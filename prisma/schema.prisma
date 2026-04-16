@@ -1,0 +1,399 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== 用户模型 =====
+
+model User {
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  name                   String?
+  plan                   String    @default("FREE")
+  planExpiresAt          DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  // 到达邮件统计
+  arrivalsTotalCount     Int       @default(0)
+  arrivalsLastSearchedAt DateTime?
+  arrivalsFolder         String?
+
+  @@map("users")
+}
+
+// ===== 核心业务模型 =====
+
+model Postcard {
+  id                 String             @id @default(cuid())
+  userId             String             @default("local")
+  postcardId         String             @unique
+  recipientName      String
+  recipientAddress   String
+  recipientCountry   String
+  recipientCity      String?
+  recipientAge       Int?
+  recipientGender    String?
+  recipientInterests String?
+  recipientBio       String?
+  status             String             @default("draft")
+  sentDate           DateTime?
+  receivedDate       DateTime?
+  content            String?
+  metadata           String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  distance           Int?
+  GeneratedContent   GeneratedContent[]
+  PastedEmail        PastedEmail[]
+
+  @@map("postcards")
+}
+
+model ReceivedCard {
+  id                  String   @id @default(cuid())
+  userId              String   @default("local")
+  country             String
+  city                String?
+  postcardId          String?
+  postcardIdConfirmed Boolean  @default(false)
+  cardRarity          String?
+  cardId              String?
+  hasShared           Boolean  @default(false)
+
+  // 图片处理相关字段
+  imageUrl              String?
+  originalImageUrl      String?
+  processedImageUrl     String?
+  imageProcessingStatus String? @default("pending")
+  imageProcessingError  String?
+  imageAdjustedAt       DateTime?
+  imageProcessVersion   Int     @default(1)
+  adjustmentMeta        String?
+
+  ocrText    String?
+  metadata   String?
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("received_cards")
+}
+
+model GeneratedContent {
+  id            String    @id @default(cuid())
+  userId        String    @default("local")
+  type          String
+  content       String
+  metadata      String?
+  createdAt     DateTime  @default(now())
+  contentBody   String
+  contentTitle  String
+  contentType   String    @default("full_letter")
+  isHandwritten Boolean   @default(false)
+  language      String    @default("zh")
+  postcardId    String
+  tone          String    @default("friendly")
+  usedTokens    Int       @default(0)
+  contentZh     String?
+  updatedAt     DateTime? @updatedAt
+  postcard      Postcard  @relation(fields: [postcardId], references: [id], onDelete: Cascade)
+
+  @@map("generated_contents")
+}
+
+model Template {
+  id         String   @id @default(cuid())
+  userId     String?
+  name       String
+  content    String
+  category   String
+  isSystem   Boolean  @default(false)
+  usageCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("templates")
+}
+
+model UserMaterial {
+  id            String    @id @default(cuid())
+  userId        String    @default("local")
+  category      String
+  content       String    @default("")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  contentStruct String?
+  lastUsedAt    DateTime?
+  tags          String?
+  usageCount    Int       @default(0)
+
+  @@unique([userId, category])
+  @@map("user_materials")
+}
+
+model PastedEmail {
+  id         String   @id @default(cuid())
+  userId     String   @default("local")
+  postcardId String
+  rawContent String
+  parsedData String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  postcard   Postcard @relation(fields: [postcardId], references: [id], onDelete: Cascade)
+
+  @@map("pasted_emails")
+}
+
+model ArrivalReply {
+  id                 String    @id @default(cuid())
+  userId             String    @default("local")
+  postcardId         String    @unique
+  destinationCountry String
+  destinationCity    String?
+  recipientName      String?
+  recipientEmail     String?
+  travelDays         Int?
+  distance           Int?
+  message            String?
+  arrivedAt          DateTime?
+  emailDate          DateTime?
+  emailMessageId     String?
+  rawSubject         String?
+  rawContent         String?
+  status             String    @default("parsed")
+  parseError         String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  messageAnalysis MessageAnalysis?
+
+  @@index([userId])
+  @@index([userId, arrivedAt])
+  @@index([destinationCountry])
+  @@map("arrival_replies")
+}
+
+model MessageAnalysis {
+  id              String    @id @default(cuid())
+  userId          String    @default("local")
+  postcardId      String    @unique
+  message         String
+  aiScore         Float
+  categories      String
+  primaryCategory String
+  emotion         String
+  tags            String
+  sender          String?
+  country         String?
+  arrivedAt       DateTime?
+  analyzedAt      DateTime  @default(now())
+  cacheValidUntil DateTime
+  modelVersion    String
+  translation     String?
+  translationModel String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  arrivalReply ArrivalReply? @relation(fields: [postcardId], references: [postcardId], onDelete: Cascade)
+
+  @@index([userId, primaryCategory])
+  @@index([userId, aiScore])
+  @@map("message_analyses")
+}
+
+// ===== 用户相关（本地单用户） =====
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique @default("local")
+  aboutMe     String   @default("")
+  aboutMeEn   String   @default("")
+  casualNotes String   @default("")
+  tags        String   @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+model MaterialProgress {
+  id               String    @id @default(cuid())
+  userId           String    @unique @default("local")
+  completionRate   Int       @default(0)
+  qualityScore     Int       @default(0)
+  categoryProgress String?
+  lastEvaluatedAt  DateTime?
+  totalMatches     Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("material_progress")
+}
+
+// ===== Postcrossing 同步（可选功能） =====
+
+model PostcrossingAccount {
+  id              String    @id @default(cuid())
+  userId          String    @unique @default("local")
+  username        String
+  password        String
+  isActive        Boolean   @default(true)
+  lastSyncAt      DateTime?
+  lastSyncStatus  String?
+  lastSyncError   String?
+  cookie          String?
+  cookieExpiresAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("postcrossing_accounts")
+}
+
+model PostcrossingTraveling {
+  id               String    @id @default(cuid())
+  userId           String    @default("local")
+  postcardId       String
+  receiverUsername String
+  countryCode      String
+  sentDate         DateTime
+  distance         Int
+  arrivedFlag      Int       @default(0)
+  rawData          String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  parsedAt         DateTime?
+  parsedData       String?
+  profileFetchedAt DateTime?
+  profileText      String?
+  recipientAddress String?
+  recipientCity    String?
+  recipientCountry String?
+  recipientName    String?
+  recipientPostal  String?
+
+  @@index([userId])
+  @@map("postcrossing_traveling")
+}
+
+model PostcrossingSyncLog {
+  id        String   @id @default(cuid())
+  userId    String   @default("local")
+  action    String
+  details   String?
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("postcrossing_sync_logs")
+}
+
+// ===== 本地设置 =====
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model EmailConfig {
+  id         String    @id @default(cuid())
+  userId     String    @default("local")
+  email      String
+  provider   String
+  imapHost   String
+  imapPort   Int
+  imapUser   String
+  imapPass   String
+  isActive   Boolean   @default(true)
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  folderPath String?
+
+  @@map("email_configs")
+}
+
+model Email {
+  id          String   @id @default(cuid())
+  userId      String   @default("local")
+  messageId   String   @unique
+  from        String
+  to          String
+  subject     String
+  content     String
+  htmlContent String?
+  receivedAt  DateTime @default(now())
+  isRead      Boolean  @default(false)
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, messageId])
+  @@map("emails")
+}
+
+// ===== 抽卡系统（娱乐彩蛋，免费） =====
+
+model GachaPool {
+  id        String         @id @default(uuid())
+  name      String
+  ssrRate   Float          @default(0.05)
+  srRate    Float          @default(0.15)
+  rRate     Float          @default(0.40)
+  nRate     Float          @default(0.40)
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  cards     CardTemplate[]
+
+  @@map("gacha_pools")
+}
+
+model CardTemplate {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String
+  category    String?
+  isActive    Boolean        @default(true)
+  usageCount  Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  gachaPoolId String?
+  keywords    String?
+  rarity      String         @default("N")
+  weight      Int            @default(100)
+  gachaPool   GachaPool?     @relation(fields: [gachaPoolId], references: [id])
+  sortOrder   Int            @default(0)
+
+  @@map("card_templates")
+}
+
+model UserGachaLog {
+  id            String   @id @default(uuid())
+  userId        String   @default("local")
+  cardId        String?
+  rarity        String
+  postcardId    String?  @unique
+  obtainedAt    DateTime @default(now())
+  aiScore       Int?
+  contentScore  Int?
+  cultureScore  Int?
+  languageScore Int?
+  storyScore    Int?
+  summary       String?
+  luckyLevel    String?
+  luckyBonus    Int?
+
+  @@index([userId])
+  @@index([userId, obtainedAt])
+  @@index([postcardId])
+  @@map("user_gacha_logs")
+}

@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npx prisma generate && npx prisma migrate deploy && npm run build",
+  "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/feedbacks/poll",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/admin/feedbacks/report",
+      "schedule": "0 20 * * *"
+    }
+  ]
+}
