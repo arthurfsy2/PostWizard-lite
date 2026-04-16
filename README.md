@@ -114,6 +114,26 @@ npm run dev
 
 ---
 
+## ⚠️ 安全提示
+
+**当前版本不建议部署到 Vercel 等公开环境！**
+
+- 🔒 **原因**：开源版为简化部署，默认**无用户认证系统**，所有数据公开可访问
+-  **风险**：部署到 Vercel 后，你的明信片数据、邮件配置等可能被他人访问
+- 💡 **推荐用法**：
+  - ✅ 本地开发环境运行（`npm run dev`）
+  - ✅ 私有服务器部署（需自行配置认证）
+
+**下一版本计划**：
+- 添加可选的管理员登录功能（通过环境变量控制开关，默认关闭）
+- 支持安全的 Vercel 部署
+
+**临时解决方案**（如必须部署）：
+- 使用 Vercel 的 [Deployment Protection](https://vercel.com/docs/deployment-protection) 功能
+- 或通过 [Vercel Authentication](https://vercel.com/guides/adding-password-protection-to-nextjs) 添加密码保护
+
+---
+
 ## 📁 项目结构
 
 ```
