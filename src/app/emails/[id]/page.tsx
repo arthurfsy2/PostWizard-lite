@@ -43,7 +43,6 @@ export default function EmailDetailPage() {
   const parseKey = searchParams.get('parseKey');
   
   const { token, user, isLoading: authLoading, fetchUser } = useAuthStore();
-  const { isPaidUser, isLoading: quotaLoading } = useIsPaidUser();
   
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [isLoading, setIsLoading] = useState(true);

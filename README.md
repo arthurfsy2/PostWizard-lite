@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/logo.svg" width="120" alt="PostWizard Logo">
+<img src="public/favicon.svg" width="120" alt="PostWizard Logo">
 
 # PostWizard Lite ✨
 
@@ -34,30 +34,31 @@
 
 ## 🎯 一句话介绍
 
-基于 AI 的 Postcrossing 明信片写作工具。分析收件人兴趣、自动生成个性化英文信件，让写明信片变得更简单。
+基于 AI 的明信片收、寄信助手。
+寄信：分析收件人兴趣、自动生成个性化明信片内容，解决不知道写什么的苦恼；抓取邮箱中的他人注册时的回复，自动生成Timeline、词云、精选留言。
+收信：识别难以辨认的手写内容、趣味抽卡评价明信片
 
 ---
 
 ## ✨ 功能特性
 
 ### 📮 寄信流程
-- **📋 粘贴解析** — 直接粘贴邮件文本，智能提取收件人信息
-- **📧 邮件解析** — IMAP 自动抓取 Postcrossing 邮件，一键识别
+- **📋 粘贴解析** — 直接粘贴邮件文本，智能提取收件人信息，根据收件人画像自动生成个性化英文内容
+- **📧 邮件解析** — IMAP 自动抓取收件人信息邮件，一键识别（和粘贴解析二选一即可）
 - **📜 历史记录** — 管理所有待寄和已寄明信片
-- **✍️ AI 生成** — 根据收件人画像自动生成个性化英文内容
+- **✍️ 送达回复** — 抓取邮箱中的他人注册时的回复，自动生成Timeline、词云、精选留言。
 
 ### 📬 收信流程
 - **📷 上传识别** — 上传明信片照片，OCR 自动识别文字
 - **🗂️ 收信历史** — 整理所有收到的明信片
-- **🖼️ 图片处理** — 自动裁剪、增强、旋转图片
+- **🖼️ 图片处理** — 自动裁剪、增强、旋转图片（优化中）
 
 ### 🎮 特色功能
-- **🎴 抽卡系统** — 随机抽取信件模板，增加写作趣味性
-- **🏷️ 徽章系统** — 完成成就解锁徽章，记录你的 Postcrossing 之旅
+- **🎴 收片抽卡菜单** — AI 分析明信片内容，评定内容真诚度+号码lucky值（SSR/SR/R/N）并生成多维评分
+- **👤 个人要素** — 个人简介中英双语管理，让收信人感受到真实的你！
 - **📊 收信分析** — 送达回复追踪、词云、精选留言
-- **🎨 素材库** — 对话式素材输入、质量评估、智能推荐
 - **🖨️ 打印功能** — A4 批量打印版，带剪切线
-- **🗺️ 地图追踪** — 可视化明信片旅行路线
+
 
 ---
 
@@ -123,13 +124,12 @@ src/
 │   ├── materials/        # 素材库
 │   ├── received/         # 收信管理
 │   ├── sent/             # 寄信管理
-│   ├── profile/          # 个人资料
+│   ├── profile/          # 个人要素
 │   ├── settings/         # 设置
 │   └── api/              # API 路由
 ├── components/           # UI 组件
 │   ├── ui/               # 基础组件 (shadcn/ui)
 │   ├── gacha/            # 抽卡系统
-│   ├── badge/            # 徽章系统
 │   └── ...
 ├── lib/                  # 工具库 & 服务
 ├── hooks/                # React Hooks
@@ -159,17 +159,15 @@ src/
 
 <div align="center">
 
-| 首页仪表盘 | 收信历史 | AI 生成 |
-|:----------:|:--------:|:-------:|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Received](docs/screenshots/received.png) | ![AI Generate](docs/screenshots/ai-generate.png) |
+| AI 解析收件人 | 收信智能评价 |
+|:-------------:|:------------:|
+| ![AI Parse](docs/screenshots/sent-parse.jpg) | ![Received AI](docs/screenshots/received-ai.jpg) |
 
-| 素材库 | 抽卡系统 | 词云分析 |
-|:------:|:--------:|:--------:|
-| ![Materials](docs/screenshots/materials.png) | ![Gacha](docs/screenshots/gacha.png) | ![WordCloud](docs/screenshots/wordcloud.png) |
+| 送达时间线 | 词云分析 |
+|:----------:|:--------:|
+| ![Timeline](docs/screenshots/timeline.png) | ![WordCloud](docs/screenshots/wordcloud.png) |
 
 </div>
-
-> 📷 **提示**：截图文件夹 `docs/screenshots/` 尚未创建，运行后可添加真实截图
 
 ---
 
@@ -199,16 +197,6 @@ npm run db:migrate       # 运行数据库迁移
 npm run build            # 构建生产版本
 npm run start            # 启动生产服务器
 ```
-
----
-
-## 📖 开发文档
-
-- [本地用户模式说明](./docs/LOCAL_USER_MODE.md)
-- [UserId 本地化检查 SOP](./docs/SOP_CODE_MIGRATION_USERID.md)
-- [技术债务管理指南](./docs/TECH_DEBT_GUIDE.md)
-- [API 文档](./docs/API.md)
-- [贡献指南](./CONTRIBUTING.md)
 
 ---
 

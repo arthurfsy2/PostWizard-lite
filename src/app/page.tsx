@@ -27,8 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { HomeActions } from "@/components/home/HomeActions";
-import { WelcomeGuideWrapper } from "@/components/onboarding/WelcomeGuideWrapper";
-import { useNewUserQuota } from "@/hooks/useNewUserQuota";
 
 // 静态特征数据
 const features = [
@@ -85,9 +83,6 @@ const features = [
 ];
 
 export default function HomePage() {
-  // 使用统一的 Hook 获取新用户额度
-  const { newUserQuota: newUserFreeQuota } = useNewUserQuota();
-
   useEffect(() => {
     // 记录访问日志 - 使用防抖避免重复记录
     const hasLogged = sessionStorage.getItem("visited_home");
@@ -316,7 +311,6 @@ export default function HomePage() {
       </main>
 
       <Footer />
-      <WelcomeGuideWrapper />
     </div>
   );
 }
