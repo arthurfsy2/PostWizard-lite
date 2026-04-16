@@ -94,18 +94,63 @@ npm run db:push
 
 ### 4. 配置 AI API
 
+#### 方式一：环境变量（推荐）
+
 创建 `.env.local` 文件：
 
 ```bash
 # OpenAI 兼容 API（必需）
 OPENAI_API_KEY=your-api-key
 OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
 
 # 可选：禁用 Prisma 查询日志
 DISABLE_PRISMA_QUERY_LOGS=true
 ```
 
-> 💡 **提示**：启动后也可访问 `/settings` 页面在网页中配置
+#### 方式二：网页配置
+
+启动后访问 `/settings` 页面，在网页中配置 API Key、Base URL 和模型。
+
+---
+
+## 🔑 API Key 申请指南
+
+### 阿里云百炼（推荐 · 有免费额度）
+
+阿里云百炼提供 **免费试用额度**，支持视觉识别模型（适合明信片 OCR 识别）。
+
+**申请步骤**：
+1. 访问 [阿里云百炼控制台](https://bailian.console.aliyun.com/)
+2. 注册/登录阿里云账号
+3. 进入「模型广场」→ 选择 **Qwen-VL-Max** 或 **Qwen-VL-Plus**（视觉识别模型）
+4. 点击「开通服务」→ 领取免费试用额度
+5. 创建 API Key：进入「API-KEY 管理」→ 创建新的 API Key
+
+**配置示例**（与截图一致）：
+```bash
+# 配置名称（仅网页配置显示）
+qwen 配置
+
+# AI 服务商：通义千问 (阿里云)
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+OPENAI_MODEL=qwen3-vl-8b-thinking
+```
+
+> 💡 **提示**：
+> - 免费额度约 **100 万 token**（具体以官网为准）
+> - 必须选择 **Qwen-VL** 系列模型（支持图片识别，如 `qwen3-vl-8b-thinking`）
+> - Base URL 使用阿里云百炼的兼容模式地址
+> - SDK 实际请求地址：`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`
+
+### 其他 API 提供商
+
+你也可以使用其他 OpenAI 兼容的 API 服务：
+- **OpenAI 官方**：`https://api.openai.com/v1`
+- **DeepSeek**：`https://api.deepseek.com/v1`
+- **智谱 AI**：`https://open.bigmodel.cn/api/paas/v4`
+- **自定义服务**：本地部署的 Ollama、vLLM 等
 
 ### 5. 启动开发服务器
 
