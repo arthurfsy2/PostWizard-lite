@@ -1,0 +1,65 @@
+/* 抽卡特效动画 */
+
+/* SSR 光晕旋转 */
+@keyframes glowRotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* 光晕脉冲 */
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.3) rotate(180deg);
+    opacity: 0.8;
+  }
+}
+
+/* 星光闪烁 */
+@keyframes starTwinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* 粒子漂浮 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* 卡片呼吸 */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 15px 50px rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 20px 60px rgba(251, 191, 36, 0.6);
+  }
+}

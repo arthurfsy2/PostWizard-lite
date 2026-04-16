@@ -1,0 +1,340 @@
+@import "tailwindcss";
+
+/* 温暖主题配色 */
+:root {
+  --background: #fefdfb;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --primary: #f97316;
+  --primary-foreground: #ffffff;
+  --secondary: #fff7ed;
+  --secondary-foreground: #ea580c;
+  --muted: #f5f5f4;
+  --muted-foreground: #78716c;
+  --accent: #fed7aa;
+  --accent-foreground: #c2410c;
+  --border: #e7e5e4;
+  --radius: 1rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 8px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1c1917;
+    --foreground: #fafaf9;
+    --card: #292524;
+    --card-foreground: #fafaf9;
+    --primary: #fb923c;
+    --primary-foreground: #1c1917;
+    --secondary: #44403c;
+    --secondary-foreground: #fed7aa;
+    --muted: #292524;
+    --muted-foreground: #a8a29e;
+    --accent: #451a03;
+    --accent-foreground: #fed7aa;
+    --border: #44403c;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 温暖渐变背景类 */
+.bg-warm-gradient {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%);
+}
+
+.bg-warm-gradient-dark {
+  background: linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%);
+}
+
+/* 温暖卡片阴影 */
+.card-warm-shadow {
+  box-shadow: 0 4px 20px -2px rgba(249, 115, 22, 0.1), 0 8px 30px -5px rgba(249, 115, 22, 0.05);
+}
+
+/* 柔和过渡 */
+.transition-warm {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   借鉴 Linear 设计系统的改进
+   ============================================ */
+
+/* 幽灵按钮 - 半透明背景 + 细边框 */
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(254, 215, 170, 0.5);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(253, 186, 116, 0.6);
+}
+
+/* 玻璃态卡片 - 半透明层级感 */
+.card-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(254, 215, 170, 0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-glass:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(253, 186, 116, 0.5);
+}
+
+/* 温暖渐变卡片 - 半透明渐变背景 */
+.card-warm {
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.7) 0%, rgba(255, 237, 213, 0.7) 100%);
+  border: 1px solid rgba(254, 215, 170, 0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-warm:hover {
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.9) 0%, rgba(255, 237, 213, 0.9) 100%);
+  border-color: rgba(253, 186, 116, 0.5);
+}
+
+/* 细微边框 - 用于卡片和容器 */
+.border-subtle {
+  border-color: rgba(231, 229, 228, 0.6);
+}
+
+/* 改进的卡片阴影 - 更微妙的层级感 */
+.card-elevated {
+  box-shadow: 
+    0 1px 2px rgba(249, 115, 22, 0.05),
+    0 4px 12px rgba(249, 115, 22, 0.08);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-elevated:hover {
+  box-shadow: 
+    0 2px 4px rgba(249, 115, 22, 0.08),
+    0 8px 20px rgba(249, 115, 22, 0.12);
+  transform: translateY(-1px);
+}
+
+/* 抽卡特效动画 */
+
+/* SSR 光晕旋转 */
+@keyframes glowRotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* 光晕脉冲 */
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.3) rotate(180deg);
+    opacity: 0.8;
+  }
+}
+
+/* 星光闪烁 */
+@keyframes starTwinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* 粒子漂浮 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* 卡片呼吸 */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 15px 50px rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 20px 60px rgba(251, 191, 36, 0.6);
+  }
+}
+
+/* Timeline 流动光效 */
+@keyframes shimmer {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
+/* ============================================
+   稀有度卡牌特效动画
+   参考: docs/design/RECEIVED_CARD_RARITY_DESIGN.md
+   ============================================ */
+
+/* SSR - 呼吸光晕（3s 周期） */
+@keyframes ssr-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(255, 215, 0, 0.4),
+      0 0 40px rgba(255, 165, 0, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(255, 215, 0, 0.6),
+      0 0 60px rgba(255, 165, 0, 0.4);
+  }
+}
+
+/* SSR - 星星闪烁（2s 周期） */
+@keyframes ssr-sparkle {
+  0%, 100% { 
+    opacity: 0.3; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.3);
+  }
+}
+
+/* SSR - 边框流动（3s 周期） */
+@keyframes ssr-border-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* SR - 边框微光流动（4s 周期） */
+@keyframes sr-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 动画类 */
+.animate-ssr-glow {
+  animation: ssr-pulse 3s ease-in-out infinite;
+}
+
+.animate-ssr-pulse {
+  animation: ssr-pulse 3s ease-in-out infinite;
+}
+
+.animate-ssr-sparkle {
+  animation: ssr-sparkle 2s ease-in-out infinite;
+}
+
+.animate-ssr-border {
+  animation: ssr-border-flow 3s ease infinite;
+  background-size: 200% 200%;
+}
+
+.animate-sr-shimmer {
+  animation: sr-shimmer 4s linear infinite;
+  background-size: 200% 200%;
+}
+
+/* 渐变边框样式（使用 background-clip） */
+.rarity-border-ssr {
+  border: 2px solid transparent;
+  background-image: 
+    linear-gradient(#fff7ed 0 0),
+    linear-gradient(45deg, #FFD700, #FFA500, #FFD700);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 100% 100%, 200% 200%;
+  animation: ssr-border-flow 3s ease infinite;
+}
+
+.rarity-border-sr {
+  border: 2px solid transparent;
+  background-image: 
+    linear-gradient(#f9fafb 0 0),
+    linear-gradient(45deg, #C0C0C0, #E8E8E8, #A8A8A8, #C0C0C0);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 100% 100%, 200% 200%;
+  animation: sr-shimmer 4s linear infinite;
+}
+
+.rarity-border-r {
+  border: 2px solid transparent;
+  background-image: 
+    linear-gradient(#fff7ed 0 0),
+    linear-gradient(45deg, #CD7F32, #B87333, #CD7F32);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .rarity-border-ssr {
+    background-image: 
+      linear-gradient(#1c1917 0 0),
+      linear-gradient(45deg, #FFD700, #FFA500, #FFD700);
+  }
+  
+  .rarity-border-sr {
+    background-image: 
+      linear-gradient(#292524 0 0),
+      linear-gradient(45deg, #C0C0C0, #E8E8E8, #A8A8A8, #C0C0C0);
+  }
+  
+  .rarity-border-r {
+    background-image: 
+      linear-gradient(#1c1917 0 0),
+      linear-gradient(45deg, #CD7F32, #B87333, #CD7F32);
+  }
+}
