@@ -112,6 +112,8 @@ DISABLE_PRISMA_QUERY_LOGS=true
 
 启动后访问 `/settings` 页面，在网页中配置 API Key、Base URL 和模型。
 
+![API SETTINGS](docs/screenshots/api-settings.png)
+
 ---
 
 ## 🔑 API Key 申请指南
