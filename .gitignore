@@ -80,4 +80,4 @@ playwright-report/
 tmp-*.ts
 tmp-*.js
 *.tmp
-data\wordcloud-dictionary.json
+data/wordcloud-dictionary.json

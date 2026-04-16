@@ -37,29 +37,31 @@
 寄信：分析收件人兴趣、自动生成个性化明信片内容，解决不知道写什么的苦恼；抓取邮箱中的他人注册时的回复，自动生成 Timeline、词云、精选留言。
 收信：识别难以辨认的手写内容、趣味抽卡评价明信片
 
-> 💡 **项目来源**：本开源版核心功能来自 [PostWizard 完整版](https://postwizard.cn)（支持用户注册、多用户管理、付费系统等）。这是 PostWizard 的简化开源版本。
+> 💡 **项目来源**：本开源版核心功能来自 [PostWizard 完整版](https://postwizard.cn)（支持用户注册、多用户管理、捐赠支持、反馈、帮助等）。这是 PostWizard 的简化开源+本地使用版本。
 
 ---
 
 ## ✨ 功能特性
 
 ### 📮 寄信流程
+
 - **📋 粘贴解析** — 直接粘贴邮件文本，智能提取收件人信息，根据收件人画像自动生成个性化英文内容
 - **📧 邮件解析** — IMAP 自动抓取收件人信息邮件，一键识别（和粘贴解析二选一即可）
 - **📜 历史记录** — 管理所有待寄和已寄明信片
 - **✍️ 送达回复** — 抓取邮箱中的他人注册时的回复，自动生成 Timeline、词云、精选留言。
 
 ### 📬 收信流程
+
 - **📷 上传识别** — 上传明信片照片，OCR 自动识别文字
 - **🗂️ 收信历史** — 整理所有收到的明信片
 - **🖼️ 图片处理** — 自动裁剪、增强、旋转图片（优化中）
 
 ### 🎮 特色功能
+
 - **🎴 收片抽卡菜单** — AI 分析明信片内容，评定内容真诚度 + 号码 lucky 值（SSR/SR/R/N）并生成多维评分
 - **👤 个人要素** — 个人简介中英双语管理，让收信人感受到真实的你！
 - **📊 收信分析** — 送达回复追踪、词云、精选留言
 - **🖨️ 打印功能** — A4 批量打印版，带剪切线
-
 
 ---
 
@@ -120,16 +122,18 @@ npm run dev
 **当前版本不建议部署到 Vercel 等公开环境！**
 
 - 🔒 **原因**：开源版为简化部署，默认**无用户认证系统**，所有数据公开可访问
--  **风险**：部署到 Vercel 后，你的明信片数据、邮件配置等可能被他人访问
+- **风险**：部署到 Vercel 后，你的明信片数据、邮件配置等可能被他人访问
 - 💡 **推荐用法**：
   - ✅ 本地开发环境运行（`npm run dev`）
   - ✅ 私有服务器部署（需自行配置认证）
 
 **下一版本计划**：
+
 - 添加可选的管理员登录功能（通过环境变量控制开关，默认关闭）
 - 支持安全的 Vercel 部署
 
 **临时解决方案**（如必须部署）：
+
 - 使用 Vercel 的 [Deployment Protection](https://vercel.com/docs/deployment-protection) 功能
 - 或通过 [Vercel Authentication](https://vercel.com/guides/adding-password-protection-to-nextjs) 添加密码保护
 
@@ -161,18 +165,18 @@ src/
 
 ## 🛠️ 技术栈
 
-| 类别 | 技术 |
-|------|------|
-| **框架** | Next.js 16 (App Router) |
-| **语言** | TypeScript / React 19 |
-| **样式** | Tailwind CSS 4 |
-| **数据库** | SQLite (Prisma ORM) |
-| **状态管理** | Zustand |
-| **数据获取** | TanStack Query + SWR |
-| **AI** | OpenAI 兼容 API |
-| **OCR** | Tesseract.js |
-| **测试** | Vitest + Playwright |
-| **部署** | Vercel |
+| 类别               | 技术                    |
+| ------------------ | ----------------------- |
+| **框架**     | Next.js 16 (App Router) |
+| **语言**     | TypeScript / React 19   |
+| **样式**     | Tailwind CSS 4          |
+| **数据库**   | SQLite (Prisma ORM)     |
+| **状态管理** | Zustand                 |
+| **数据获取** | TanStack Query + SWR    |
+| **AI**       | OpenAI 兼容 API         |
+| **OCR**      | Tesseract.js            |
+| **测试**     | Vitest + Playwright     |
+| **部署**     | Vercel                  |
 
 ---
 
@@ -180,12 +184,12 @@ src/
 
 <div align="center">
 
-| AI 解析收件人 | 收信智能评价 |
-|:-------------:|:------------:|
+|               AI 解析收件人               |                  收信智能评价                  |
+| :----------------------------------------: | :--------------------------------------------: |
 | ![AI Parse](docs/screenshots/sent-parse.jpg) | ![Received AI](docs/screenshots/received-ai.jpg) |
 
-| 送达时间线 | 词云分析 |
-|:----------:|:--------:|
+|                送达时间线                |                  词云分析                  |
+| :--------------------------------------: | :----------------------------------------: |
 | ![Timeline](docs/screenshots/timeline.png) | ![WordCloud](docs/screenshots/wordcloud.png) |
 
 </div>
