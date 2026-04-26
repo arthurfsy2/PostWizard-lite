@@ -3,7 +3,7 @@
  * 参考 PRD: arrivals-wordcloud-pm-final.md 第八点五节
  */
 
-export type HighlightCategory = 'touching' | 'funny' | 'blessing' | 'cultural';
+export type HighlightCategory = 'touching' | 'emotional' | 'culturalInsight';
 
 export interface HighlightCategoryInfo {
   key: HighlightCategory;
@@ -58,24 +58,18 @@ export const HIGHLIGHT_CATEGORIES: HighlightCategoryInfo[] = [
     key: 'touching',
     label: '最走心',
     icon: '💝',
-    description: '真诚温暖的深度留言',
+    description: '有个人故事的留言，真诚而不只是礼貌',
   },
   {
-    key: 'funny',
-    label: '最有趣',
-    icon: '😄',
-    description: '幽默有趣的精彩留言',
+    key: 'emotional',
+    label: '情感温度',
+    icon: '💗',
+    description: '祝福有温度，不是套话',
   },
   {
-    key: 'blessing',
-    label: '最祝福',
-    icon: '✨',
-    description: '充满祝福的美好留言',
-  },
-  {
-    key: 'cultural',
-    label: '文化交流',
+    key: 'culturalInsight',
+    label: '文化洞察',
     icon: '🌍',
-    description: '跨文化交流的精彩留言',
+    description: '有本地视角，不是景点介绍',
   },
 ];

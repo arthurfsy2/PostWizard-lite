@@ -15,11 +15,10 @@ export interface SentimentAnalysisResult {
   score: number;                     // 综合情感评分 (0-100) = max(categories)
   categories: {
     touching: number;                // 走心程度 (0-100)
-    funny: number;                   // 有趣程度 (0-100)
-    blessing: number;                // 祝福程度 (0-100)
-    cultural: number;                // 文化交流程度 (0-100)
+    emotional: number;               // 情感温度 (0-100)
+    culturalInsight: number;         // 文化洞察 (0-100)
   };
-  primaryCategory: 'touching' | 'funny' | 'blessing' | 'cultural';
+  primaryCategory: 'touching' | 'emotional' | 'culturalInsight';
   emotion: 'positive' | 'neutral' | 'negative';
   tags: string[];                    // 关键词标签 (3-5 个)
   translation?: string;              // 中文翻译（可选，非英文留言时填充）
@@ -30,21 +29,20 @@ export interface SentimentAnalysisResult {
  * 构建 AI 分析 Prompt
  *
  * 设计原则：
- * - 4 个维度独立评分，可以同时高分（一条留言可以既走心又祝福）
+ * - 3 个维度独立评分，可以同时高分（一条留言可以既走心又有情感温度）
  * - 最终 score = max(categories)，取最好的那一面作为精选分数
  * - AI 只负责评分，不负责汇总（汇总逻辑透明可控）
  */
 function buildAnalysisPrompt(message: string): string {
-  return `你是一位专业的明信片留言情感分析师。请对留言的 4 个维度独立评分（每项 0-100）。
+  return `你是一位专业的明信片留言情感分析师。请对留言的 3 个维度独立评分（每项 0-100）。
 
-## 4 个维度（独立评分，可以同时高分）：
+## 3 个维度（独立评分，可以同时高分）：
 
 | 维度 | 含义 | 低分特征 | 高分特征 |
 |------|------|----------|----------|
-| **touching**（走心） | 真情实感、感人故事、深度共鸣 | 泛泛感谢、客套话 | 有个人故事、情感脆弱、让人共鸣 |
-| **funny**（有趣） | 幽默、机智、自嘲 | 无幽默元素 | 让人会心一笑、有趣的表达 |
-| **blessing**（祝福） | 真诚祝愿 | 模板化万能祝福 | 针对收信人的真诚期盼 |
-| **cultural**（文化交流） | 分享文化/生活/地理信息 | 无文化交流 | 分享了有趣的知识或经历 |
+| **touching**（走心） | 真情实感、个人故事、深度共鸣 | 泛泛感谢、客套话 | 有个人故事、情感脆弱、让人共鸣 |
+| **emotional**（情感温度） | 真诚祝愿、有温度的祝福 | 模板化万能祝福 | 针对收信人的真诚期盼，包含情感词 |
+| **culturalInsight**（文化洞察） | 本地视角、文化对比、个人解读 | 景点介绍、百科式陈述 | 本地人视角、非显而易见的事实 |
 
 ## 评分锚点（严格对标）：
 
@@ -54,37 +52,32 @@ function buildAnalysisPrompt(message: string): string {
 - 60-80：提及个人细节（骑行、宠物、天气）
 - 85+：有故事、情感脆弱、让人共鸣
 
-**blessing（祝福）：**
+**emotional（情感温度）：**
 - 5-20：模板化万能祝福（"wishing you health, happiness, love and joy"）
 - 30-60：普通祝福，有针对性但不算真诚
-- 70+：针对收信人的真诚期盼，有温度
+- 70+：包含情感词（strength, comfort, warmth, hope you feel），有温度
 
-**funny（有趣）：**
-- 5-20：没有幽默元素
-- 30-60：有一点点有趣
-- 70+：让人会心一笑
-
-**cultural（文化交流）：**
-- 5-20：没有文化交流
-- 30-60：简单提及文化
-- 70+：分享了有趣的文化/地理/生活知识
+**culturalInsight（文化洞察）：**
+- 5-20：没有文化内容
+- 30-60：景点介绍（"The Eiffel Tower is in Paris"）
+- 70+：本地人视角（"What strikes me about my hometown is..."），文化对比，个人解读
 
 ## Few-shot 示例：
 
 **留言**: "Hi, thanks for the card! Happy Postcrossing!"
-→ touching=20, funny=10, blessing=40, cultural=5
+→ touching=20, emotional=40, culturalInsight=5
 
 **留言**: "恭喜你的宝宝！我有三个孩子，趁他们还小好好享受吧，时间眨眼就过去了！"
-→ touching=80, funny=10, blessing=50, cultural=5
+→ touching=80, emotional=50, culturalInsight=5
 
 **留言**: "你的卡片让我想起我祖母…收到你的卡片时我哭了，那种温暖的感觉一模一样。"
-→ touching=95, funny=5, blessing=40, cultural=5
+→ touching=95, emotional=40, culturalInsight=5
 
-**留言**: "你是怎么收集到这么多恐龙的？太疯狂了！我也很喜欢古生物学。"
-→ touching=30, funny=50, blessing=20, cultural=40
+**留言**: "What tourists don't know about Tokyo is that the best ramen shops are in residential areas."
+→ touching=30, emotional=20, culturalInsight=75
 
-**留言**: "谢谢你的卡片和邮票！祝骑行顺利，注意安全！Happy Postcrossing!"
-→ touching=30, funny=10, blessing=60, cultural=5
+**留言**: "谢谢你的卡片和邮票！祝骑行顺利，注意安全！"
+→ touching=30, emotional=60, culturalInsight=5
 
 ## 待分析的留言：
 
@@ -96,9 +89,8 @@ ${message}
 {
   "categories": {
     "touching": <0-100>,
-    "funny": <0-100>,
-    "blessing": <0-100>,
-    "cultural": <0-100>
+    "emotional": <0-100>,
+    "culturalInsight": <0-100>
   },
   "emotion": "<positive/neutral/negative>",
   "tags": ["<标签1>", "<标签2>", "<标签3>"],
@@ -110,7 +102,7 @@ ${message}
  * 从 categories 计算综合评分 = max(categories)
  */
 function computeScore(categories: SentimentAnalysisResult['categories']): number {
-  return Math.max(categories.touching, categories.funny, categories.blessing, categories.cultural);
+  return Math.max(categories.touching, categories.emotional, categories.culturalInsight);
 }
 
 /**
@@ -138,9 +130,8 @@ function parseAnalysisResult(content: string): SentimentAnalysisResult {
 
     const categories: SentimentAnalysisResult['categories'] = {
       touching: Math.min(100, Math.max(0, Math.round(parsed.categories?.touching || 0))),
-      funny: Math.min(100, Math.max(0, Math.round(parsed.categories?.funny || 0))),
-      blessing: Math.min(100, Math.max(0, Math.round(parsed.categories?.blessing || 0))),
-      cultural: Math.min(100, Math.max(0, Math.round(parsed.categories?.cultural || 0))),
+      emotional: Math.min(100, Math.max(0, Math.round(parsed.categories?.emotional || 0))),
+      culturalInsight: Math.min(100, Math.max(0, Math.round(parsed.categories?.culturalInsight || 0))),
     };
 
     const result: SentimentAnalysisResult = {
@@ -155,11 +146,11 @@ function parseAnalysisResult(content: string): SentimentAnalysisResult {
     return result;
   } catch (error) {
     console.error('[parseAnalysisResult] 解析失败:', error, '原始内容:', content);
-    const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+    const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
     return {
       score: 20,
       categories,
-      primaryCategory: 'blessing',
+      primaryCategory: 'emotional',
       emotion: 'neutral',
       tags: [],
     };
@@ -174,11 +165,11 @@ function parseAnalysisResult(content: string): SentimentAnalysisResult {
  */
 export async function analyzeMessage(message: string): Promise<SentimentAnalysisResult> {
   if (!message || message.trim().length < 10) {
-    const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 30, cultural: 10 };
+    const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 30, culturalInsight: 10 };
     return {
       score: computeScore(categories),
       categories,
-      primaryCategory: 'blessing',
+      primaryCategory: 'emotional',
       emotion: 'neutral',
       tags: ['简短'],
     };
@@ -262,13 +253,13 @@ export async function analyzeMessagesBatch<T extends { id: string; message: stri
       }
     } catch (error) {
       console.error(`[analyzeMessagesBatch] 分析失败：${item.id}`, error);
-      const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+      const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
       results.push({
         ...item,
         analysis: {
           score: 20,
           categories,
-          primaryCategory: 'blessing',
+          primaryCategory: 'emotional',
           emotion: 'neutral',
           tags: [],
         },
@@ -284,7 +275,7 @@ export async function analyzeMessagesBatch<T extends { id: string; message: stri
  */
 export function filterByCategory(
   analyses: SentimentAnalysisResult[],
-  category: 'touching' | 'funny' | 'blessing' | 'cultural',
+  category: 'touching' | 'emotional' | 'culturalInsight',
   minConfidence: number = 60
 ): SentimentAnalysisResult[] {
   return analyses.filter(a =>
@@ -327,11 +318,11 @@ export function isTemplateMessage(content: string): boolean {
 export function analyzeByRules(message: string): SentimentAnalysisResult | null {
   if (!message || message.trim().length < 10) {
     // 太短的留言，直接返回低分
-    const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+    const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 30, culturalInsight: 10 };
     return {
       score: 30,
       categories,
-      primaryCategory: 'blessing',
+      primaryCategory: 'emotional',
       emotion: 'neutral',
       tags: ['简短'],
       _source: 'rule-engine', // 标记来源
@@ -343,11 +334,11 @@ export function analyzeByRules(message: string): SentimentAnalysisResult | null 
 
   // 仅针对极短留言（<60字符）进行模板话术检测
   if (isTemplateMessage(msg) && msgLength < 60) {
-    const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 40, cultural: 10 };
+    const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 40, culturalInsight: 10 };
     return {
       score: 30,
       categories,
-      primaryCategory: 'blessing',
+      primaryCategory: 'emotional',
       emotion: 'positive',
       tags: ['模板', '感谢'],
       _source: 'rule-engine', // 标记来源
@@ -467,16 +458,15 @@ async function analyzeBatchWithAI<T extends { id: string; message: string }>(
     return `${index + 1}. [${item.id}]\n"""${item.message}"""\n`;
   }).join('\n');
 
-  const prompt = `你是一位专业的明信片留言情感分析师。请对以下 ${batch.length} 条留言的 4 个维度独立评分（每项 0-100）。
+  const prompt = `你是一位专业的明信片留言情感分析师。请对以下 ${batch.length} 条留言的 3 个维度独立评分（每项 0-100）。
 
-## 4 个维度（独立评分，可以同时高分）：
+## 3 个维度（独立评分，可以同时高分）：
 
 | 维度 | 含义 | 低分特征 | 高分特征 |
 |------|------|----------|----------|
-| **touching**（走心） | 真情实感、感人故事、深度共鸣 | 泛泛感谢、客套话 | 有个人故事、情感脆弱、让人共鸣 |
-| **funny**（有趣） | 幽默、机智、自嘲 | 无幽默元素 | 让人会心一笑、有趣的表达 |
-| **blessing**（祝福） | 真诚祝愿 | 模板化万能祝福 | 针对收信人的真诚期盼 |
-| **cultural**（文化交流） | 分享文化/生活/地理信息 | 无文化交流 | 分享了有趣的知识或经历 |
+| **touching**（走心） | 真情实感、个人故事、深度共鸣 | 泛泛感谢、客套话 | 有个人故事、情感脆弱、让人共鸣 |
+| **emotional**（情感温度） | 真诚祝愿、有温度的祝福 | 模板化万能祝福 | 针对收信人的真诚期盼，包含情感词 |
+| **culturalInsight**（文化洞察） | 本地视角、文化对比、个人解读 | 景点介绍、百科式陈述 | 本地人视角、非显而易见的事实 |
 
 ## 评分锚点：
 
@@ -486,34 +476,29 @@ async function analyzeBatchWithAI<T extends { id: string; message: string }>(
 - 60-80：提及个人细节（骑行、宠物、天气）
 - 85+：有故事、情感脆弱（心理健康、家庭压力）、让人共鸣
 
-**blessing（祝福）：**
+**emotional（情感温度）：**
 - 5-20：模板化万能祝福（"wishing you health, happiness, love and joy"）
 - 30-60：普通祝福，有针对性但不算真诚
-- 70+：针对收信人的真诚期盼，有温度
+- 70+：包含情感词（strength, comfort, warmth, hope you feel），有温度
 
-**funny（有趣）：**
-- 5-20：没有幽默元素
-- 30-60：有一点点有趣
-- 70+：让人会心一笑
-
-**cultural（文化交流）：**
-- 5-20：没有文化交流
-- 30-60：简单提及文化
-- 70+：分享了有趣的文化/地理/生活知识
+**culturalInsight（文化洞察）：**
+- 5-20：没有文化内容
+- 30-60：景点介绍（"The Eiffel Tower is in Paris"）
+- 70+：本地人视角（"What strikes me about my hometown is..."），文化对比，个人解读
 
 ## Few-shot 示例：
 
 **留言**: "Hi, thanks for the card! Happy Postcrossing!"
-→ touching=20, funny=10, blessing=40, cultural=5
+→ touching=20, emotional=40, culturalInsight=5
 
 **留言**: "恭喜你的宝宝！我有三个孩子，趁他们还小好好享受吧，时间眨眼就过去了！"
-→ touching=80, funny=10, blessing=50, cultural=5
+→ touching=80, emotional=50, culturalInsight=5
 
 **留言**: "你的卡片让我想起我祖母…收到你的卡片时我哭了，那种温暖的感觉一模一样。"
-→ touching=95, funny=5, blessing=40, cultural=5
+→ touching=95, emotional=40, culturalInsight=5
 
 **留言**: "Hi! I live in a small village. I've been going through a tough time lately - dealing with anxiety and some health issues. Postcrossing has been such a bright spot for me, connecting with kind strangers around the world."
-→ touching=95, funny=5, blessing=30, cultural=5
+→ touching=95, emotional=30, culturalInsight=5
 （说明：情感脆弱、分享个人挣扎、真实故事，属于最高分走心留言）
 
 ## 待分析的留言：
@@ -526,9 +511,8 @@ ${batchContent}
     "index": 0,
     "categories": {
       "touching": <0-100>,
-      "funny": <0-100>,
-      "blessing": <0-100>,
-      "cultural": <0-100>
+      "emotional": <0-100>,
+      "culturalInsight": <0-100>
     },
     "emotion": "<positive/neutral/negative>",
     "tags": ["<标签1>", "<标签2>", "<标签3>"],
@@ -565,13 +549,13 @@ ${batchContent}
         const analysis = await analyzeMessage(item.message);
         fallbackResults.push({ ...item, analysis });
       } catch (err) {
-        const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+        const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
         fallbackResults.push({
           ...item,
           analysis: {
             score: 20,
             categories,
-            primaryCategory: 'blessing',
+            primaryCategory: 'emotional',
             emotion: 'neutral',
             tags: [],
             _source: 'ai',
@@ -594,18 +578,17 @@ function buildBatchResults<T extends { id: string; message: string }>(
     const parsed = parsedArray.find((p: any) => p.index === index);
     
     if (!parsed) {
-      const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+      const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
       return {
         ...item,
-        analysis: { score: 20, categories, primaryCategory: 'blessing', emotion: 'neutral', tags: [], _source: 'ai' },
+        analysis: { score: 20, categories, primaryCategory: 'emotional', emotion: 'neutral', tags: [], _source: 'ai' },
       };
     }
 
     const categories: SentimentAnalysisResult['categories'] = {
       touching: Math.min(100, Math.max(0, Math.round(parsed.categories?.touching || 0))),
-      funny: Math.min(100, Math.max(0, Math.round(parsed.categories?.funny || 0))),
-      blessing: Math.min(100, Math.max(0, Math.round(parsed.categories?.blessing || 0))),
-      cultural: Math.min(100, Math.max(0, Math.round(parsed.categories?.cultural || 0))),
+      emotional: Math.min(100, Math.max(0, Math.round(parsed.categories?.emotional || 0))),
+      culturalInsight: Math.min(100, Math.max(0, Math.round(parsed.categories?.culturalInsight || 0))),
     };
 
     const entries = Object.entries(categories) as [SentimentAnalysisResult['primaryCategory'], number][];
@@ -614,7 +597,7 @@ function buildBatchResults<T extends { id: string; message: string }>(
     return {
       ...item,
       analysis: {
-        score: Math.max(categories.touching, categories.funny, categories.blessing, categories.cultural),
+        score: Math.max(categories.touching, categories.emotional, categories.culturalInsight),
         categories,
         primaryCategory: top[0],
         emotion: parsed.emotion || 'neutral',

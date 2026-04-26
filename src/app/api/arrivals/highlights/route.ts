@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 import { getAIModel } from '@/lib/services/ai-config';
 import { getCachedHighlights, cacheHighlights } from '@/lib/services/cache';
+import { normalizeCategory } from '@/lib/utils/categoryNormalize';
 
 /**
  * GET /api/arrivals/highlights
@@ -28,20 +29,29 @@ export async function GET(request: NextRequest) {
 
     // 2. 解析查询参数
     const { searchParams } = new URL(request.url);
-    const category = (searchParams.get('category') || 'touching') as 
-      'touching' | 'funny' | 'blessing' | 'cultural';
+    const rawCategory = searchParams.get('category') || 'touching';
+    
+    // 标准化分类 key（兼容旧值：funny → touching, blessing → emotional, cultural → culturalInsight）
+    const category = normalizeCategory(rawCategory);
+    
+    if (!category) {
+      // 无效分类 → 返回空数组，而非 404
+      return NextResponse.json({
+        success: true,
+        highlights: [],
+        totalAnalyzed: 0,
+        totalCount: 0,
+        hasMore: false,
+        category: 'touching',
+        cached: false,
+        updatedAt: new Date().toISOString(),
+        message: `无效的分类 "${rawCategory}"，已重定向到 "touching"`,
+      });
+    }
+    
     const limit = Math.min(20, parseInt(searchParams.get('limit') || '10', 10));
     const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10));
     const force = searchParams.get('force') === '1';
-
-    // 3. 验证分类参数
-    const validCategories = ['touching', 'funny', 'blessing', 'cultural'];
-    if (!validCategories.includes(category)) {
-      return NextResponse.json(
-        { success: false, error: '无效的分类' },
-        { status: 400 }
-      );
-    }
 
     // 4. 获取模型版本用于缓存
     const modelVersion = await getAIModel();
@@ -61,10 +71,22 @@ export async function GET(request: NextRequest) {
 
     // 6. 从数据库获取分析结果（全量，用于去重后分页）
     // Top 10 模式：不再使用分类阈值，仅按分数排序
+    // 兼容旧数据：DB 中可能存储的是新 key（emotional/culturalInsight）或旧 key（blessing/cultural）
+    // 映射规则：新 key → 新 key，旧 key → 新 key（兜底兼容）
+    const categoryToDbMap: Record<string, string> = {
+      'touching': 'touching',
+      'emotional': 'emotional',
+      'culturalInsight': 'culturalInsight',
+      // 兜底兼容：如果 DB 中有旧 key，映射到新 key
+      'blessing': 'emotional',
+      'cultural': 'culturalInsight',
+    };
+    const dbCategory = categoryToDbMap[category] || category;
+    
     const analyses = await prisma.messageAnalysis.findMany({
       where: {
         userId,
-        primaryCategory: category,
+        primaryCategory: dbCategory,
         message: {
           gte: '', // 确保不为空
         },

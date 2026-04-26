@@ -30,6 +30,7 @@ export function HighlightsContainer({
 }: HighlightsContainerProps) {
   const [activeCategory, setActiveCategory] = useState<HighlightCategory>(defaultCategory);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
+  const [isPolling, setIsPolling] = useState(false); // 是否正在轮询分析进度
 
   const {
     highlights,
@@ -65,10 +66,33 @@ export function HighlightsContainer({
   const shouldShowContinueButton = pendingCount > 0;
   const shouldShowPendingHint = pendingCount > 0 && totalStatusCount > 0;
 
-  // 初始加载时获取分析状态
+  // 初始加载时获取分析状态（仅挂载时执行一次）
   useEffect(() => {
     fetchStatus();
-  }, [fetchStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 自动轮询：仅在用户点击"继续分析"后，每 3 秒刷新一次状态和精选
+  useEffect(() => {
+    if (!isPolling || !status || status.pending === 0) return;
+
+    const timer = setInterval(() => {
+      fetchStatus();
+      refresh();
+    }, 3000);
+
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPolling, status?.pending]);
+
+  // 分析完成时停止轮询
+  useEffect(() => {
+    if (isPolling && status && status.pending === 0) {
+      setIsPolling(false);
+      toast.success('✨ 所有留言分析完成！');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.pending]);
 
   const handleCategoryChange = (category: HighlightCategory) => {
     setActiveCategory(category);
@@ -84,15 +108,13 @@ export function HighlightsContainer({
       return;
     }
 
+    setIsPolling(true); // 开始轮询
     const result = await continueAnalysis();
     if (result.success) {
       toast.success(`已开始补全剩余 ${result.count} 条留言的精选分析，请稍候...`);
-      setTimeout(() => {
-        fetchStatus();
-        refresh();
-      }, 5000);
     } else {
       toast.error(result.message);
+      setIsPolling(false); // 失败时停止轮询
     }
   };
 
