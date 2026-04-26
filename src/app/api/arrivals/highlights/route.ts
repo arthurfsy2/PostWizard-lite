@@ -84,8 +84,9 @@ export async function GET(request: NextRequest) {
     for (const analysis of analyses) {
       const messageLength = (analysis.message || '').length;
 
-      // 长度过滤 (20-500 字符) - 仅过滤质量过低内容
-      if (messageLength < 20 || messageLength > 500) {
+      // 长度过滤 (>=20 字符) - 仅过滤质量过低内容
+      // 移除上限：高质量长文（如个人故事、情感脆弱）不应被过滤
+      if (messageLength < 20) {
         continue;
       }
 
