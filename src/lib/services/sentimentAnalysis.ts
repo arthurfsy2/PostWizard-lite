@@ -23,6 +23,7 @@ export interface SentimentAnalysisResult {
   emotion: 'positive' | 'neutral' | 'negative';
   tags: string[];                    // 关键词标签 (3-5 个)
   translation?: string;              // 中文翻译（可选，非英文留言时填充）
+  _source?: 'rule-engine' | 'ai';    // 打分来源标记（内部使用，不存入数据库）
 }
 
 /**
@@ -299,4 +300,328 @@ export function sortByScore(
   analyses: Array<{ analysis: SentimentAnalysisResult } & Record<string, any>>
 ): typeof analyses {
   return analyses.sort((a, b) => b.analysis.score - a.analysis.score);
+}
+
+/**
+ * 规则判断：模板话术检测（非 AI 调用，零 token 消耗）
+ * 
+ * 识别低质量、泛泛感谢的留言
+ */
+export function isTemplateMessage(content: string): boolean {
+  const templatePatterns = [
+    /^(thanks|thank you|gracias|danke|merci|grazie|спасибо|谢谢)/i,  // 仅以感谢开头
+    /^(hi|hello|hey),?\s+(thanks|thank you)/i,  // 问候 + 感谢
+    /^(happy postcrossing|enjoy|cheers|best)/i,  // 模板结尾
+    /^(thanks|thank you) for (the|your) (card|postcard|stamp)/i,  // 感谢卡片
+  ];
+  return templatePatterns.some(p => p.test(content.trim()));
+}
+
+/**
+ * 规则分析：基于关键词和句式的快速判断（零 AI 调用）
+ * 
+ * 定位：仅针对极短文本（<60字符）进行快速淘汰，中长文本（>=60字符）全部交由 AI 分析
+ * 
+ * @returns 规则判断结果，或 null（规则无法判断，需调用 AI）
+ */
+export function analyzeByRules(message: string): SentimentAnalysisResult | null {
+  if (!message || message.trim().length < 10) {
+    // 太短的留言，直接返回低分
+    const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+    return {
+      score: 30,
+      categories,
+      primaryCategory: 'blessing',
+      emotion: 'neutral',
+      tags: ['简短'],
+      _source: 'rule-engine', // 标记来源
+    };
+  }
+
+  const msg = message.trim();
+  const msgLength = msg.length;
+
+  // 仅针对极短留言（<60字符）进行模板话术检测
+  if (isTemplateMessage(msg) && msgLength < 60) {
+    const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 40, cultural: 10 };
+    return {
+      score: 30,
+      categories,
+      primaryCategory: 'blessing',
+      emotion: 'positive',
+      tags: ['模板', '感谢'],
+      _source: 'rule-engine', // 标记来源
+    };
+  }
+
+  // 中长文本（>=60字符）全部交由 AI 分析
+  // 移除所有长文本拦截逻辑
+  return null;
+}
+
+/**
+ * 批量分析多条留言（优化版：规则优先 + 批量 AI）
+ * 
+ * @param messages 留言数组
+ * @param batchSize 每批处理数量（默认 20）
+ * @param onProgress 进度回调
+ * @param concurrency 并行请求数（默认 3，避免触发 API 限流）
+ * @returns 分析结果数组
+ */
+export async function analyzeMessagesBatchOptimized<T extends { id: string; message: string }>(
+  messages: T[],
+  batchSize: number = 20,
+  onProgress?: (current: number, total: number) => void,
+  concurrency: number = 3
+): Promise<Array<T & { analysis: SentimentAnalysisResult }>> {
+  const results: Array<T & { analysis: SentimentAnalysisResult }> = [];
+  let processedCount = 0;
+
+  // 1. 先用规则判断（零 AI 调用）
+  const ruleResults: Array<T & { analysis: SentimentAnalysisResult }> = [];
+  const aiCandidates: T[] = [];
+
+  for (const msg of messages) {
+    const ruleResult = analyzeByRules(msg.message);
+    if (ruleResult) {
+      ruleResults.push({ ...msg, analysis: ruleResult });
+      processedCount++;
+      if (onProgress) {
+        onProgress(processedCount, messages.length);
+      }
+    } else {
+      aiCandidates.push(msg);
+    }
+  }
+
+  console.log(`[批量分析] 规则判断：${ruleResults.length}/${messages.length} 条（仅短文本），需 AI 分析：${aiCandidates.length} 条`);
+
+  // 2. 分批
+  const batches: T[][] = [];
+  for (let i = 0; i < aiCandidates.length; i += batchSize) {
+    batches.push(aiCandidates.slice(i, i + batchSize));
+  }
+
+  console.log(`[批量分析] 共 ${batches.length} 个批次，并行度：${concurrency}`);
+
+  // 3. 并行处理批次（带并发控制）
+  const processBatch = async (batch: T[]): Promise<Array<T & { analysis: SentimentAnalysisResult }>> => {
+    try {
+      const batchAnalysis = await analyzeBatchWithAI(batch);
+      return batchAnalysis;
+    } catch (error) {
+      console.error(`[批量分析] AI 分析失败，回退到单条分析`);
+      const fallbackResults: Array<T & { analysis: SentimentAnalysisResult }> = [];
+      for (const item of batch) {
+        try {
+          const analysis = await analyzeMessage(item.message);
+          fallbackResults.push({ ...item, analysis });
+        } catch (err) {
+          const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+          fallbackResults.push({
+            ...item,
+            analysis: {
+              score: 20,
+              categories,
+              primaryCategory: 'blessing',
+              emotion: 'neutral',
+              tags: [],
+              _source: 'ai',
+            },
+          });
+        }
+      }
+      return fallbackResults;
+    }
+  };
+
+  // 并发执行：每次最多 concurrency 个批次同时请求
+  for (let i = 0; i < batches.length; i += concurrency) {
+    const parallelBatches = batches.slice(i, i + concurrency);
+    const batchResults = await Promise.all(parallelBatches.map(batch => processBatch(batch)));
+    
+    for (const batchResult of batchResults) {
+      results.push(...batchResult);
+      processedCount += batchResult.length;
+      if (onProgress) {
+        onProgress(processedCount, messages.length);
+      }
+    }
+  }
+
+  // 4. 合并结果（规则 + AI）
+  return [...ruleResults, ...results];
+}
+
+/**
+ * 批量 AI 分析（一次请求处理多条留言）
+ */
+async function analyzeBatchWithAI<T extends { id: string; message: string }>(
+  batch: T[]
+): Promise<Array<T & { analysis: SentimentAnalysisResult }>> {
+  const client = await createOpenAIClient();
+  const model = await getAIModel();
+
+  // 构建批量 Prompt
+  const batchContent = batch.map((item, index) => {
+    return `${index + 1}. [${item.id}]\n"""${item.message}"""\n`;
+  }).join('\n');
+
+  const prompt = `你是一位专业的明信片留言情感分析师。请对以下 ${batch.length} 条留言的 4 个维度独立评分（每项 0-100）。
+
+## 4 个维度（独立评分，可以同时高分）：
+
+| 维度 | 含义 | 低分特征 | 高分特征 |
+|------|------|----------|----------|
+| **touching**（走心） | 真情实感、感人故事、深度共鸣 | 泛泛感谢、客套话 | 有个人故事、情感脆弱、让人共鸣 |
+| **funny**（有趣） | 幽默、机智、自嘲 | 无幽默元素 | 让人会心一笑、有趣的表达 |
+| **blessing**（祝福） | 真诚祝愿 | 模板化万能祝福 | 针对收信人的真诚期盼 |
+| **cultural**（文化交流） | 分享文化/生活/地理信息 | 无文化交流 | 分享了有趣的知识或经历 |
+
+## 评分锚点：
+
+**touching（走心）：**
+- 5-20：只有感谢，无个人情感
+- 30-50：简单回应，有礼貌但不深入
+- 60-80：提及个人细节（骑行、宠物、天气）
+- 85+：有故事、情感脆弱（心理健康、家庭压力）、让人共鸣
+
+**blessing（祝福）：**
+- 5-20：模板化万能祝福（"wishing you health, happiness, love and joy"）
+- 30-60：普通祝福，有针对性但不算真诚
+- 70+：针对收信人的真诚期盼，有温度
+
+**funny（有趣）：**
+- 5-20：没有幽默元素
+- 30-60：有一点点有趣
+- 70+：让人会心一笑
+
+**cultural（文化交流）：**
+- 5-20：没有文化交流
+- 30-60：简单提及文化
+- 70+：分享了有趣的文化/地理/生活知识
+
+## Few-shot 示例：
+
+**留言**: "Hi, thanks for the card! Happy Postcrossing!"
+→ touching=20, funny=10, blessing=40, cultural=5
+
+**留言**: "恭喜你的宝宝！我有三个孩子，趁他们还小好好享受吧，时间眨眼就过去了！"
+→ touching=80, funny=10, blessing=50, cultural=5
+
+**留言**: "你的卡片让我想起我祖母…收到你的卡片时我哭了，那种温暖的感觉一模一样。"
+→ touching=95, funny=5, blessing=40, cultural=5
+
+**留言**: "Hi! I live in a small village. I've been going through a tough time lately - dealing with anxiety and some health issues. Postcrossing has been such a bright spot for me, connecting with kind strangers around the world."
+→ touching=95, funny=5, blessing=30, cultural=5
+（说明：情感脆弱、分享个人挣扎、真实故事，属于最高分走心留言）
+
+## 待分析的留言：
+
+${batchContent}
+
+请只输出 JSON 数组（不要解释，不要换行）：
+[
+  {
+    "index": 0,
+    "categories": {
+      "touching": <0-100>,
+      "funny": <0-100>,
+      "blessing": <0-100>,
+      "cultural": <0-100>
+    },
+    "emotion": "<positive/neutral/negative>",
+    "tags": ["<标签1>", "<标签2>", "<标签3>"],
+    "translation": "<中文翻译，保留完整语义，如果是中文则留空>"
+  },
+  ...
+]`;
+
+  const response = await client.chat.completions.create({
+    model,
+    messages: [
+      { role: 'system', content: '你是情感分析专家，只输出 JSON 格式的分析结果。' },
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.3,
+    max_tokens: 6000,  // 增加 token 限制，避免翻译被截断
+  });
+
+  const content = response.choices[0]?.message?.content || '';
+  
+  // 解析批量结果
+  try {
+    const jsonMatch = content.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    const jsonStr = jsonMatch ? jsonMatch[1] : content;
+    const cleanJson = jsonStr.replace(/^\s*\[/, '[').replace(/\]\s*$/, ']');
+    const parsedArray = JSON.parse(cleanJson);
+
+    return buildBatchResults(batch, parsedArray);
+  } catch (parseError) {
+    console.warn('[analyzeBatchWithAI] 解析失败，回退到单条分析:', (parseError as Error).message);
+    const fallbackResults: Array<T & { analysis: SentimentAnalysisResult }> = [];
+    for (const item of batch) {
+      try {
+        const analysis = await analyzeMessage(item.message);
+        fallbackResults.push({ ...item, analysis });
+      } catch (err) {
+        const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+        fallbackResults.push({
+          ...item,
+          analysis: {
+            score: 20,
+            categories,
+            primaryCategory: 'blessing',
+            emotion: 'neutral',
+            tags: [],
+            _source: 'ai',
+          },
+        });
+      }
+    }
+    return fallbackResults;
+  }
+}
+
+/**
+ * 构建批量分析结果
+ */
+function buildBatchResults<T extends { id: string; message: string }>(
+  batch: T[],
+  parsedArray: any[]
+): Array<T & { analysis: SentimentAnalysisResult }> {
+  return batch.map((item, index) => {
+    const parsed = parsedArray.find((p: any) => p.index === index);
+    
+    if (!parsed) {
+      const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+      return {
+        ...item,
+        analysis: { score: 20, categories, primaryCategory: 'blessing', emotion: 'neutral', tags: [], _source: 'ai' },
+      };
+    }
+
+    const categories: SentimentAnalysisResult['categories'] = {
+      touching: Math.min(100, Math.max(0, Math.round(parsed.categories?.touching || 0))),
+      funny: Math.min(100, Math.max(0, Math.round(parsed.categories?.funny || 0))),
+      blessing: Math.min(100, Math.max(0, Math.round(parsed.categories?.blessing || 0))),
+      cultural: Math.min(100, Math.max(0, Math.round(parsed.categories?.cultural || 0))),
+    };
+
+    const entries = Object.entries(categories) as [SentimentAnalysisResult['primaryCategory'], number][];
+    const [top] = entries.sort((a, b) => b[1] - a[1]);
+
+    return {
+      ...item,
+      analysis: {
+        score: Math.max(categories.touching, categories.funny, categories.blessing, categories.cultural),
+        categories,
+        primaryCategory: top[0],
+        emotion: parsed.emotion || 'neutral',
+        tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [],
+        translation: parsed.translation || undefined,
+        _source: 'ai', // AI 分析标记
+      },
+    };
+  });
 }

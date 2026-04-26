@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 import { fetchEmailFullContent, searchEmailUids } from '@/lib/services/imapService';
 import { getCountryCode, getCountryName } from '@/lib/country-codes';
-import { analyzeMessage } from '@/lib/services/sentimentAnalysis';
+import { analyzeMessagesBatchOptimized } from '@/lib/services/sentimentAnalysis';
 import { getAIModel } from '@/lib/services/ai-config';
 import { invalidateHighlightsCache } from '@/lib/services/cache';
 import { Semaphore } from '@/lib/utils/semaphore';
@@ -212,6 +212,13 @@ export async function POST(request: NextRequest) {
         let failedCount = 0;
         let skippedCount = 0;
         let queuedAnalysisCount = 0;
+        const pendingAnalysis: Array<{
+          postcardId: string;
+          message: string;
+          recipientName?: string;
+          country?: string;
+          arrivedAt?: Date;
+        }> = [];
         
         sendEvent('status', {
           message: `开始解析 ${emails.length} 封邮件...`,
@@ -304,62 +311,13 @@ export async function POST(request: NextRequest) {
             if (shouldAnalyze && normalizedMessage) {
               queuedAnalysisCount++;
               existingAnalysisPostcardIds.add(postcardId);
-              const modelVersion = await getAIModel();
-              const cacheTTL = 24 * 60 * 60 * 1000;
-              const cacheValidUntil = new Date(Date.now() + cacheTTL);
-              const msg = normalizedMessage;
-
-              // fire-and-forget：不等分析完成，继续处理下一封
-              void (async () => {
-                try {
-                  await aiSemaphore.run(async () => {
-                    const analysis = await analyzeMessage(msg);
-                    await prisma.messageAnalysis.upsert({
-                      where: { postcardId },
-                      create: {
-                        userId: userId,
-                        postcardId,
-                        message: msg,
-                        sender: parsedInfo.recipientName,
-                        country: parsedInfo.country,
-                        arrivedAt: parsedInfo.arrivedAt,
-                        aiScore: analysis.score,
-                        categories: JSON.stringify(analysis.categories),
-                        primaryCategory: analysis.primaryCategory,
-                        emotion: analysis.emotion,
-                        tags: JSON.stringify(analysis.tags),
-                        translation: analysis.translation || null,
-                        translationModel: analysis.translation ? modelVersion : null,
-                        cacheValidUntil,
-                        modelVersion,
-                      },
-                      update: {
-                        message: msg,
-                        sender: parsedInfo.recipientName,
-                        country: parsedInfo.country,
-                        arrivedAt: parsedInfo.arrivedAt,
-                        aiScore: analysis.score,
-                        categories: JSON.stringify(analysis.categories),
-                        primaryCategory: analysis.primaryCategory,
-                        emotion: analysis.emotion,
-                        tags: JSON.stringify(analysis.tags),
-                        translation: analysis.translation || null,
-                        translationModel: analysis.translation ? modelVersion : null,
-                        cacheValidUntil,
-                        modelVersion,
-                        analyzedAt: new Date(),
-                      },
-                    });
-                    // 清除精选缓存（异步，不阻塞）
-                    void invalidateHighlightsCache(userId);
-                    console.log(`[AI 分析] ${postcardId} 完成，score=${analysis.score}，类别: ${analysis.primaryCategory}`);
-                  });
-                } catch (err) {
-                  // AI 分析失败不影响解析流程，静默处理
-                  console.error(`[AI 分析] ${postcardId} 分析失败:`, err);
-                  existingAnalysisPostcardIds.delete(postcardId);
-                }
-              })();
+              pendingAnalysis.push({
+                postcardId,
+                message: normalizedMessage,
+                recipientName: parsedInfo.recipientName,
+                country: parsedInfo.country,
+                arrivedAt: parsedInfo.arrivedAt,
+              });
             }
             
             // 每 10 封发送一次进度
@@ -384,6 +342,98 @@ export async function POST(request: NextRequest) {
               total: emails.length
             });
           }
+        }
+        
+        // 🚀 批次批量分析（所有邮件解析完成后）
+        if (pendingAnalysis.length > 0) {
+          sendEvent('status', {
+            message: `开始批量分析 ${pendingAnalysis.length} 条留言...`,
+            progress: 96
+          });
+          
+          const modelVersion = await getAIModel();
+          const cacheTTL = 24 * 60 * 60 * 1000;
+          const cacheValidUntil = new Date(Date.now() + cacheTTL);
+          
+          // Fire-and-forget：不阻塞 SSE 响应
+          void (async () => {
+            try {
+              console.log(`[批量分析] 开始分析 ${pendingAnalysis.length} 条留言...`);
+              
+              // 使用优化版批量分析（规则优先 + 批量 AI）
+              const results = await analyzeMessagesBatchOptimized(
+                pendingAnalysis.map(r => ({
+                  id: r.postcardId,
+                  message: r.message,
+                })),
+                20,  // 每批 20 条
+                (current, total) => {
+                  console.log(`[批量分析] 进度：${current}/${total}`);
+                }
+              );
+              
+              console.log(`[批量分析] 分析完成，共 ${results.length} 条结果，开始保存到数据库...`);
+              
+              // 批量保存到数据库
+              for (const result of results) {
+                const pending = pendingAnalysis.find(r => r.postcardId === result.id);
+                if (!pending) continue;
+                
+                // 区分打分来源：规则引擎 vs AI
+                const isRuleEngine = result.analysis._source === 'rule-engine';
+                const savedModelVersion = isRuleEngine ? 'rule-engine-v1' : modelVersion;
+                
+                try {
+                  await prisma.messageAnalysis.upsert({
+                    where: { postcardId: result.id },
+                    create: {
+                      userId: userId,
+                      postcardId: result.id,
+                      message: pending.message,
+                      sender: pending.recipientName,
+                      country: pending.country,
+                      arrivedAt: pending.arrivedAt,
+                      aiScore: result.analysis.score,
+                      categories: JSON.stringify(result.analysis.categories),
+                      primaryCategory: result.analysis.primaryCategory,
+                      emotion: result.analysis.emotion,
+                      tags: JSON.stringify(result.analysis.tags),
+                      translation: result.analysis.translation || null,
+                      translationModel: result.analysis.translation ? savedModelVersion : null,
+                      cacheValidUntil,
+                      modelVersion: savedModelVersion,
+                    },
+                    update: {
+                      message: pending.message,
+                      sender: pending.recipientName,
+                      country: pending.country,
+                      arrivedAt: pending.arrivedAt,
+                      aiScore: result.analysis.score,
+                      categories: JSON.stringify(result.analysis.categories),
+                      primaryCategory: result.analysis.primaryCategory,
+                      emotion: result.analysis.emotion,
+                      tags: JSON.stringify(result.analysis.tags),
+                      translation: result.analysis.translation || null,
+                      translationModel: result.analysis.translation ? savedModelVersion : null,
+                      cacheValidUntil,
+                      modelVersion: savedModelVersion,
+                      analyzedAt: new Date(),
+                    },
+                  });
+                } catch (err) {
+                  console.error(`[批量分析] ${result.id} 保存失败:`, err);
+                }
+              }
+              
+              // 清除精选缓存
+              await invalidateHighlightsCache(userId);
+              console.log(`[批量分析] 完成：成功 ${results.length} 条`);
+            } catch (error) {
+              console.error('[批量分析] 错误:', error);
+            } finally {
+              await prisma.$disconnect();
+            }
+          })();
         }
         
         // 发送最终统计
