@@ -285,12 +285,12 @@ export function Header() {
             {/* 其他 */}
             <div className="px-3 py-2 space-y-1">
               <Link
-                href="/materials"
+                href="/profile"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 <Inbox className="h-4 w-4" />
-                <span>素材库</span>
+                <span>个人要素</span>
               </Link>
               <Link
                 href="/settings"

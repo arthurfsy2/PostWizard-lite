@@ -78,7 +78,7 @@ export async function POST(
           {
             error: 'PREMIUM_TEMPLATE_REQUIRED',
             message: '该模板需要付费会员才能使用',
-            upgradeUrl: '/pricing',
+            upgradeUrl: '/donate',
           },
           { status: 403 }
         );

@@ -198,7 +198,7 @@ export default function UploadPage() {
         
         if (data.error === "OCR_QUOTA_EXCEEDED") {
           setError("本月免费 OCR 次数已用完，请升级订阅");
-          router.push("/pricing");
+          router.push("/donate");
           return;
         }
         throw new Error(data.error || "上传失败");

@@ -79,22 +79,14 @@ export default function EmailDetailPage() {
     
     const fetchMaterialsStatus = async () => {
       try {
-        const response = await fetch('/api/content/materials', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+        const response = await fetch('/api/profile', {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        
         if (response.ok) {
-          const result = await response.json();
-          const materials = result.materials || {};
-          
-          // 统一判断逻辑：是否有任何一个分类填写了内容
-          const hasAnyMaterial = Object.values(materials).some(
-            (content: any) => content && content.toString().trim().length > 0
-          );
-          
-          setHasMaterials(hasAnyMaterial);
+          const data = await response.json();
+          const profile = data.profile || {};
+          const hasAboutMe = profile.aboutMe && profile.aboutMe.trim().length > 0;
+          setHasMaterials(hasAboutMe);
         }
       } catch (error) {
         console.error('[EmailDetail] 获取素材状态失败:', error);
@@ -319,7 +311,7 @@ export default function EmailDetailPage() {
               onBack={handleBackToEmails}
               isGenerating={isGenerating}
               hasMaterials={hasMaterials}
-              onGoToMaterials={() => router.push('/materials')}
+              onGoToMaterials={() => router.push('/profile')}
             />
           </div>
         )}

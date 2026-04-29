@@ -197,7 +197,7 @@ export default function EditCardPage() {
           const data = await response.json();
           if (data.error === 'OCR_QUOTA_EXCEEDED') {
             if (confirm('OCR 额度已用完，是否前往升级？')) {
-              router.push('/pricing');
+              router.push('/donate');
             }
           } else if (data.error === 'OCR_FREQUENCY_LIMITED') {
             alert(`操作过于频繁，请在 1 小时后再试`);
@@ -245,7 +245,7 @@ export default function EditCardPage() {
         const data = await response.json();
         if (data.error === 'PREMIUM_TEMPLATE_REQUIRED') {
           if (confirm('该模板需要付费会员，是否前往升级？')) {
-            router.push('/pricing');
+            router.push('/donate');
           }
         } else {
           throw new Error(data.error || '生成失败');
@@ -575,7 +575,7 @@ export default function EditCardPage() {
             <h2 className="text-lg font-semibold">🎨 选择模板</h2>
             {hasLockedTemplates && !user?.isPaidUser && (
               <button
-                onClick={() => router.push('/pricing')}
+                onClick={() => router.push('/donate')}
                 className="text-sm px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full font-medium hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-1"
               >
                 <span>👑</span>

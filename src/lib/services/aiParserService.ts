@@ -8,7 +8,6 @@
  */
 
 import OpenAI from 'openai';
-import { hasFilledMaterials, type MaterialCategory } from '@/lib/helpers/materialsChecker';
 
 import { getAIConfigFromDB, createOpenAIClient } from './ai-config';
 
@@ -51,7 +50,7 @@ export interface AIParsedResult {
   
   // 素材检查（Step 1 通用）
   hasMaterials: boolean; // 是否已填写个人素材
-  filledMaterialsCategories: MaterialCategory[]; // 已填写的素材分类
+  filledMaterialsCategories: string[]; // 已填写的素材分类
 }
 
 /**
