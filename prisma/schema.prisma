@@ -59,7 +59,7 @@ model ReceivedCard {
   userId              String   @default("local")
   country             String
   city                String?
-  postcardId          String?
+  postcardId          String?  @unique
   postcardIdConfirmed Boolean  @default(false)
   cardRarity          String?
   cardId              String?

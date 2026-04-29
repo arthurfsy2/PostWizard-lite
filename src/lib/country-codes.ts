@@ -315,6 +315,32 @@ export function getCountryName(code: string): string | undefined {
 }
 
 /**
+ * 常见国家/地区中文名称映射
+ */
+const COUNTRY_NAMES_CN: Record<string, string> = {
+  JP: '日本', CN: '中国', KR: '韩国', US: '美国', GB: '英国',
+  DE: '德国', FR: '法国', IT: '意大利', ES: '西班牙', RU: '俄罗斯',
+  BR: '巴西', AU: '澳大利亚', CA: '加拿大', NL: '荷兰', BE: '比利时',
+  CH: '瑞士', AT: '奥地利', PL: '波兰', CZ: '捷克', FI: '芬兰',
+  SE: '瑞典', NO: '挪威', DK: '丹麦', PT: '葡萄牙', GR: '希腊',
+  HU: '匈牙利', IE: '爱尔兰', NZ: '新西兰', MX: '墨西哥', AR: '阿根廷',
+  CL: '智利', CO: '哥伦比亚', TH: '泰国', SG: '新加坡', MY: '马来西亚',
+  PH: '菲律宾', ID: '印度尼西亚', VN: '越南', IN: '印度', ZA: '南非',
+  EG: '埃及', TR: '土耳其', UA: '乌克兰', HK: '香港', TW: '台湾',
+};
+
+/**
+ * 根据国家代码获取中文名称
+ * @param code 2 字母国家代码
+ * @returns 中文名称，如果找不到则返回英文名称，都没有则返回代码本身
+ */
+export function getCountryNameCN(code: string): string {
+  const upper = code.toUpperCase();
+  if (COUNTRY_NAMES_CN[upper]) return COUNTRY_NAMES_CN[upper];
+  return COUNTRY_NAMES[upper] || upper;
+}
+
+/**
  * 标准化国家名称（保留 Postcrossing 官方格式）
  * @param countryName 原始国家名称
  * @returns Postcrossing 官方名称，如果找不到则返回清理后的原始名称

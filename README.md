@@ -104,9 +104,14 @@ OPENAI_API_KEY=your-api-key
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
 
+# 可选：启用管理员密码保护
+ADMIN_PASSWORD=your-strong-password
+
 # 可选：禁用 Prisma 查询日志
 DISABLE_PRISMA_QUERY_LOGS=true
 ```
+
+> 加密密钥 `ENCRYPTION_KEY` 会**在首次运行时自动生成**并写入 `.env.local`，无需手动配置。
 
 #### 方式二：网页配置
 
@@ -160,29 +165,28 @@ OPENAI_MODEL=qwen3-vl-8b-thinking
 npm run dev
 ```
 
-访问 http://localhost:3000
+访问 http://localhost:3001
 
 ---
 
 ## ⚠️ 安全提示
 
-**当前版本不建议部署到 Vercel 等公开环境！**
+默认**无用户认证系统**，适合本地开发和私有网络部署。
 
-- 🔒 **原因**：开源版为简化部署，默认**无用户认证系统**，所有数据公开可访问
-- **风险**：部署到 Vercel 后，你的明信片数据、邮件配置等可能被他人访问
-- 💡 **推荐用法**：
-  - ✅ 本地开发环境运行（`npm run dev`）
-  - ✅ 私有服务器部署（需自行配置认证）
+### 启用管理员登录
 
-**下一版本计划**：
+如需部署到公网，设置 `ADMIN_PASSWORD` 环境变量即可开启密码保护：
 
-- 添加可选的管理员登录功能（通过环境变量控制开关，默认关闭）
-- 支持安全的 Vercel 部署
+```bash
+# .env.local
+ADMIN_PASSWORD=your-strong-password
+```
 
-**临时解决方案**（如必须部署）：
+> 修改密码后需**重启服务器**才能生效。
 
-- 使用 Vercel 的 [Deployment Protection](https://vercel.com/docs/deployment-protection) 功能
-- 或通过 [Vercel Authentication](https://vercel.com/guides/adding-password-protection-to-nextjs) 添加密码保护
+- ✅ 设置后：所有页面需要密码登录才能访问
+- ⬜ 未设置时：无认证，行为与之前一致
+- 登录状态通过 httpOnly Cookie 保持，有效期 7 天
 
 ---
 
@@ -193,8 +197,7 @@ src/
 ├── app/                  # Next.js App Router 页面
 │   ├── arrivals/         # 送达回复追踪
 │   ├── emails/           # 邮件解析
-│   ├── materials/        # 素材库
-│   ├── received/         # 收信管理
+│   │   ├── received/         # 收信管理
 │   ├── sent/             # 寄信管理
 │   ├── profile/          # 个人要素
 │   ├── settings/         # 设置
@@ -223,7 +226,7 @@ src/
 | **AI**       | OpenAI 兼容 API         |
 | **OCR**      | Tesseract.js            |
 | **测试**     | Vitest + Playwright     |
-| **部署**     | Vercel                  |
+| **部署**     | 本地 / 私有服务器       |
 
 ---
 
@@ -248,7 +251,7 @@ src/
 ```bash
 # 开发
 npm run dev              # 启动开发服务器
-npm run dev:uat          # 启动 UAT 环境 (端口 3001)
+npm run dev:uat          # 启动 UAT 环境 (端口 3002)
 
 # 测试
 npm run test             # 运行单元测试

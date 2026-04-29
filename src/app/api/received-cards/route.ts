@@ -216,9 +216,8 @@ export async function POST(request: NextRequest) {
         }
       }, 500);
       
-      // 返回访问 URL
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      return `${baseUrl}/api/images/received/${finalFilename}`;
+      // 返回相对路径（不含域名端口，避免环境变化导致 URL 失效）
+      return `/api/images/received/${finalFilename}`;
     };
 
     // 保存临时图片

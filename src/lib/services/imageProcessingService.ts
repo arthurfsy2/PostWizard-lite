@@ -108,9 +108,8 @@ export async function processImage(
     const processedWidth = processedMetadata.width || 0;
     const processedHeight = processedMetadata.height || 0;
 
-    // 生成访问 URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const processedImageUrl = `${baseUrl}/api/images/received/${outputFilename}`;
+    // 生成相对路径
+    const processedImageUrl = `/api/images/received/${outputFilename}`;
 
     return {
       processedImageUrl,
@@ -157,10 +156,6 @@ export async function autoEnhanceImage(
       throw new Error('无法从 URL 提取文件名');
     }
     originalImagePath = path.join(process.cwd(), 'data', 'received', filename);
-  } else if (url.startsWith('http://localhost:3000/')) {
-    // 兼容旧路径（临时）
-    const relativePath = url.replace('http://localhost:3000/', '');
-    originalImagePath = path.join(process.cwd(), 'public', relativePath);
   } else if (url.startsWith('/')) {
     // 相对路径
     originalImagePath = path.join(process.cwd(), 'public', url);
@@ -213,32 +208,28 @@ export async function updateCardImageStatus(
 }
 
 /**
- * 从 URL 获取本地文件路径（兼容 Vercel 和本地）
+ * 从 URL 获取本地文件路径
  */
 export function getLocalImagePath(imageUrl: string): string {
-  // 如果是相对路径或本地 URL，转换为绝对路径
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  
-  // 情况 1: 相对路径 /uploads/...
-  if (imageUrl.startsWith('/uploads/')) {
-    return path.join(process.cwd(), 'public', imageUrl);
-  }
-  
-  // 情况 2: 完整 URL http://localhost:3000/uploads/...
-  if (imageUrl.startsWith(baseUrl)) {
-    const relativePath = imageUrl.substring(baseUrl.length);
-    return path.join(process.cwd(), 'public', relativePath);
-  }
-  
-  // 情况 3: Vercel API URL (http://xxx/api/uploads/...)
-  if (imageUrl.includes('/api/uploads/')) {
-    const match = imageUrl.match(/\/api\/uploads\/(.*)/);
+  // 情况 1: /api/images/received/xxx.webp → data/received/xxx.webp
+  if (imageUrl.includes('/api/images/received/')) {
+    const match = imageUrl.match(/\/api\/images\/received\/(.+)/);
     if (match) {
-      const relativePath = `/uploads/${match[1]}`;
-      return path.join(process.cwd(), 'public', relativePath);
+      return path.join(process.cwd(), 'data', 'received', match[1]);
     }
   }
-  
-  // 情况 4: 已经是文件路径，直接返回
+
+  // 情况 2: 完整 URL，提取路径部分
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+  if (imageUrl.startsWith(baseUrl)) {
+    const relativePath = imageUrl.substring(baseUrl.length);
+    if (relativePath.startsWith('/api/images/received/')) {
+      const filename = relativePath.replace('/api/images/received/', '');
+      return path.join(process.cwd(), 'data', 'received', filename);
+    }
+    return path.join(process.cwd(), 'public', relativePath);
+  }
+
+  // 情况 3: 已经是文件路径，直接返回
   return imageUrl;
 }

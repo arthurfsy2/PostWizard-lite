@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { toPng } from 'html-to-image';
 import { Download, Copy, ArrowLeft, Sparkles, Image } from 'lucide-react';
+import { getFlagEmoji } from '@/lib/flag-emoji';
 // 安全的 HTML 净化函数（避免 isomorphic-dompurify 的 Node.js 兼容问题）
 const sanitizeHtml = (html: string): string => {
   if (typeof window === 'undefined') {
@@ -317,7 +318,7 @@ function renderTemplate(htmlTemplate: string, data: any, showWatermark: boolean 
     .replace(/{{senderCity}}/g, data.senderCity || '')
     .replace(/{{handwrittenText}}/g, data.handwrittenText || '')
     .replace(/{{receivedDate}}/g, data.receivedAt ? new Date(data.receivedAt).toLocaleDateString() : '')
-    .replace(/{{countryFlag}}/g, getCountryFlag(data.senderCountry));
+    .replace(/{{countryFlag}}/g, getFlagEmoji(data.senderCountry || ''));
 
   // 添加水印（免费用户）
   if (showWatermark) {
@@ -335,14 +336,6 @@ function renderTemplate(htmlTemplate: string, data: any, showWatermark: boolean 
   return result;
 }
 
-function getCountryFlag(countryCode?: string): string {
-  if (!countryCode) return '🏳️';
-  const codePoints = countryCode
-    .toUpperCase()
-    .split('')
-    .map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-}
 
 function parseCSS(cssString: string): React.CSSProperties {
   // 简化的 CSS 解析（实际应该用更完善的方案）

@@ -53,28 +53,11 @@ export async function GET(
         })
       : null;
 
-    // 将相对 URL 转换为完整 URL
-    const isVercel = process.env.VERCEL === '1';
-    const baseUrl = isVercel 
-      ? process.env.NEXT_PUBLIC_APP_URL || ''
-      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    
-    const backImageUrl = receivedCard.imageUrl 
-      ? (receivedCard.imageUrl.startsWith('http') ? receivedCard.imageUrl : `${baseUrl}${receivedCard.imageUrl}`)
-      : null;
-    
-    const frontImageUrl = metadata.frontImageUrl
-      ? (metadata.frontImageUrl.startsWith('http') ? metadata.frontImageUrl : `${baseUrl}${metadata.frontImageUrl}`)
-      : null;
-
-    // 新增：处理后的图片和原图 URL
-    const processedImageUrl = receivedCard.processedImageUrl
-      ? (receivedCard.processedImageUrl.startsWith('http') ? receivedCard.processedImageUrl : `${baseUrl}${receivedCard.processedImageUrl}`)
-      : null;
-    
-    const originalImageUrl = receivedCard.originalImageUrl
-      ? (receivedCard.originalImageUrl.startsWith('http') ? receivedCard.originalImageUrl : `${baseUrl}${receivedCard.originalImageUrl}`)
-      : null;
+    // 直接返回 URL（相对路径或完整 URL）
+    const backImageUrl = receivedCard.imageUrl || null;
+    const frontImageUrl = metadata.frontImageUrl || null;
+    const processedImageUrl = receivedCard.processedImageUrl || null;
+    const originalImageUrl = receivedCard.originalImageUrl || null;
 
     // 转换字段名以兼容前端
     return NextResponse.json({

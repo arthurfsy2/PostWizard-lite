@@ -46,16 +46,10 @@ export async function POST(
         const imageBuffer = fs.readFileSync(imagePath);
         imageBase64 = imageBuffer.toString('base64');
       } else {
-        const vercelPath = path.join('/tmp', receivedCard.backImageUrl.replace(/^\/api\/uploads\//, ''));
-        if (fs.existsSync(vercelPath)) {
-          const imageBuffer = fs.readFileSync(vercelPath);
-          imageBase64 = imageBuffer.toString('base64');
-        } else {
-          return NextResponse.json(
-            { error: '图片文件不存在' },
-            { status: 400 }
-          );
-        }
+        return NextResponse.json(
+          { error: '图片文件不存在' },
+          { status: 400 }
+        );
       }
     } catch (error) {
       return NextResponse.json(

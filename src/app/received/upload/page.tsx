@@ -18,10 +18,14 @@ import {
   Edit3,
   RefreshCw,
   Crown,
+  Globe,
+  MapPin,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import ImageViewer from "@/components/received/ImageViewer";
+import { getFlagEmoji } from "@/lib/flag-emoji";
+import { getCountryNameCN } from "@/lib/country-codes";
 
 // 获取维度图标
 function getDimensionIcon(name: string): string {
@@ -750,86 +754,107 @@ export default function UploadPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg p-8 mb-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <Edit3 className="w-6 h-6" />
-                        编辑明信片信息
-                      </h2>
-                      {/* Postcard ID 显示区域 */}
-                      {cardData.postcardId && (
-                        <div className="flex items-center gap-4 px-5 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg min-w-[280px]">
-                          <div className="flex-1">
-                            <div className="text-xs font-medium text-emerald-700">
-                              Postcard ID
-                            </div>
-                            {postcardIdUnclear ? (
-                              <input
-                                type="text"
-                                value={formData.postcardId}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, postcardId: e.target.value })
-                                }
-                                className="text-xl font-bold text-emerald-700 font-mono bg-white border border-emerald-300 rounded px-2 py-1 w-full focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                placeholder="请输入正确的 ID"
-                              />
-                            ) : (
-                              <div className="text-xl font-bold text-emerald-700 font-mono">
-                                {cardData.postcardId}
-                              </div>
+                <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg overflow-hidden mb-6">
+                  {/* 渐变头部 - 与 CardDetailModal 风格统一 */}
+                  <div className="relative bg-gradient-to-r from-orange-500 to-amber-500 p-5 text-white">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm text-3xl shadow-lg">
+                          {getFlagEmoji(formData.senderCountry || cardData.senderCountry || '')}
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-bold">
+                            {formData.senderUsername || cardData.senderUsername
+                              ? `@${formData.senderUsername || cardData.senderUsername}`
+                              : '编辑明信片信息'}
+                          </h2>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-white/80">
+                            {formData.senderCity && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {formData.senderCity}
+                              </span>
                             )}
-                          </div>
-                          <div className="flex gap-2">
-                            {postcardIdUnclear ? (
-                              <button
-                                onClick={() => {
-                                  setPostcardIdUnclear(false);
-                                  setPostcardIdConfirmed(true);
-                                }}
-                                className="px-4 py-2 text-sm rounded-lg transition-all bg-emerald-500 text-white hover:bg-emerald-600"
-                                title="保存"
-                              >
-                                保存
-                              </button>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => setPostcardIdConfirmed(true)}
-                                  className={`px-4 py-2 text-sm rounded-lg transition-all ${
-                                    postcardIdConfirmed
-                                      ? "bg-emerald-500 text-white"
-                                      : "bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200"
-                                  }`}
-                                  title="确认"
-                                >
-                                  ✓ 确认
-                                </button>
-                                <button
-                                  onClick={() => setPostcardIdUnclear(true)}
-                                  className={`px-3 py-2 text-sm rounded-lg transition-all ${
-                                    postcardIdUnclear
-                                      ? "bg-amber-500 text-white"
-                                      : "bg-white text-amber-700 hover:bg-amber-50 border border-amber-200"
-                                  }`}
-                                  title="看不清"
-                                >
-                                  看不清
-                                </button>
-                              </>
-                            )}
+                            <span className="flex items-center gap-1">
+                              <Globe className="h-3.5 w-3.5" />
+                              {getCountryNameCN(formData.senderCountry || cardData.senderCountry || '') || '未知国家'}
+                            </span>
                           </div>
                         </div>
-                      )}
+                      </div>
+                      <button
+                        onClick={handleBackToStep2}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
                     </div>
-                    <button
-                      onClick={handleBackToStep2}
-                      className="text-gray-500 hover:text-gray-700 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      关闭
-                    </button>
+
+                    {/* Postcard ID - 渐变头部内 */}
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-sm font-mono backdrop-blur-sm">
+                        <span>🆔</span>
+                        {(postcardIdUnclear || !cardData.postcardId) ? (
+                          <input
+                            type="text"
+                            value={formData.postcardId}
+                            onChange={(e) =>
+                              setFormData({ ...formData, postcardId: e.target.value })
+                            }
+                            className="bg-white/20 border border-white/30 rounded px-2 py-0.5 text-sm font-bold text-white placeholder-white/60 focus:ring-2 focus:ring-white/40 focus:border-transparent w-[160px]"
+                            placeholder={cardData.postcardId ? "请输入正确的 ID" : "未识别到，可手动输入"}
+                          />
+                        ) : (
+                          <span className="font-bold">{cardData.postcardId}</span>
+                        )}
+                        {postcardIdConfirmed && (
+                          <span className="rounded-full bg-green-400/80 px-2 py-0.5 text-xs font-bold text-white">
+                            已确认
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        {(postcardIdUnclear || !cardData.postcardId) ? (
+                          <button
+                            onClick={() => {
+                              if (formData.postcardId) {
+                                setPostcardIdUnclear(false);
+                                setPostcardIdConfirmed(true);
+                              }
+                            }}
+                            className="px-3 py-1.5 text-xs rounded-full transition-all bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
+                          >
+                            保存
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setPostcardIdConfirmed(true)}
+                              className={`px-3 py-1.5 text-xs rounded-full transition-all ${
+                                postcardIdConfirmed
+                                  ? "bg-green-400/80 text-white"
+                                  : "bg-white/20 text-white hover:bg-white/30"
+                              } backdrop-blur-sm`}
+                            >
+                              ✓ 确认
+                            </button>
+                            <button
+                              onClick={() => setPostcardIdUnclear(true)}
+                              className={`px-3 py-1.5 text-xs rounded-full transition-all ${
+                                postcardIdUnclear
+                                  ? "bg-amber-400/80 text-white"
+                                  : "bg-white/20 text-white hover:bg-white/30"
+                              } backdrop-blur-sm`}
+                            >
+                              看不清
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
+
+                  <div className="p-8">
 
                   {/* 三栏布局：图片 + 英文原文 + 中文翻译 */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -857,7 +882,7 @@ export default function UploadPage() {
 
                     {/* 中栏：英文原文（可编辑） */}
                     <div className="flex flex-col">
-                      <div className="flex flex-col h-full p-4 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-200 rounded-xl relative shadow-sm">
+                      <div className="flex flex-col h-full p-5 bg-gradient-to-br from-orange-50/80 to-amber-50/80 border border-orange-100 rounded-2xl relative shadow-inner">
                         <div className="flex items-center justify-between mb-2 flex-shrink-0">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">✍️</span>
@@ -899,7 +924,7 @@ export default function UploadPage() {
                     {/* 右栏：中文翻译（参考） */}
                     <div className="flex flex-col">
                       {cardData.translatedText ? (
-                        <div className="flex flex-col h-full p-4 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-200 rounded-xl relative shadow-sm">
+                        <div className="flex flex-col h-full p-5 bg-gradient-to-br from-blue-50/80 to-cyan-50/80 border border-blue-100 rounded-2xl relative shadow-inner">
                           <div className="flex items-center gap-2 mb-2 flex-shrink-0">
                             <span className="text-lg">🇨</span>
                             <label className="text-sm font-semibold text-emerald-900">
@@ -1041,6 +1066,7 @@ export default function UploadPage() {
                       )}
                     </button>
                   </div>
+                </div>
                 </div>
               </motion.div>
             )}

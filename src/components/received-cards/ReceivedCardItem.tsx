@@ -9,6 +9,7 @@ import {
 
 import { GachaCardFrame } from '@/components/gacha/GachaCardFrame';
 import { Rarity } from '@/lib/constants/rarity';
+import { getFlagEmoji } from '@/lib/flag-emoji';
 
 interface ReceivedCard {
   id: string;
@@ -37,76 +38,7 @@ interface ReceivedCardItemProps {
   onClick: () => void;
 }
 
-// 国家代码转国旗emoji
-function getCountryFlag(countryCode: string | null): string {
-  if (!countryCode) return '🌍';
-  
-  // 特殊处理
-  const specialFlags: Record<string, string> = {
-    'UK': '🇬🇧',
-    'GB': '🇬🇧',
-    'TW': '🇹🇼',
-    'HK': '🇭🇰',
-    'MO': '🇲🇴',
-    'CN': '🇨🇳',
-    'JP': '🇯🇵',
-    'KR': '🇰🇷',
-    'US': '🇺🇸',
-    'DE': '🇩🇪',
-    'FR': '🇫🇷',
-    'IT': '🇮🇹',
-    'ES': '🇪🇸',
-    'RU': '🇷🇺',
-    'BR': '🇧🇷',
-    'AU': '🇦🇺',
-    'CA': '🇨🇦',
-    'NL': '🇳🇱',
-    'BE': '🇧🇪',
-    'CH': '🇨🇭',
-    'AT': '🇦🇹',
-    'PL': '🇵🇱',
-    'CZ': '🇨🇿',
-    'FI': '🇫🇮',
-    'SE': '🇸🇪',
-    'NO': '🇳🇴',
-    'DK': '🇩🇰',
-    'PT': '🇵🇹',
-    'GR': '🇬🇷',
-    'HU': '🇭🇺',
-    'IE': '🇮🇪',
-    'NZ': '🇳🇿',
-    'MX': '🇲🇽',
-    'AR': '🇦🇷',
-    'CL': '🇨🇱',
-    'CO': '🇨🇴',
-    'PE': '🇵🇪',
-    'VE': '🇻🇪',
-    'SG': '🇸🇬',
-    'MY': '🇲🇾',
-    'TH': '🇹🇭',
-    'PH': '🇵🇭',
-    'ID': '🇮🇩',
-    'VN': '🇻🇳',
-    'IN': '🇮🇳',
-    'ZA': '🇿🇦',
-    'EG': '🇪🇬',
-    'TR': '🇹🇷',
-    'UA': '🇺🇦',
-    'RS': '🇷🇸',
-  };
-
-  if (specialFlags[countryCode.toUpperCase()]) {
-    return specialFlags[countryCode.toUpperCase()];
-  }
-
-  // 通用逻辑：A-Z 转国旗
-  const codePoints = countryCode
-    .toUpperCase()
-    .split('')
-    .map(char => 127397 + char.charCodeAt(0));
-  
-  return String.fromCodePoint(...codePoints);
-}
+// 国家代码转国旗emoji（使用共享工具 getFlagEmoji）
 
 // 语言代码转语言名称
 function getLanguageName(langCode: string | null): string {
@@ -199,7 +131,7 @@ export function ReceivedCardItem({
             {/* 地区 */}
             {(card.senderCountry || card.senderCity) && (
               <span className="text-gray-500 truncate flex-shrink-0">
-                {getCountryFlag(card.senderCountry)} {[card.senderCity, card.senderCountry].filter(Boolean).join(', ')}
+                {getFlagEmoji(card.senderCountry || '')} {[card.senderCity, card.senderCountry].filter(Boolean).join(', ')}
               </span>
             )}
             {(card.senderCountry || card.senderCity) && card.senderUsername && (
@@ -263,7 +195,7 @@ export function ReceivedCardItem({
         {/* 国家标志 */}
         <div className="absolute top-3 left-3">
           <span className="text-2xl drop-shadow-lg">
-            {getCountryFlag(card.senderCountry)}
+            {getFlagEmoji(card.senderCountry || '')}
           </span>
         </div>
 
@@ -294,7 +226,7 @@ export function ReceivedCardItem({
           {/* 地区 */}
           {(card.senderCountry || card.senderCity) && (
             <span className="text-gray-500 truncate flex-shrink-0">
-              {getCountryFlag(card.senderCountry)} {[card.senderCity, card.senderCountry].filter(Boolean).join(', ')}
+              {getFlagEmoji(card.senderCountry || '')} {[card.senderCity, card.senderCountry].filter(Boolean).join(', ')}
             </span>
           )}
           {(card.senderCountry || card.senderCity) && card.senderUsername && (

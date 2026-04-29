@@ -10,8 +10,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Globe, 
+import {
+  Globe,
   MapPin,
   Copy,
   Trash2,
@@ -25,6 +25,8 @@ import {
   RotateCw,
   ImageIcon,
 } from 'lucide-react';
+import { getFlagEmoji } from '@/lib/flag-emoji';
+import { getCountryNameCN } from '@/lib/country-codes';
 
 
 interface ReceivedCard {
@@ -54,87 +56,11 @@ interface CardDetailModalProps {
   onDelete?: (cardId: string) => void; // 删除回调
 }
 
-// 国家代码转国家名称
-function getCountryName(countryCode: string | null): string {
-  if (!countryCode) return '';
-  
-  const countryNames: Record<string, string> = {
-    'JP': '日本',
-    'CN': '中国',
-    'KR': '韩国',
-    'US': '美国',
-    'GB': '英国',
-    'DE': '德国',
-    'FR': '法国',
-    'IT': '意大利',
-    'ES': '西班牙',
-    'RU': '俄罗斯',
-    'BR': '巴西',
-    'AU': '澳大利亚',
-    'CA': '加拿大',
-    'NL': '荷兰',
-    'BE': '比利时',
-    'CH': '瑞士',
-    'AT': '奥地利',
-    'PL': '波兰',
-    'CZ': '捷克',
-    'FI': '芬兰',
-    'SE': '瑞典',
-    'NO': '挪威',
-    'DK': '丹麦',
-    'PT': '葡萄牙',
-    'GR': '希腊',
-    'HU': '匈牙利',
-    'IE': '爱尔兰',
-    'NZ': '新西兰',
-    'MX': '墨西哥',
-    'AR': '阿根廷',
-    'CL': '智利',
-    'CO': '哥伦比亚',
-    'TH': '泰国',
-    'SG': '新加坡',
-    'MY': '马来西亚',
-    'PH': '菲律宾',
-    'ID': '印度尼西亚',
-    'VN': '越南',
-    'IN': '印度',
-    'ZA': '南非',
-    'EG': '埃及',
-    'TR': '土耳其',
-    'UA': '乌克兰',
-  };
+// 国家代码转国家名称（使用共享工具）
+// getCountryNameCN 已从 @/lib/country-codes 导入
 
-  return countryNames[countryCode.toUpperCase()] || countryCode;
-}
-
-// 国家代码转国旗emoji
-function getCountryFlag(countryCode: string | null): string {
-  if (!countryCode) return '🌍';
-  
-  const specialFlags: Record<string, string> = {
-    'UK': '🇬🇧',
-    'GB': '🇬🇧',
-    'TW': '🇹🇼',
-    'HK': '🇭🇰',
-    'CN': '🇨🇳',
-    'JP': '🇯🇵',
-    'KR': '🇰🇷',
-    'US': '🇺🇸',
-    'DE': '🇩🇪',
-    'FR': '🇫🇷',
-  };
-
-  if (specialFlags[countryCode.toUpperCase()]) {
-    return specialFlags[countryCode.toUpperCase()];
-  }
-
-  const codePoints = countryCode
-    .toUpperCase()
-    .split('')
-    .map(char => 127397 + char.charCodeAt(0));
-  
-  return String.fromCodePoint(...codePoints);
-}
+// 国家代码转国旗emoji（使用共享工具）
+// getFlagEmoji 已从 @/lib/flag-emoji 导入
 
 // 语言代码转语言名称
 function getLanguageName(langCode: string | null): string {
@@ -259,7 +185,7 @@ export function CardDetailModal({
             <div className="flex items-center gap-4">
               {/* 国旗图标 */}
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm text-3xl shadow-lg">
-                {getCountryFlag(card.senderCountry)}
+                {getFlagEmoji(card.senderCountry || '')}
               </div>
               
               <div>
@@ -275,7 +201,7 @@ export function CardDetailModal({
                   )}
                   <span className="flex items-center gap-1">
                     <Globe className="h-3.5 w-3.5" />
-                    {getCountryName(card.senderCountry) || card.senderCountry || '未知国家'}
+                    {getCountryNameCN(card.senderCountry || '') || card.senderCountry || '未知国家'}
                   </span>
                   {card.receivedAt && (
                     <span className="flex items-center gap-1">
