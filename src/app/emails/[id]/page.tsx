@@ -300,7 +300,7 @@ export default function EmailDetailPage() {
           </div>
         )}
 
-        {/* Step 2: AI 解析结果 */}
+        {/* Step 2: 解析结果 */}
         {currentStep === 2 && parsedData && (
           <div className="mt-8">
             <Step2Card

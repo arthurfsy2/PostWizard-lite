@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, ArrowLeft, Copy, Check, FileDown, Printer, Mail, MapPin, Globe, Heart, Ban, Sparkles, Calendar, User, Lightbulb, Target } from 'lucide-react';
+import { Loader2, ArrowLeft, Copy, Check, FileDown, Printer, Mail, MapPin, Globe, Heart, Ban, Search, Calendar, User, Lightbulb, Target } from 'lucide-react';
 
   interface HistoryDetail {
   id: string;
@@ -179,10 +179,6 @@ function HistoryDetailPage() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30">
         <Header />
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-200/40 rounded-full blur-3xl" />
-          <div className="absolute top-1/3 -left-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl" />
-        </div>
         <main className="flex-1 container py-12 flex justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
         </main>
@@ -225,12 +221,6 @@ function HistoryDetailPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30">
       <Header />
       
-      {/* 装饰球 */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -left-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl" />
-      </div>
-
       <main className="flex-1 container py-12 relative">
         {/* 返回按钮 */}
         <div className="mb-6">
@@ -299,11 +289,11 @@ function HistoryDetailPage() {
           <Card className="border-0 shadow-xl shadow-slate-200/50">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <Search className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">AI 解析结果</CardTitle>
+                  <CardTitle className="text-lg">解析结果</CardTitle>
                   <CardDescription className="text-xs">收件人详细信息</CardDescription>
                 </div>
               </div>
@@ -508,10 +498,6 @@ export default function HistoryDetailPageWithSuspense() {
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30">
         <Header />
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-200/40 rounded-full blur-3xl" />
-          <div className="absolute top-1/3 -left-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl" />
-        </div>
         <main className="flex-1 container py-12 flex justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
         </main>

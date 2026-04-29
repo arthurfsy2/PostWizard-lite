@@ -16,11 +16,12 @@ import { normalizeCategory } from '@/lib/utils/categoryNormalize';
  * - offset: number (默认 0，分页偏移)
  * - force: boolean (是否强制刷新缓存)
  * 
- * 筛选逻辑（2026-04-13 更新 - Top 10 模式）：
- * - 基础筛选：长度 20-500 字符（仅过滤质量过低内容）
+ * 筛选逻辑（2026-04-30 更新 - Top 20 模式）：
+ * - 基础筛选：长度 >= 20 字符
+ * - 最低分：aiScore >= 40（过滤模板话术等低质量内容）
  * - 去重：同用户最多 2 条/分类，同明信片不重复
  * - 排序：按 aiScore 降序，同分按到达日期降序
- * - 展示：每个分类固定展示 Top 10（不再使用分类阈值）
+ * - 展示：每个分类固定展示 Top 20
  */
 export async function GET(request: NextRequest) {
   try {
@@ -112,7 +113,10 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Top 10 模式：移除分类置信度过滤，所有数据都有机会展示
+      // 最低分过滤：过滤掉模板话术等低质量内容
+      if (analysis.aiScore < 40) {
+        continue;
+      }
 
       // 去重：同一张明信片不重复
       if (seenPostcardIds.has(analysis.postcardId)) {

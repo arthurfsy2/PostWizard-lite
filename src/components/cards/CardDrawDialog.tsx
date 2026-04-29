@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Star, Heart, BookOpen, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Star, Heart, BookOpen, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 // 安全的 HTML 净化函数（避免 isomorphic-dompurify 的 Node.js 兼容问题）
 const sanitizeHtml = (html: string): string => {
   if (typeof window === 'undefined') {
@@ -220,7 +220,7 @@ const ReasonsPanel: React.FC<{ reasons: string[]; rarity: string }> = ({ reasons
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 text-xs text-slate-500 hover:text-orange-500 transition-colors w-full"
       >
-        <Sparkles className="w-3 h-3" />
+        <Star className="w-3 h-3" />
         <span>为什么是{rarity}？</span>
         <motion.span
           animate={{ rotate: expanded ? 180 : 0 }}
@@ -394,8 +394,8 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
     <div className="flex flex-col h-full">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-2">
         <div className="flex items-center justify-center gap-2 mb-0.5">
-          <Sparkles className="w-4 h-4 text-orange-500" />
-          <h2 className="text-lg font-bold text-slate-900">AI 智能评价</h2>
+          <Star className="w-4 h-4 text-orange-500" />
+          <h2 className="text-lg font-bold text-slate-900">内容评价</h2>
         </div>
         <p className="text-[10px] text-slate-500">基于内容的多维度分析</p>
       </motion.div>

@@ -80,61 +80,21 @@ body {
    借鉴 Linear 设计系统的改进
    ============================================ */
 
-/* 幽灵按钮 - 半透明背景 + 细边框 */
-.btn-ghost {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(254, 215, 170, 0.5);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* ============================================
+   卡片阴影 - 中性灰色调
+   ============================================ */
 
-.btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(253, 186, 116, 0.6);
-}
-
-/* 玻璃态卡片 - 半透明层级感 */
-.card-glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(254, 215, 170, 0.4);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-glass:hover {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(253, 186, 116, 0.5);
-}
-
-/* 温暖渐变卡片 - 半透明渐变背景 */
-.card-warm {
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.7) 0%, rgba(255, 237, 213, 0.7) 100%);
-  border: 1px solid rgba(254, 215, 170, 0.4);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-warm:hover {
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.9) 0%, rgba(255, 237, 213, 0.9) 100%);
-  border-color: rgba(253, 186, 116, 0.5);
-}
-
-/* 细微边框 - 用于卡片和容器 */
-.border-subtle {
-  border-color: rgba(231, 229, 228, 0.6);
-}
-
-/* 改进的卡片阴影 - 更微妙的层级感 */
 .card-elevated {
-  box-shadow: 
-    0 1px 2px rgba(249, 115, 22, 0.05),
-    0 4px 12px rgba(249, 115, 22, 0.08);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-elevated:hover {
-  box-shadow: 
-    0 2px 4px rgba(249, 115, 22, 0.08),
-    0 8px 20px rgba(249, 115, 22, 0.12);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.08),
+    0 8px 20px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
 }
 

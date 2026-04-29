@@ -9,13 +9,14 @@ import {
   Zap,
   Copy,
   ClipboardPaste,
-  Sparkles,
-  Printer,
+  Scan,
   ArrowRight,
   Check,
   Pencil,
   Camera,
   Inbox,
+  Send,
+  Download,
 } from "lucide-react";
 import {
   Card,
@@ -33,51 +34,51 @@ const features = [
   // 写信功能（3个）
   {
     title: "粘贴邮件解析",
-    description: "粘贴邮件内容，AI 自动提取收信人偏好",
+    description: "粘贴邮件内容，自动提取收信人偏好",
     icon: Mail,
-    color: "from-blue-500 to-cyan-500",
-    bg: "bg-blue-50",
+    color: "text-blue-600",
+    bg: "bg-blue-100",
     category: "寄信",
   },
   {
-    title: "AI 写信",
-    description: "根据收件人档案智能生成个性化明信片内容",
+    title: "写信助手",
+    description: "根据收件人档案生成个性化明信片内容",
     icon: FileText,
-    color: "from-orange-500 to-amber-500",
-    bg: "bg-orange-50",
+    color: "text-orange-600",
+    bg: "bg-orange-100",
     category: "寄信",
   },
   {
     title: "邮箱直连",
     description: "绑定邮箱，自动读取邮件内容解析",
     icon: Zap,
-    color: "from-emerald-500 to-teal-500",
-    bg: "bg-emerald-50",
+    color: "text-emerald-600",
+    bg: "bg-emerald-100",
     category: "寄信",
   },
   // 收信功能（3个）
   {
-    title: "收信 OCR",
-    description: "智能识别明信片内容，自动提取寄信人信息",
-    icon: Copy,
-    color: "from-pink-500 to-rose-500",
-    bg: "bg-pink-50",
+    title: "收信识别",
+    description: "识别明信片内容，自动提取寄信人信息",
+    icon: Scan,
+    color: "text-pink-600",
+    bg: "bg-pink-100",
     category: "收信",
   },
   {
     title: "晒单图生成",
     description: "一键生成精美晒单图，分享你的收信喜悦",
-    icon: Sparkles,
-    color: "from-violet-500 to-purple-500",
-    bg: "bg-violet-50",
+    icon: Camera,
+    color: "text-violet-600",
+    bg: "bg-violet-100",
     category: "收信",
   },
   {
     title: "收信历史",
     description: "记录每一张收到的明信片，建立专属收藏册",
     icon: Inbox,
-    color: "from-rose-500 to-red-500",
-    bg: "bg-rose-50",
+    color: "text-rose-600",
+    bg: "bg-rose-100",
     category: "收信",
   },
 ];
@@ -117,20 +118,13 @@ export default function HomePage() {
       <main className="flex-1">
         {/* Hero Section - 现代简约风格 */}
         <section className="relative pt-20 pb-32 overflow-hidden">
-          {/* 装饰性背景元素 */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-orange-200/40 to-amber-200/40 rounded-full blur-3xl" />
-            <div className="absolute top-1/3 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-200/30 to-purple-200/30 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-gradient-to-tl from-emerald-200/30 to-teal-200/30 rounded-full blur-3xl" />
-          </div>
-
           <div className="container mx-auto px-4 relative">
             <div className="mx-auto max-w-[65rem] text-center space-y-8">
               {/* 主标题 - 双功能平衡 */}
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-100 to-pink-100 text-orange-700 text-sm font-medium">
-                  <Sparkles className="w-4 h-4" />
-                  <span>AI 明信片收、寄信助手</span>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 text-orange-700 text-sm font-medium">
+                  <Mail className="w-4 h-4" />
+                  <span>明信片收寄信助手</span>
                 </div>
 
                 <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight">
@@ -172,7 +166,7 @@ export default function HomePage() {
               {/* 学习项目说明 */}
               <div className="pt-6 animate-in fade-in duration-1000 delay-300">
                 <p className="text-sm text-slate-500">
-                  📚 这是一个学习 AI 产品开发的实践项目，所有功能免费开放
+                  📚 这是一个学习产品开发的实践项目，所有功能免费开放
                 </p>
               </div>
             </div>
@@ -197,17 +191,13 @@ export default function HomePage() {
                 return (
                   <Card
                     key={feature.title}
-                    className="group border border-orange-100/60 bg-white/70 backdrop-blur-sm hover:bg-white/90 hover:border-orange-200/70 transition-all duration-300 hover:-translate-y-1 overflow-hidden card-elevated"
+                    className="group border border-orange-100/60 bg-white hover:bg-white/90 hover:border-orange-200/70 transition-all duration-300 hover:-translate-y-1 overflow-hidden card-elevated"
                   >
                     <CardHeader className="space-y-4 pb-6">
                       <div
-                        className={`w-14 h-14 rounded-xl ${feature.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+                        className={`w-14 h-14 rounded-xl ${feature.bg} flex items-center justify-center`}
                       >
-                        <div
-                          className={`bg-gradient-to-br ${feature.color} w-10 h-10 rounded-lg flex items-center justify-center`}
-                        >
-                          <Icon className="h-6 w-6 text-white" />
-                        </div>
+                        <Icon className={`h-6 w-6 ${feature.color}`} />
                       </div>
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg font-semibold text-slate-900">
@@ -234,42 +224,44 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 使用流程 - 步骤条优化 */}
+        {/* 使用流程 */}
         <section className="py-20 bg-gradient-to-b from-white to-slate-50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12 space-y-3">
               <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
                 如何使用
               </h2>
-              <p className="text-lg text-slate-600">四步完成明信片写作</p>
+              <p className="text-lg text-slate-600">寄信、收信，轻松搞定</p>
             </div>
 
-            <div className="mx-auto max-w-4xl">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* 寄信流程 */}
+            <div className="mx-auto max-w-4xl mb-16">
+              <div className="flex items-center gap-2 mb-8">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <Send className="h-4 w-4 text-orange-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">寄信流程</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {[
                   {
                     step: 1,
-                    title: "解析收信人偏好",
-                    desc: "粘贴邮件内容，AI 自动提取收信人信息",
+                    title: "解析收件人",
+                    desc: "粘贴邮件内容，或从邮箱直接解析，自动提取收件人偏好",
                     icon: Copy,
                   },
                   {
                     step: 2,
-                    title: "AI 写信",
-                    desc: "智能生成个性化明信片内容",
+                    title: "写信助手",
+                    desc: "基于收件人喜好，生成个性化明信片内容",
                     icon: ClipboardPaste,
                   },
                   {
                     step: 3,
-                    title: "一键生成",
-                    desc: "自动生成回信内容，支持中文和英文",
-                    icon: Sparkles,
-                  },
-                  {
-                    step: 4,
-                    title: "收信晒单",
-                    desc: "OCR 识别收信，生成精美晒单图",
-                    icon: Printer,
+                    title: "送达回复",
+                    desc: "追踪明信片送达状态，整理回信时间线",
+                    icon: Mail,
                   },
                 ].map((item, index) => {
                   const Icon = item.icon;
@@ -278,10 +270,9 @@ export default function HomePage() {
                       key={item.step}
                       className="relative flex flex-col items-center text-center group"
                     >
-                      {/* 步骤编号 */}
                       <div className="relative mb-4">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 text-white flex items-center justify-center border border-orange-300/50 group-hover:scale-105 transition-all duration-300">
-                          <Icon className="h-7 w-7" />
+                        <div className="w-16 h-16 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center border border-orange-200 group-hover:scale-105 transition-all duration-300">
+                          <Icon className="h-6 w-6" />
                         </div>
                         <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border border-orange-200 text-orange-600 font-bold text-xs flex items-center justify-center">
                           {item.step}
@@ -291,13 +282,67 @@ export default function HomePage() {
                       <h3 className="text-base font-semibold text-slate-900 mb-1">
                         {item.title}
                       </h3>
-                      <p className="text-sm text-slate-500 leading-relaxed max-w-[200px]">
+                      <p className="text-sm text-slate-500 leading-relaxed max-w-[220px]">
                         {item.desc}
                       </p>
 
-                      {/* 连接线 */}
-                      {index < 3 && (
+                      {index < 2 && (
                         <div className="hidden md:block absolute top-8 left-1/2 w-full h-px bg-gradient-to-r from-orange-200 via-amber-200 to-orange-200 -z-10" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 收信流程 */}
+            <div className="mx-auto max-w-4xl">
+              <div className="flex items-center gap-2 mb-8">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Download className="h-4 w-4 text-emerald-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">收信流程</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-xl mx-auto">
+                {[
+                  {
+                    step: 1,
+                    title: "上传识别",
+                    desc: "拍照或上传明信片背面，自动识别手写内容",
+                    icon: Camera,
+                  },
+                  {
+                    step: 2,
+                    title: "收信历史",
+                    desc: "管理收信记录，查看翻译和明信片图集",
+                    icon: Inbox,
+                  },
+                ].map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.step}
+                      className="relative flex flex-col items-center text-center group"
+                    >
+                      <div className="relative mb-4">
+                        <div className="w-16 h-16 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center border border-emerald-200 group-hover:scale-105 transition-all duration-300">
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border border-emerald-200 text-emerald-600 font-bold text-xs flex items-center justify-center">
+                          {item.step}
+                        </div>
+                      </div>
+
+                      <h3 className="text-base font-semibold text-slate-900 mb-1">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-slate-500 leading-relaxed max-w-[220px]">
+                        {item.desc}
+                      </p>
+
+                      {index < 1 && (
+                        <div className="hidden md:block absolute top-8 left-1/2 w-full h-px bg-gradient-to-r from-emerald-200 via-teal-200 to-emerald-200 -z-10" />
                       )}
                     </div>
                   );

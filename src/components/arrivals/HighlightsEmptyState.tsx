@@ -26,7 +26,7 @@ export function HighlightsEmptyState({ category, emptyState }: HighlightsEmptySt
           <div className="space-y-3">
             <p className="text-gray-900 font-medium">数据还不够哦~</p>
             <p className="text-gray-500 text-sm leading-relaxed">
-              收到更多明信片后，AI 会帮你挑选最动人的留言
+              收到更多明信片后，系统会帮你挑选最动人的留言
             </p>
           </div>
         );
@@ -44,7 +44,7 @@ export function HighlightsEmptyState({ category, emptyState }: HighlightsEmptySt
           <div className="space-y-3">
             <p className="text-gray-900 font-medium">还没有任何留言</p>
             <p className="text-gray-500 text-sm leading-relaxed">
-              从邮箱中解析送达确认邮件后，AI 会自动分析留言
+              从邮箱中解析送达确认邮件后，系统会自动分析留言
             </p>
           </div>
         );

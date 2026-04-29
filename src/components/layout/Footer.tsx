@@ -7,16 +7,16 @@ export function Footer() {
         {/* 免责声明 */}
         <div className="mb-3 text-xs text-center text-slate-500 px-4">
           <p>
-            Disclaimer: PostWizard AI is an independent learning project and is not affiliated with, endorsed by, or connected to Postcrossing.
+            Disclaimer: PostWizard is an independent learning project and is not affiliated with, endorsed by, or connected to Postcrossing.
             All trademarks and registered trademarks are the property of their respective owners.
           </p>
           <p className="mt-1">
-            免责声明：PostWizard AI 是一个独立的学习项目，与 Postcrossing 无任何关联、认可或连接关系。所有商标和注册商标归其各自所有者所有。
+            免责声明：PostWizard 是一个独立的学习项目，与 Postcrossing 无任何关联、认可或连接关系。所有商标和注册商标归其各自所有者所有。
           </p>
         </div>
         
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
-          <span className="font-medium text-slate-700">PostWizard AI</span>
+          <span className="font-medium text-slate-700">PostWizard</span>
           <span className="text-slate-300">·</span>
           <span className="text-slate-500">让明信片写作更简单</span>
           <span className="text-slate-300">·</span>

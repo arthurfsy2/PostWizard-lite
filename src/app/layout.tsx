@@ -23,9 +23,9 @@ const notoSerifTC = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "PostWizard AI - 明信片智能收、寄信助手",
+  title: "PostWizard - 明信片收寄信助手",
   description:
-    "AI 帮你分析收件人兴趣，自动生成个性化英文信件。让写明信片变得更简单！",
+    "帮你分析收件人兴趣，自动生成个性化英文信件。让写明信片变得更简单！",
 };
 
 export default function RootLayout({

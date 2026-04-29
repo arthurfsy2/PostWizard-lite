@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw, ChevronDown, Sparkles } from "lucide-react";
+import { Loader2, RefreshCw, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HIGHLIGHT_CATEGORIES, type HighlightCategory, type HighlightCategoryInfo } from "@/types/highlights";
 import { useHighlights } from "@/hooks/useHighlights";
@@ -25,7 +25,7 @@ interface HighlightsContainerProps {
  */
 export function HighlightsContainer({
   defaultCategory = "touching",
-  limit = 10,
+  limit = 20,
   showHeader = true,
 }: HighlightsContainerProps) {
   const [activeCategory, setActiveCategory] = useState<HighlightCategory>(defaultCategory);
@@ -36,16 +36,12 @@ export function HighlightsContainer({
     highlights,
     isLoading,
     isRefreshing,
-    isLoadingMore,
     error,
     emptyState,
     totalAnalyzed,
-    totalCount,
-    hasMore,
     cached,
     updatedAt,
     refresh,
-    loadMore,
   } = useHighlights({
     category: activeCategory,
     limit,
@@ -155,7 +151,7 @@ export function HighlightsContainer({
                   className="text-purple-600 border-purple-300 hover:bg-purple-50"
                   title={`继续补全剩余 ${pendingCount} 条留言的精选分析`}
                 >
-                  <Sparkles className={`w-4 h-4 mr-1.5 ${isAnalyzing ? "animate-spin" : ""}`} />
+                  <TrendingUp className={`w-4 h-4 mr-1.5 ${isAnalyzing ? "animate-spin" : ""}`} />
                   {isAnalyzing ? "补分析中..." : `继续分析剩余留言 (${pendingCount})`}
                 </Button>
               )}
@@ -177,7 +173,7 @@ export function HighlightsContainer({
           {status && (
             <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg p-4 border border-slate-200">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-700">📊 AI 分析进度</h3>
+                <h3 className="text-sm font-semibold text-gray-700">📊 分析进度</h3>
                 <button
                   onClick={() => fetchStatus()}
                   className="text-xs text-gray-500 hover:text-gray-700"
@@ -231,7 +227,7 @@ export function HighlightsContainer({
               {/* 低分提示 */}
               {status.scoreDistribution.poor > 0 && (
                 <p className="text-xs text-gray-500 mt-2">
-                  ℹ️ {status.scoreDistribution.poor} 条留言评分较低（&lt;40 分），可能需要优化 AI Prompt
+                  ℹ️ {status.scoreDistribution.poor} 条留言评分较低（&lt;40 分），可能需要优化评分规则
                 </p>
               )}
             </div>
@@ -290,38 +286,6 @@ export function HighlightsContainer({
               index={index}
             />
           ))}
-
-          {/* 加载更多 */}
-          {hasMore && (
-            <div className="pt-4 text-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadMore}
-                disabled={isLoadingMore}
-                className="text-gray-600 hover:text-orange-600 border-dashed"
-              >
-                {isLoadingMore ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                    加载中...
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4 mr-1.5" />
-                    加载更多（已显示 {highlights.length}/{totalCount} 条）
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {/* 已全部加载 */}
-          {!hasMore && highlights.length > 0 && totalCount > 0 && (
-            <p className="text-center text-xs text-gray-400 pt-2">
-              已显示全部 {totalCount} 条精选留言
-            </p>
-          )}
         </div>
       )}
 

@@ -99,7 +99,7 @@ export const helpFaqs: FAQItem[] = [
   {
     question: "遇到问题如何反馈？",
     answer:
-      "发送邮件至 teams@postwizard.cn，我们会在 24 小时内回复。被采纳的建议可获得 OCR 额度或会员天数奖励！",
+      "欢迎到 GitHub 仓库提交 Issue，开发者会尽快回复。",
     icon: "MessageCircle",
   },
   // 收信相关 FAQ

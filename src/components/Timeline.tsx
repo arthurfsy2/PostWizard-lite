@@ -216,7 +216,7 @@ export const sampleTimelineEvents: TimelineEvent[] = [
     id: "3",
     icon: "bot",
     title: "WorkBuddy 开始评估",
-    description: "AI Agent 自动分析反馈内容并评估处理方案",
+    description: "自动分析反馈内容并评估处理方案",
     timestamp: "2026-03-31T00:30:00",
   },
   {

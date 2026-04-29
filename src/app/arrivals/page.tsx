@@ -22,7 +22,7 @@ import {
   List,
   Cloud,
   MessageSquare,
-  Sparkles,
+  Compass,
 
   ChevronLeft,
   ChevronRight,
@@ -81,7 +81,7 @@ function OnboardingGuide({ onStartSearch }: { onStartSearch: () => void }) {
   const steps = [
     { icon: Mail, title: "配置邮箱", desc: "添加你的 Postcrossing 邮箱" },
     { icon: Search, title: "搜索邮件", desc: "扫描邮箱中的送达确认" },
-    { icon: Sparkles, title: "开始探索", desc: "查看词云、精选和 Timeline" },
+    { icon: Compass, title: "开始探索", desc: "查看词云、精选和 Timeline" },
   ];
 
   return (
@@ -351,7 +351,7 @@ export default function ArrivalsPage() {
 
   const refreshStats = useCallback(async () => {
     try {
-      const response = await apiFetch("/arrivals?page=1&limit=1");
+      const response = await apiFetch("/api/arrivals?page=1&limit=1");
       const result = await response.json();
       if (result.success) {
         setGlobalStats(result.data.stats);
@@ -463,7 +463,7 @@ export default function ArrivalsPage() {
                   <MessageSquare className="h-5 w-5" /> 留言精选
                 </h3>
                 <FallbackScoreNotice />
-                <HighlightsContainer limit={10} />
+                <HighlightsContainer limit={20} />
               </div>
             </div>
           ) : (

@@ -549,8 +549,6 @@ export default function UploadPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center">
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -561,21 +559,12 @@ export default function UploadPage() {
       <Header />
 
       <main className="py-12 px-4">
-        {/* 装饰球 */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/3 right-1/4 w-40 h-40 bg-amber-100/50 rounded-full blur-2xl"></div>
-
         <div className="max-w-4xl mx-auto relative z-10">
           {/* Header */}
           <section className="relative mb-8 overflow-hidden">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-200/40 to-teal-200/40 rounded-full blur-3xl" />
-              <div className="absolute top-1/3 -left-40 w-80 h-80 bg-gradient-to-tr from-amber-200/30 to-orange-200/30 rounded-full blur-3xl" />
-            </div>
             <div className="relative">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">
-                <span className="text-slate-900">AI 智能收信识别</span>
+                <span className="text-slate-900">收信识别</span>
                 <span className="mx-2 text-slate-300">|</span>
                 <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
                   3步轻松收藏
@@ -599,7 +588,7 @@ export default function UploadPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 mb-6">
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 mb-6">
                   <div
                     className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${
                       isDragging
@@ -642,7 +631,7 @@ export default function UploadPage() {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                           <button
                             onClick={handleFileClick}
-                            className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25 hover:shadow-xl hover:-translate-y-0.5"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                           >
                             <ImageIcon className="w-5 h-5" />
                             选择图片
@@ -650,7 +639,7 @@ export default function UploadPage() {
 
                           <button
                             onClick={handleCameraClick}
-                            className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                           >
                             <Camera className="w-5 h-5" />
                             拍照上传
@@ -697,7 +686,7 @@ export default function UploadPage() {
                     <button
                       onClick={handleUpload}
                       disabled={uploading || gachaLoading}
-                      className="w-full mt-6 px-6 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-medium hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25"
+                      className="w-full mt-6 px-6 py-4 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
                     >
                       {uploading || gachaLoading ? (
                         <>
@@ -754,7 +743,7 @@ export default function UploadPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg overflow-hidden mb-6">
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-lg overflow-hidden mb-6">
                   {/* 渐变头部 - 与 CardDetailModal 风格统一 */}
                   <div className="relative bg-gradient-to-r from-orange-500 to-amber-500 p-5 text-white">
                     <div className="flex items-center justify-between">
@@ -938,15 +927,15 @@ export default function UploadPage() {
                             {cardData.translatedText}
                           </div>
                           <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1 flex-shrink-0">
-                            <span>🤖</span>
-                            AI 翻译，仅供参考
+                            <span>📝</span>
+                            翻译仅供参考
                           </p>
                         </div>
                       ) : (
                         <div className="flex flex-col h-full p-4 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl relative shadow-sm items-center justify-center text-center">
-                          <span className="text-4xl mb-2">🤖</span>
+                          <span className="text-4xl mb-2">📝</span>
                           <p className="text-sm text-gray-500">暂无翻译</p>
-                          <p className="text-xs text-gray-400 mt-1">AI 将自动生成翻译</p>
+                          <p className="text-xs text-gray-400 mt-1">翻译将自动生成</p>
                         </div>
                       )}
                     </div>
@@ -1032,7 +1021,7 @@ export default function UploadPage() {
                     <button
                       onClick={handleSave}
                       disabled={generating}
-                      className="px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-medium transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-orange-500/25 text-lg"
+                      className="px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg text-lg"
                     >
                       {generating ? (
                         <>

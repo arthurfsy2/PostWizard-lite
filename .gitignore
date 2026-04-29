@@ -77,8 +77,8 @@ playwright-report/
 .codebuddy/
 .playwright-cli/
 
-# internal docs (SOP etc.)
-docs/TEAM_SOP.md
+# internal docs
+docs/
 
 # temp files
 tmp-*.ts

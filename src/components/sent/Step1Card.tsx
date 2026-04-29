@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Sparkles, HelpCircle, Lightbulb, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Mail, Send, HelpCircle, Lightbulb, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -96,7 +96,7 @@ export function Step1Card({
                   <div className="flex-1">
                     <h4 className="font-semibold text-amber-900">检测到您尚未填写个人要素</h4>
                     <p className="text-sm text-amber-800 mt-1 leading-relaxed">
-                      为了让 AI 生成更有温度、更个性化的内容，建议先填写一些个人简介、随心记或兴趣标签。
+                      为了让生成的内容更有温度、更个性化，建议先填写一些个人简介、随心记或兴趣标签。
                       这样生成的明信片内容会更自然，避免空洞的套话。
                     </p>
                   </div>
@@ -105,12 +105,12 @@ export function Step1Card({
             )}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                  <Mail className="h-6 w-6 text-white" />
+                <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center">
+                  <Mail className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
                   <CardTitle className="text-xl">Step 1 · 选择收件人</CardTitle>
-                  <CardDescription>粘贴一段收件人资料或通知内容，AI 会自动提炼写作重点</CardDescription>
+                  <CardDescription>粘贴一段收件人资料或通知内容，系统会自动提炼写作重点</CardDescription>
                 </div>
               </div>
               <button
@@ -147,7 +147,7 @@ Wants: warm, personal, culture-related postcard content`}
                   className="font-mono text-sm h-72 resize-none overflow-y-auto border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 />
                 <p className="text-sm text-slate-500 mt-2">
-                  AI 会自动提炼可用于写作的重点，并尽量忽略地址、联系方式和平台识别信息
+                  系统会自动提炼可用于写作的重点，并尽量忽略地址、联系方式和平台识别信息
                 </p>
               </div>
 
@@ -183,17 +183,17 @@ Wants: warm, personal, culture-related postcard content`}
                 <Button
                   type="submit"
                   disabled={isParsing || !emailContent.trim()}
-                  className="w-full h-12 text-base bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg"
+                  className="w-full h-12 text-base bg-orange-500 hover:bg-orange-600 shadow-lg"
                 >
                   {isParsing ? (
                     <>
-                      <Sparkles className="h-4 w-4 mr-2 animate-spin" />
-                      AI 解析中...
+                      <Send className="h-4 w-4 mr-2 animate-spin" />
+                      解析中...
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      下一步：AI 智能解析
+                      <Send className="h-4 w-4 mr-2" />
+                      解析收件人信息
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </>
                   )}
@@ -221,7 +221,7 @@ Wants: warm, personal, culture-related postcard content`}
                 { num: 1, text: '直接复制一段收件人资料、通知内容，或你自己顺手整理的摘要' },
                 { num: 2, text: '不需要专门重写成固定模板，系统会自动提取兴趣、语言、国家和写作偏好' },
                 { num: 3, text: '如果内容里混有地址、邮箱、链接或账号信息，系统会尽量自动弱化和忽略' },
-                { num: 4, text: '点击“AI 智能解析”，继续生成更适合这位收件人的写作建议' },
+                { num: 4, text: '点击”解析收件人信息”，继续生成更适合这位收件人的写作建议' },
               ].map((item) => (
                 <div key={item.num} className="flex gap-3">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">

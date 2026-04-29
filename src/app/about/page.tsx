@@ -3,17 +3,13 @@
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Heart, 
-  Code, 
-  Brain, 
-  Server, 
-  Sparkles, 
-  Target, 
-  Users,
+import {
+  Heart,
+  Code,
+  Brain,
+  Server,
+  Globe,
   GraduationCap,
-  Lightbulb,
-  Rocket
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
@@ -22,49 +18,30 @@ const techStack = [
   {
     category: 'AI',
     icon: Brain,
-    color: 'from-purple-500 to-indigo-500',
-    items: ['Google Gemini 3.1 Flash-Lite', '阿里云百炼（备用）'],
+    iconColor: 'text-purple-600',
+    bgColor: 'bg-purple-100',
+    items: ['通义千问、Gemini、OpenAI 等', '支持自定义 OpenAI 兼容接口'],
   },
   {
     category: '前端',
     icon: Code,
-    color: 'from-blue-500 to-cyan-500',
+    iconColor: 'text-blue-600',
+    bgColor: 'bg-blue-100',
     items: ['Next.js 15', 'React 19', 'TypeScript', 'Tailwind CSS', 'shadcn/ui'],
   },
   {
     category: '后端',
     icon: Server,
-    color: 'from-emerald-500 to-teal-500',
-    items: ['Node.js', 'Prisma ORM', 'PostgreSQL/SQLite'],
+    iconColor: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
+    items: ['Node.js', 'Prisma ORM', 'SQLite / PostgreSQL'],
   },
   {
-    category: '部署',
-    icon: Rocket,
-    color: 'from-orange-500 to-amber-500',
-    items: ['Vercel', 'Serverless Functions'],
-  },
-];
-
-const learnings = [
-  {
-    icon: Lightbulb,
-    title: '产品从0到1',
-    description: '从需求分析到上线运营，完整经历产品设计流程',
-  },
-  {
-    icon: Brain,
-    title: 'AI应用实践',
-    description: '学习如何将AI能力集成到实际产品中',
-  },
-  {
-    icon: Target,
-    title: '合规意识',
-    description: '理解ToS、隐私保护、数据安全的重要性',
-  },
-  {
-    icon: Users,
-    title: '用户价值',
-    description: '找到真正的用户痛点，而非假设的需求',
+    category: '收信识别',
+    icon: Globe,
+    iconColor: 'text-orange-600',
+    bgColor: 'bg-orange-100',
+    items: ['OCR 手写识别', '多语言翻译', '明信片图集管理'],
   },
 ];
 
@@ -81,8 +58,8 @@ export default function AboutPage() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 mb-6 shadow-lg">
-            <GraduationCap className="h-10 w-10 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-orange-100 mb-6 shadow-lg">
+            <GraduationCap className="h-10 w-10 text-orange-600" />
           </div>
 
           <Badge variant="secondary" className="mb-4 bg-orange-100 text-orange-700 hover:bg-orange-100">
@@ -90,11 +67,11 @@ export default function AboutPage() {
           </Badge>
 
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-            <span className="block text-slate-900">关于 PostWizard AI</span>
+            <span className="block text-slate-900">关于 PostWizard</span>
           </h1>
 
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            这是一个AI产品经理的学习实践项目，旨在帮助非英语母语用户更好地进行国际明信片交换
+            这是一个希望转型为AI产品经理的个人学习实践项目，旨在帮助非英语母语用户更好地进行国际明信片交换
           </p>
         </motion.div>
 
@@ -108,8 +85,8 @@ export default function AboutPage() {
           <Card className="border-orange-200 bg-orange-50/50">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center">
-                  <Heart className="h-5 w-5 text-white" />
+                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <Heart className="h-5 w-5 text-orange-600" />
                 </div>
                 <CardTitle className="text-xl">项目初衷</CardTitle>
               </div>
@@ -142,8 +119,8 @@ export default function AboutPage() {
                 >
                   <Card className="h-full border-slate-200/60 hover:shadow-lg transition-all duration-300">
                     <CardHeader>
-                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${tech.color} flex items-center justify-center mb-3`}>
-                        <Icon className="h-5 w-5 text-white" />
+                      <div className={`w-10 h-10 rounded-lg ${tech.bgColor} flex items-center justify-center mb-3`}>
+                        <Icon className={`h-5 w-5 ${tech.iconColor}`} />
                       </div>
                       <CardTitle className="text-lg">{tech.category}</CardTitle>
                     </CardHeader>
@@ -163,7 +140,7 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* 成本说明 */}
+        {/* 开源说明 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -173,66 +150,33 @@ export default function AboutPage() {
           <Card className="border-emerald-200 bg-emerald-50/50">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Globe className="h-5 w-5 text-emerald-600" />
                 </div>
-                <CardTitle className="text-xl">成本与运营</CardTitle>
+                <CardTitle className="text-xl">开源与部署</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-slate-700 leading-relaxed">
-                这是一个<strong>非盈利</strong>的学习项目。所有捐赠仅用于覆盖实际运营成本：
+                PostWizard Lite 是一个<strong>开源</strong>的学习项目，你可以自由部署到自己的服务器上。
               </p>
               <ul className="space-y-2 text-slate-700">
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-500">•</span>
-                  <span><strong>AI API调用：</strong>每次分析约¥0.005，使用Google Gemini 3.1 Flash-Lite模型</span>
+                  <span><strong>自部署：</strong>基于 Next.js，支持任意 Node.js 环境部署</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-500">•</span>
-                  <span><strong>服务器成本：</strong>Vercel托管费用，保证24/7稳定运行</span>
+                  <span><strong>AI 模型：</strong>支持通义千问、Gemini、OpenAI 等多种服务，需自行配置 API Key</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-500">•</span>
-                  <span><strong>域名和其他：</strong>年度域名费用等基础开销</span>
+                  <span><strong>数据自主：</strong>所有数据存储在本地数据库（SQLite / PostgreSQL），不经过任何第三方</span>
                 </li>
               </ul>
-              <p className="text-slate-700 leading-relaxed">
-                如果收到的捐赠超过实际成本，多余部分将用于升级服务、开发新功能或支持其他学习项目。
-              </p>
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* 学习收获 */}
-        <div className="max-w-5xl mx-auto mb-16">
-          <h2 className="text-2xl font-bold text-center mb-8">学习收获</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {learnings.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.1 * idx }}
-                >
-                  <Card className="h-full border-slate-200/60 hover:shadow-lg transition-all duration-300">
-                    <CardHeader>
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center mb-3">
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
-                      <CardTitle className="text-lg">{item.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-slate-600">{item.description}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
 
         {/* 联系方式 */}
         <motion.div
@@ -241,19 +185,21 @@ export default function AboutPage() {
           transition={{ duration: 0.5, delay: 0.9 }}
           className="max-w-2xl mx-auto text-center"
         >
-          <Card className="border-0 bg-gradient-to-br from-slate-50 to-slate-100">
+          <Card className="border border-slate-200 bg-slate-50">
             <CardContent className="py-8">
               <h3 className="text-xl font-bold text-slate-800 mb-4">
                 想聊聊？
               </h3>
               <p className="text-slate-600 mb-4">
-                如果你也对AI产品感兴趣，或有任何建议，欢迎联系我。
+                如果你也对 AI 产品感兴趣，或有任何建议，欢迎到 GitHub 提 Issue。
               </p>
               <a
-                href="mailto:teams@postwizard.cn"
+                href="https://github.com/arthurfsy2/PostWizard-lite/issues"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
               >
-                teams@postwizard.cn
+                GitHub Issues
               </a>
             </CardContent>
           </Card>

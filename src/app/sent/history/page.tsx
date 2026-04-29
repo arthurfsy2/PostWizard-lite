@@ -33,7 +33,7 @@ import {
   Printer,
   CheckSquare,
   Square,
-  Sparkles,
+  Star,
   Globe2,
   Filter,
   RefreshCcw,
@@ -283,7 +283,7 @@ export default function HistoryPage() {
       label: '已收藏',
       value: favoriteCount,
       helper: '便于二次挑选',
-      icon: Sparkles,
+      icon: Star,
       iconClassName: 'from-amber-500 to-orange-500',
       chipClassName: 'bg-amber-50 text-amber-700 border-amber-100',
     },
@@ -309,19 +309,10 @@ export default function HistoryPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-orange-50/30">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-orange-200/40 blur-3xl" />
-        <div className="absolute top-1/3 -left-32 h-80 w-80 rounded-full bg-blue-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute bottom-1/3 right-10 h-64 w-64 rounded-full bg-emerald-200/20 blur-3xl" />
-      </div>
-
       <Header />
       <main className="container flex-1 py-10 md:py-12">
-        <section className="relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_60px_-24px_rgba(15,23,42,0.18)] backdrop-blur xl:p-8">
+        <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm xl:p-8">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400" />
-          <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-orange-100/70 blur-3xl" />
-          <div className="absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-blue-100/60 blur-3xl" />
 
           <div className="relative flex flex-col gap-8">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -346,8 +337,8 @@ export default function HistoryPage() {
 
                     <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
                       <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
-                        <Sparkles className="h-4 w-4 text-orange-500" />
-                        UI v2.0 精致层次
+                        <Star className="h-4 w-4 text-orange-500" />
+                        精致层次
                       </div>
                       <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
                         <Calendar className="h-4 w-4 text-slate-400" />

@@ -54,7 +54,7 @@ export default function ProfilePage() {
               <span>个人要素</span>
             </h1>
             <p className="text-stone-500 text-sm md:text-base">
-              填写你的个人简介和随心记，让 AI 更好地为你生成明信片内容
+              填写你的个人简介和随心记，帮助生成更贴切的明信片内容
             </p>
           </motion.div>
 

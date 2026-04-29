@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { 
-  Check, User, Heart, Globe, Ban, Sparkles, Lightbulb, ArrowRight, ArrowLeft 
+  Check, User, Heart, Globe, Ban, FileText, Lightbulb, ArrowRight, ArrowLeft
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,12 +56,12 @@ export function Step2Card({
       <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-white" />
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center">
+              <Check className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
-              <CardTitle className="text-xl">Step 2 · AI 解析结果</CardTitle>
-              <CardDescription>AI 已成功识别收件人详细信息</CardDescription>
+              <CardTitle className="text-xl">Step 2 · 解析结果</CardTitle>
+              <CardDescription>已识别收件人详细信息</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -169,7 +169,7 @@ export function Step2Card({
               {parsedData.contentPreference && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
-                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    <Heart className="h-4 w-4 text-emerald-600" />
                     <span className="text-sm font-semibold text-emerald-600">内容喜好</span>
                   </div>
                   <p className="text-sm text-slate-700">{parsedData.contentPreference}</p>
@@ -180,7 +180,7 @@ export function Step2Card({
               {parsedData.messageToSender && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
-                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    <FileText className="h-4 w-4 text-emerald-600" />
                     <span className="text-sm font-semibold text-emerald-600">想你写的内容</span>
                   </div>
                   <p className="text-sm font-medium text-slate-700 bg-emerald-50 p-3 rounded-lg">
@@ -204,7 +204,7 @@ export function Step2Card({
                           需要先填写个人要素
                         </h4>
                         <p className="text-sm text-amber-700 mb-3">
-                          填写个人简介后，AI 会基于您的真实经历和喜好生成更个性化、更有温度的明信片内容。
+                          填写个人简介后，系统会基于您的真实经历和喜好生成更个性化、更有温度的明信片内容。
                         </p>
                         <div className="flex gap-2">
                           <Button
@@ -256,17 +256,17 @@ export function Step2Card({
                   <Button
                     onClick={onGenerate}
                     disabled={isGenerating}
-                    className="flex-1 h-12 text-base bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg"
+                    className="flex-1 h-12 text-base bg-emerald-600 hover:bg-emerald-700 shadow-lg"
                   >
                     {isGenerating ? (
                       <>
-                        <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+                        <ArrowRight className="h-4 w-4 mr-2 animate-spin" />
                         生成中...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        下一步：生成明信片内容
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                        生成明信片内容
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </>
                     )}

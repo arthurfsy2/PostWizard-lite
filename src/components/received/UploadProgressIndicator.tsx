@@ -1,6 +1,6 @@
 'use client';
 
-import { Upload, Sparkles, Edit } from 'lucide-react';
+import { Upload, Scan, Edit } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface UploadProgressIndicatorProps {
@@ -20,9 +20,9 @@ const steps = [
   },
   {
     step: 2,
-    title: 'AI 智能评估',
-    description: '智能分析明信片内容质量',
-    icon: Sparkles,
+    title: '内容评估',
+    description: '评估明信片内容质量',
+    icon: Scan,
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'bg-emerald-500',
     activeColor: 'text-emerald-600',

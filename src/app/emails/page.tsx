@@ -358,12 +358,6 @@ export default function EmailsPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30">
       <Header />
 
-      {/* 装饰球 */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-orange-200/40 to-amber-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-200/30 to-purple-200/30 rounded-full blur-3xl" />
-      </div>
-
       <main className="container mx-auto px-4 py-8 relative">
         
         {/* 紧凑 Header Bar */}

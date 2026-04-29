@@ -184,7 +184,7 @@ export function CardDetailModal({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {/* 国旗图标 */}
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm text-3xl shadow-lg">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-3xl shadow-lg">
                 {getFlagEmoji(card.senderCountry || '')}
               </div>
               
@@ -224,7 +224,7 @@ export function CardDetailModal({
 
           {/* Postcard ID Badge */}
           {card.postcardId && (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-sm font-mono backdrop-blur-sm">
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-sm font-mono">
               <span>🆔 {card.postcardId}</span>
               {card.postcardIdConfirmed && (
                 <span className="rounded-full bg-green-400/80 px-2 py-0.5 text-xs font-bold text-white">
@@ -254,7 +254,7 @@ export function CardDetailModal({
             {/* 语言标签 */}
             {card.detectedLang && (
               <div className="absolute top-3 right-3">
-                <span className="px-3 py-1.5 bg-slate-900/70 backdrop-blur-sm text-white text-sm rounded-full flex items-center gap-1.5">
+                <span className="px-3 py-1.5 bg-slate-900/70 text-white text-sm rounded-full flex items-center gap-1.5">
                   <Languages className="h-4 w-4" />
                   {getLanguageName(card.detectedLang)}
                 </span>

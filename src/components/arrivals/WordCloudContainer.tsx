@@ -7,7 +7,7 @@ import { useWordCloud } from "@/hooks/useWordCloud";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { WordCloudWord } from "@/types/wordcloud";
 import { cn } from "@/lib/utils";
-import { BarChart3, RefreshCw, Palette, Sparkles } from "lucide-react";
+import { BarChart3, RefreshCw, Palette } from "lucide-react";
 
 /**
  * 词云容器组件
@@ -139,7 +139,7 @@ export function WordCloudContainer() {
               </>
             ) : (
               <>
-                <Sparkles className="w-3.5 h-3.5" />
+                <BarChart3 className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">经典版</span>
               </>
             )}

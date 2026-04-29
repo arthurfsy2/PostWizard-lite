@@ -8,7 +8,7 @@ import {
   ChevronDown, 
   Trophy, 
   Sprout,
-  Sparkles,
+  Tag,
   Globe,
   Check
 } from 'lucide-react';
@@ -259,8 +259,8 @@ export function ProfileEditor() {
               className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg"
             >
               <p className="text-sm text-emerald-700 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                直接粘贴你在 Postcrossing 的英文简介即可，AI 会分析内容生成标签
+                <Tag className="w-4 h-4" />
+                直接粘贴你在 Postcrossing 的英文简介即可，系统会分析内容生成标签
               </p>
             </motion.div>
           )}
@@ -281,7 +281,7 @@ export function ProfileEditor() {
               </div>
               <ol className="text-sm text-stone-600 space-y-1 list-decimal list-inside">
                 <li>先用中文写下你的兴趣爱好</li>
-                <li>AI 会帮你翻译成地道的英文</li>
+                <li>系统会帮你翻译成地道的英文</li>
                 <li>你可以粘贴到 Postcrossing 使用</li>
               </ol>
             </motion.div>
@@ -305,7 +305,7 @@ export function ProfileEditor() {
           )}
         />
 
-        {/* 智能翻译按钮 */}
+        {/* 翻译按钮 */}
         <AnimatePresence>
           {showTranslate && (
             <motion.div
@@ -378,7 +378,7 @@ export function ProfileEditor() {
                 )}
               >
                 <span className="flex items-center gap-2 text-sm font-medium">
-                  <Sparkles className="w-4 h-4" />
+                  <Tag className="w-4 h-4" />
                   不知道如何写？参考这些提示
                 </span>
                 <ChevronDown 
@@ -449,7 +449,7 @@ export function ProfileEditor() {
         </div>
         
         <p className="text-sm text-stone-500 mb-4">
-          补充一些最近发生的事情，帮助 AI 生成更贴心的内容
+          补充一些最近发生的事情，帮助生成更贴心的内容
         </p>
         
         <textarea
@@ -465,14 +465,14 @@ export function ProfileEditor() {
         />
       </motion.div>
 
-      {/* AI 标签预览 - 与留言精选风格一致 */}
+      {/* 标签预览 - 与留言精选风格一致 */}
       <motion.div 
         className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-stone-100"
         variants={fadeInUp}
       >
         <div className="flex items-center gap-3 mb-5">
           <span className="text-lg">🏷️</span>
-          <span className="font-semibold text-stone-800">AI 识别标签</span>
+          <span className="font-semibold text-stone-800">识别标签</span>
           <span className="text-sm text-stone-400">
             （保存后基于个人简介+随心记生成）
           </span>
@@ -547,7 +547,7 @@ export function ProfileEditor() {
           )}
         </button>
         <p className="mt-3 text-sm text-stone-400">
-          AI 将综合分析你的个人简介和随心记，生成个性化标签
+          系统将综合分析你的个人简介和随心记，生成个性化标签
         </p>
       </motion.div>
     </motion.div>

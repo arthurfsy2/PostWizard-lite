@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Send } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -117,7 +117,7 @@ export function ParseAction({ emailId, emailSubject, emailFrom }: ParseActionPro
         </>
       ) : (
         <>
-          <Sparkles className="w-4 h-4 mr-2" />
+          <Send className="w-4 h-4 mr-2" />
           解析收件人
         </>
       )}

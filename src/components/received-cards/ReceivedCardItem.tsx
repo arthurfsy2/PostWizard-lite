@@ -202,7 +202,7 @@ export function ReceivedCardItem({
         {/* 语言标签 - 移到左下角避免和按钮重叠 */}
         {card.detectedLang && (
           <div className="absolute bottom-3 left-3">
-            <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white text-xs rounded-full">
+            <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-full">
               {getLanguageName(card.detectedLang)}
             </span>
           </div>

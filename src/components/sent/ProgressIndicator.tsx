@@ -1,6 +1,6 @@
 'use client';
 
-import { Mail, Sparkles, FileText, Check } from 'lucide-react';
+import { Mail, Search, FileText, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface ProgressIndicatorProps {
@@ -22,9 +22,9 @@ const steps = [
   },
   {
     step: 2,
-    title: 'AI 解析',
+    title: '解析信息',
     description: '识别收件人信息',
-    icon: Sparkles,
+    icon: Search,
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'bg-emerald-500',
     activeColor: 'text-emerald-600',

@@ -211,7 +211,7 @@ function PastePageContent() {
           setCurrentStep(2);
         }
       } else {
-        setError(result.error || 'AI 解析失败，请检查邮件格式');
+        setError(result.error || '解析失败，请检查邮件格式');
       }
     } catch (err) {
       setError('网络错误，请稍后重试');
@@ -363,14 +363,9 @@ function PastePageContent() {
       <main className="container mx-auto px-4 py-12">
         {/* Hero Section */}
         <section className="relative mb-8 overflow-hidden">
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-orange-200/40 to-amber-200/40 rounded-full blur-3xl" />
-            <div className="absolute top-1/3 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-200/30 to-indigo-200/30 rounded-full blur-3xl" />
-          </div>
-
           <div className="relative">
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">
-              <span className="text-slate-900">AI 智能明信片写作</span>
+              <span className="text-slate-900">明信片写作</span>
               <span className="mx-2 text-slate-300">|</span>
               <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-clip-text text-transparent">
                 3 步轻松完成
@@ -418,7 +413,7 @@ function PastePageContent() {
             />
           )}
 
-          {/* Step 2: AI 解析结果 */}
+          {/* Step 2: 解析结果 */}
           {currentStep === 2 && parsedData && !isEditLoading && (
             <div className="mt-8">
               <Step2Card

@@ -84,7 +84,7 @@ export function EditLayout({
   const [showImageDialog, setShowImageDialog] = useState(false);
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg p-8 mb-6">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-lg p-8 mb-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -170,7 +170,7 @@ export function EditLayout({
       {/* 三栏布局：图片 + 英文原文 + 中文翻译 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* 左栏：图片展示（固定高度，sticky） */}
-        <div className="lg:sticky lg:top-6 lg:h-[600px] overflow-y-auto bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+        <div className="lg:sticky lg:top-6 lg:h-[600px] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
           <h2 className="text-lg font-semibold mb-4">📷 明信片背面</h2>
           <div 
             className="relative h-full bg-gray-50 rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer"
@@ -207,7 +207,7 @@ export function EditLayout({
         </div>
 
         {/* 中间：OCR 原文 */}
-        <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <span className="text-xl">🇬🇧</span>
@@ -254,7 +254,7 @@ export function EditLayout({
         </div>
 
         {/* 右栏：中文翻译 */}
-        <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <span className="text-xl">🇨🇳</span>
@@ -274,7 +274,7 @@ export function EditLayout({
             
             <div className="flex items-center gap-2 text-emerald-600 text-sm">
               <AlertCircle className="w-4 h-4" />
-              <span>AI 翻译，仅供参考</span>
+              <span>翻译仅供参考</span>
             </div>
           </div>
         </div>

@@ -317,9 +317,6 @@ export default function EditCardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center relative overflow-hidden">
-        {/* 装饰球 */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
         <div className="text-center relative z-10">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-600">加载中...</p>
@@ -331,9 +328,6 @@ export default function EditCardPage() {
   if (!cardData) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center relative overflow-hidden">
-        {/* 装饰球 */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
         <div className="text-center text-gray-600 relative z-10">
           <p>卡片不存在</p>
           <button
@@ -349,14 +343,9 @@ export default function EditCardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 py-12 px-4 relative overflow-hidden">
-      {/* 装饰球 */}
-      <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
-      <div className="absolute top-1/3 right-1/4 w-32 h-32 bg-amber-100/50 rounded-full blur-2xl"></div>
-
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Header - 与 Step3 一致 */}
-        <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg p-8 mb-6">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-lg p-8 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -454,7 +443,7 @@ export default function EditCardPage() {
         {/* 三栏布局：图片 + 英文原文 + 中文翻译 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 左栏：图片展示（固定高度，sticky） */}
-          <div className="lg:sticky lg:top-6 lg:h-[600px] overflow-y-auto bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+          <div className="lg:sticky lg:top-6 lg:h-[600px] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
             <h2 className="text-lg font-semibold mb-4">📷 明信片背面</h2>
             <div className="relative h-full bg-gray-50 rounded-xl overflow-hidden border-2 border-gray-200">
               {(cardData.processedImageUrl || cardData.backImageUrl) ? (
@@ -484,7 +473,7 @@ export default function EditCardPage() {
           </div>
 
           {/* 中间：英文原文 */}
-          <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <span className="text-xl">🇬</span>
@@ -526,7 +515,7 @@ export default function EditCardPage() {
           </div>
 
           {/* 右侧：中文翻译 */}
-          <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <span className="text-xl">🇨🇳</span>
@@ -546,7 +535,7 @@ export default function EditCardPage() {
               
               <div className="flex items-center gap-2 text-emerald-600 text-sm">
                 <AlertCircle className="w-4 h-4" />
-                <span>AI 翻译，仅供参考</span>
+                <span>翻译仅供参考</span>
               </div>
             </div>
           </div>
@@ -570,7 +559,7 @@ export default function EditCardPage() {
         </div>
 
         {/* 模板选择 */}
-        <div className="mt-8 bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+        <div className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">🎨 选择模板</h2>
             {hasLockedTemplates && !user?.isPaidUser && (

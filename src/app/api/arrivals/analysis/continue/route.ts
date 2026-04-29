@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
             id: r.postcardId,
             message: r.message,
           })),
-          20,  // 每批 20 条
+          5,  // 每批 5 条（减少 token 压力，避免 JSON 截断）
           (current, total) => {
             console.log(`[批量分析] 进度：${current}/${total}`);
           }

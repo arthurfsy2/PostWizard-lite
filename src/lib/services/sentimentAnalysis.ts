@@ -361,7 +361,7 @@ export function analyzeByRules(message: string): SentimentAnalysisResult | null 
  */
 export async function analyzeMessagesBatchOptimized<T extends { id: string; message: string }>(
   messages: T[],
-  batchSize: number = 20,
+  batchSize: number = 5,
   onProgress?: (current: number, total: number) => void,
   concurrency: number = 3
 ): Promise<Array<T & { analysis: SentimentAnalysisResult }>> {
@@ -401,7 +401,7 @@ export async function analyzeMessagesBatchOptimized<T extends { id: string; mess
       const batchAnalysis = await analyzeBatchWithAI(batch);
       return batchAnalysis;
     } catch (error) {
-      console.error(`[批量分析] AI 分析失败，回退到单条分析`);
+      console.error(`[批量分析] AI 批量分析失败，回退到单条分析。错误:`, (error as Error).message);
       const fallbackResults: Array<T & { analysis: SentimentAnalysisResult }> = [];
       for (const item of batch) {
         try {
@@ -521,17 +521,25 @@ ${batchContent}
   ...
 ]`;
 
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: 'system', content: '你是情感分析专家，只输出 JSON 格式的分析结果。' },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.3,
-    max_tokens: 6000,  // 增加 token 限制，避免翻译被截断
-  });
+  console.log(`[analyzeBatchWithAI] 开始批量分析 ${batch.length} 条留言，prompt 长度: ${prompt.length} 字符`);
 
-  const content = response.choices[0]?.message?.content || '';
+  let content = '';
+  try {
+    const response = await client.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: '你是情感分析专家，只输出 JSON 格式的分析结果。' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.3,
+      max_tokens: 8000,
+    });
+    content = response.choices[0]?.message?.content || '';
+    console.log(`[analyzeBatchWithAI] AI 返回 ${content.length} 字符`);
+  } catch (apiError) {
+    console.error(`[analyzeBatchWithAI] API 调用失败:`, (apiError as Error).message);
+    throw apiError; // 让外层 processBatch 捕获并 fallback
+  }
   
   // 解析批量结果
   try {
@@ -542,7 +550,8 @@ ${batchContent}
 
     return buildBatchResults(batch, parsedArray);
   } catch (parseError) {
-    console.warn('[analyzeBatchWithAI] 解析失败，回退到单条分析:', (parseError as Error).message);
+    console.warn('[analyzeBatchWithAI] JSON 解析失败，回退到单条分析。错误:', (parseError as Error).message);
+    console.warn('[analyzeBatchWithAI] 原始 AI 返回前 500 字符:', content.substring(0, 500));
     const fallbackResults: Array<T & { analysis: SentimentAnalysisResult }> = [];
     for (const item of batch) {
       try {

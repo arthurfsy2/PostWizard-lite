@@ -252,9 +252,6 @@ export default function EditCardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center relative overflow-hidden">
-        {/* 装饰球 */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
         <div className="text-center relative z-10">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-600">加载中...</p>
@@ -266,9 +263,6 @@ export default function EditCardPage() {
   if (!cardData) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center relative overflow-hidden">
-        {/* 装饰球 */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
         <div className="text-center text-gray-600 relative z-10">
           <p>卡片不存在</p>
           <button
@@ -284,16 +278,11 @@ export default function EditCardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 py-12 px-4 relative overflow-hidden">
-      {/* 装饰球 */}
-      <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
-      <div className="absolute top-1/3 right-1/4 w-32 h-32 bg-amber-100/50 rounded-full blur-2xl"></div>
-
       <div className="max-w-4xl mx-auto relative z-10">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-lg">
-              <Edit3 className="w-7 h-7 text-white" />
+            <div className="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center shadow-lg">
+              <Edit3 className="w-7 h-7 text-orange-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900">
               编辑识别结果
@@ -302,7 +291,7 @@ export default function EditCardPage() {
           <button
             onClick={handleReOcr}
             disabled={reOcrLoading}
-            className="px-4 py-2 bg-white/80 backdrop-blur-sm text-orange-600 rounded-xl hover:bg-white disabled:opacity-50 flex items-center gap-2 shadow-md transition-all"
+            className="px-4 py-2 bg-white text-orange-600 rounded-xl hover:bg-orange-50 disabled:opacity-50 flex items-center gap-2 shadow-md transition-all border border-slate-200"
           >
             {reOcrLoading ? (
               <>
@@ -323,7 +312,7 @@ export default function EditCardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* 左侧：图片预览 */}
-          <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
             <h2 className="text-lg font-semibold mb-4">📷 明信片背面</h2>
             {cardData.backImageUrl && (
               <img
@@ -335,7 +324,7 @@ export default function EditCardPage() {
           </div>
 
           {/* 中间：编辑表单 */}
-          <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
             <h2 className="text-lg font-semibold mb-4">📝 识别内容</h2>
 
             <div className="space-y-4">
@@ -501,7 +490,7 @@ export default function EditCardPage() {
           </div>
 
           {/* 右侧：翻译内容 */}
-          <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
             <h2 className="text-lg font-semibold mb-4">🇨🇳 中文翻译</h2>
             <div className="space-y-4">
               <div className="bg-orange-50/80 rounded-xl p-4 min-h-[300px]">
@@ -510,14 +499,14 @@ export default function EditCardPage() {
                 </pre>
               </div>
               <p className="text-xs text-gray-500">
-                翻译内容由 AI 自动生成，仅供参考
+                翻译仅供参考
               </p>
             </div>
           </div>
         </div>
 
         {/* 模板选择 */}
-        <div className="mt-8 bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+        <div className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">🎨 选择模板</h2>
             {hasLockedTemplates && !user?.isPaidUser && (

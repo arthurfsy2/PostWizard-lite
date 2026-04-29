@@ -64,7 +64,7 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center pl-4 sm:pl-6">
           <Link href="/" className="mr-6 flex items-center space-x-2 group">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-amber-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-warm">
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-warm">
               <Mail className="h-4 w-4 text-white" />
             </div>
             <span className="font-bold text-lg hidden sm:inline">

@@ -116,9 +116,6 @@ export default function ReceivedCardsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center">
-        {/* 装饰球 */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -128,10 +125,6 @@ export default function ReceivedCardsPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 relative overflow-hidden">
       <Header />
 
-      {/* 装饰球 */}
-      <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
-      <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-amber-100/50 rounded-full blur-2xl"></div>
 
       <main className="py-12 px-4">
         <div className="max-w-6xl mx-auto relative z-10">
@@ -166,7 +159,7 @@ export default function ReceivedCardsPage() {
             </div>
             <div className="flex items-center gap-3">
               {/* 视图切换 */}
-              <div className="flex bg-white/80 backdrop-blur-sm rounded-xl p-1.5 shadow-md border border-white">
+              <div className="flex bg-white rounded-xl p-1.5 shadow-md border border-slate-200">
                 <button
                   onClick={() => setViewMode("grid")}
                   className={`p-2.5 rounded-lg transition-all duration-200 ${
@@ -209,7 +202,7 @@ export default function ReceivedCardsPage() {
             </div>
           ) : cards.length === 0 ? (
             // 空状态
-            <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg p-12 text-center hover:shadow-xl transition-all duration-300">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-lg p-12 text-center hover:shadow-xl transition-all duration-300">
               <div className="text-6xl mb-4">🏺️</div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 还没有收到明信片
@@ -251,7 +244,7 @@ export default function ReceivedCardsPage() {
                   <button
                     onClick={() => loadCards(pagination.page - 1)}
                     disabled={pagination.page <= 1}
-                    className="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border-0 text-gray-700 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-white rounded-xl shadow-md border border-slate-200 text-gray-700 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     上一页
                   </button>
@@ -261,7 +254,7 @@ export default function ReceivedCardsPage() {
                   <button
                     onClick={() => loadCards(pagination.page + 1)}
                     disabled={pagination.page >= pagination.totalPages}
-                    className="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border-0 text-gray-700 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-white rounded-xl shadow-md border border-slate-200 text-gray-700 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     下一页
                   </button>

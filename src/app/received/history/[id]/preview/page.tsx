@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { toPng } from 'html-to-image';
-import { Download, Copy, ArrowLeft, Sparkles, Image } from 'lucide-react';
+import { Download, Copy, ArrowLeft, Camera, Image } from 'lucide-react';
 import { getFlagEmoji } from '@/lib/flag-emoji';
 // 安全的 HTML 净化函数（避免 isomorphic-dompurify 的 Node.js 兼容问题）
 const sanitizeHtml = (html: string): string => {
@@ -134,9 +134,6 @@ ${cardData?.handwrittenText?.substring(0, 100) || ''}...
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center relative overflow-hidden">
-        {/* 装饰球 */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
         <div className="text-center relative z-10">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-600">加载中...</p>
@@ -148,9 +145,6 @@ ${cardData?.handwrittenText?.substring(0, 100) || ''}...
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center relative overflow-hidden">
-        {/* 装饰球 */}
-        <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
         <div className="text-center text-gray-600 relative z-10">
           <p className="text-red-600 mb-2">{error}</p>
           <button
@@ -185,15 +179,10 @@ ${cardData?.handwrittenText?.substring(0, 100) || ''}...
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 py-12 px-4 relative overflow-hidden">
-      {/* 装饰球 */}
-      <div className="absolute top-20 left-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
-      <div className="absolute top-1/3 left-1/4 w-40 h-40 bg-amber-100/50 rounded-full blur-2xl"></div>
-
       <div className="max-w-6xl mx-auto relative z-10">
         <div className="flex items-center justify-center mb-8 gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-lg">
-            <Sparkles className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center shadow-lg">
+            <Camera className="w-7 h-7 text-orange-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900">
             分享图预览
@@ -202,7 +191,7 @@ ${cardData?.handwrittenText?.substring(0, 100) || ''}...
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* 预览区域 */}
-          <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Image className="w-5 h-5 text-orange-500" />
               预览效果
@@ -230,7 +219,7 @@ ${cardData?.handwrittenText?.substring(0, 100) || ''}...
 
           {/* 操作区域 */}
           <div className="space-y-6">
-            <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
               <h2 className="text-lg font-semibold mb-4">🎯 操作</h2>
               
               <div className="space-y-4">
@@ -274,7 +263,7 @@ ${cardData?.handwrittenText?.substring(0, 100) || ''}...
             </div>
 
             {/* 卡片信息 */}
-            <div className="bg-white/80 backdrop-blur-sm border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
               <h2 className="text-lg font-semibold mb-4">📋 卡片信息</h2>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">

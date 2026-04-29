@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Check, Copy, Download, FileDown, Sparkles, FileText } from 'lucide-react';
+import { Check, Copy, Download, FileDown, Plus, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -45,8 +45,8 @@ export function Step3Card({
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
-                <Check className="h-6 w-6 text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center">
+                <Check className="h-6 w-6 text-purple-600" />
               </div>
               <div>
                 <CardTitle className="text-xl">Step 3 · 生成完成</CardTitle>
@@ -143,9 +143,9 @@ export function Step3Card({
           <div className="pt-4 border-t border-slate-200">
             <Button
               onClick={onCreateNew}
-              className="h-12 w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg"
+              className="h-12 w-full bg-orange-500 hover:bg-orange-600 shadow-lg"
             >
-              <Sparkles className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2" />
               新建一张
             </Button>
           </div>
