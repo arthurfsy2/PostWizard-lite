@@ -262,6 +262,7 @@ export default function SettingsPage() {
           baseUrl: currentConfig.baseUrl,
           model: currentConfig.model,
           provider: currentConfig.provider,
+          configId: currentConfig.id || undefined,
         }),
       });
       const data = await response.json();

@@ -1,10 +1,28 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { normalizeAIUrl } from '@/lib/ai-url';
+import { prisma } from '@/lib/prisma';
+import { decryptSafe } from '@/lib/crypto';
+
+const SETTINGS_KEY = 'ai_configs';
 
 export async function POST(request: Request) {
   try {
-    const { apiKey, baseUrl, model, provider } = await request.json();
+    const { apiKey: rawApiKey, baseUrl, model, provider, configId } = await request.json();
+
+    let apiKey = rawApiKey;
+
+    // 前端未传 apiKey 时，从数据库读取已保存的 key
+    if (!apiKey && configId) {
+      const configsSetting = await prisma.settings.findUnique({ where: { key: SETTINGS_KEY } });
+      if (configsSetting?.value) {
+        const configs = JSON.parse(configsSetting.value);
+        const stored = configs.find((c: any) => c.id === configId);
+        if (stored?.apiKey) {
+          apiKey = decryptSafe(stored.apiKey);
+        }
+      }
+    }
 
     if (!apiKey) {
       return NextResponse.json({
