@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       error: '未收到模型响应',
     });
   } catch (error: any) {
-    console.error('AI test failed:', error);
+    console.error('[AI Test] 连接失败:', error?.message || error);
     return NextResponse.json({
       success: false,
       error: error.message || '连接失败',

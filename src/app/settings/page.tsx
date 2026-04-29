@@ -26,6 +26,7 @@ interface AIConfig {
   apiKey: string;
   baseUrl: string;
   model: string;
+  hasApiKey?: boolean;
 }
 
 // 预设配置
@@ -87,11 +88,16 @@ export default function SettingsPage() {
         if (data.configs) {
           setConfigs(data.configs);
           setActiveId(data.activeId);
-          // 加载当前激活的配置
-          const active = data.configs.find((c: AIConfig) => c.id === data.activeId);
-          if (active) {
-            setCurrentConfig(active);
-          }
+          // 从顶层字段加载激活配置（apiKey 已掩码）
+          setCurrentConfig({
+            id: data.activeId,
+            provider: data.provider || 'qwen',
+            name: data.name || '通义千问',
+            apiKey: '',
+            baseUrl: data.baseUrl || '',
+            model: data.model || '',
+            hasApiKey: data.hasApiKey,
+          });
         }
       }
     } catch {
@@ -121,19 +127,26 @@ export default function SettingsPage() {
   const handleSwitchConfig = async (configId: string) => {
     const config = configs.find(c => c.id === configId);
     if (!config) return;
-    
-    setCurrentConfig(config);
-    
-    // 设为激活
+
+    // 乐观更新
+    setActiveId(configId);
+    setCurrentConfig({
+      ...config,
+      apiKey: '',
+      hasApiKey: config.hasApiKey,
+    });
+
     try {
-      await fetch('/api/settings/ai', {
+      const response = await fetch('/api/settings/ai', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activeId: configId }),
       });
-      setActiveId(configId);
+      if (!response.ok) {
+        throw new Error('切换失败');
+      }
     } catch (err) {
-      console.error('切换配置失败:', err);
+      setError('切换配置失败');
     }
   };
 
@@ -154,6 +167,21 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setError('');
     setSaveSuccess(false);
+
+    // 前端校验
+    if (!currentConfig.name.trim()) {
+      setError('配置名称不能为空');
+      return;
+    }
+    if (!currentConfig.baseUrl.trim()) {
+      setError('API Base URL 不能为空');
+      return;
+    }
+    if (!currentConfig.model.trim()) {
+      setError('模型名称不能为空');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -170,15 +198,20 @@ export default function SettingsPage() {
         }),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '保存失败');
+        throw new Error(result.error || '保存失败');
       }
 
-      const result = await response.json();
       setConfigs(result.configs);
       setActiveId(result.activeId);
-      setCurrentConfig({ ...currentConfig, id: result.activeId });
+      setCurrentConfig(prev => ({
+        ...prev,
+        id: result.activeId,
+        apiKey: '',
+        hasApiKey: true,
+      }));
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
@@ -193,6 +226,8 @@ export default function SettingsPage() {
     e.stopPropagation();
     if (!confirm('确定要删除这个配置吗？')) return;
 
+    setError('');
+
     try {
       const response = await fetch('/api/settings/ai', {
         method: 'POST',
@@ -203,13 +238,15 @@ export default function SettingsPage() {
       if (response.ok) {
         const result = await response.json();
         setConfigs(result.configs);
-        // 如果删除的是当前激活的，切换到第一个
         if (configId === activeId && result.configs.length > 0) {
-          handleSwitchConfig(result.configs[0].id);
+          await handleSwitchConfig(result.configs[0].id);
         }
+      } else {
+        const data = await response.json();
+        setError(data.error || '删除失败');
       }
     } catch (err) {
-      console.error('删除配置失败:', err);
+      setError('删除配置失败');
     }
   };
 
@@ -399,13 +436,16 @@ export default function SettingsPage() {
             {/* API Key */}
             <div className="space-y-2">
               <Label htmlFor="apiKey">API Key</Label>
+              {currentConfig.hasApiKey && !currentConfig.apiKey && (
+                <p className="text-xs text-green-600 font-medium">已设置（输入新值可更换）</p>
+              )}
               <div className="flex gap-2">
                 <Input
                   id="apiKey"
                   type={showApiKey ? 'text' : 'password'}
                   value={currentConfig.apiKey}
-                  onChange={(e) => setCurrentConfig({ ...currentConfig, apiKey: e.target.value })}
-                  placeholder="sk-..."
+                  onChange={(e) => setCurrentConfig({ ...currentConfig, apiKey: e.target.value, hasApiKey: false })}
+                  placeholder={currentConfig.hasApiKey ? '••••••••（已保存）' : 'sk-...'}
                   className="flex-1"
                 />
                 <Button

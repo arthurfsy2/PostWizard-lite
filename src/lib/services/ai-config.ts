@@ -7,6 +7,7 @@
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
 import { normalizeAIUrl } from '@/lib/ai-url';
+import { decryptSafe } from '@/lib/crypto';
 
 export interface AIConfig {
   apiKey: string;
@@ -43,7 +44,7 @@ export async function getAIConfigFromDB(): Promise<AIConfig> {
       
       if (activeConfig) {
         return {
-          apiKey: activeConfig.apiKey || defaultConfig.apiKey,
+          apiKey: decryptSafe(activeConfig.apiKey) || defaultConfig.apiKey,
           baseUrl: activeConfig.baseUrl || defaultConfig.baseUrl,
           model: activeConfig.model || defaultConfig.model,
           provider: activeConfig.provider,
@@ -59,7 +60,7 @@ export async function getAIConfigFromDB(): Promise<AIConfig> {
     if (aiConfigSetting?.value) {
       const parsed = JSON.parse(aiConfigSetting.value);
       return {
-        apiKey: parsed.apiKey || defaultConfig.apiKey,
+        apiKey: decryptSafe(parsed.apiKey) || defaultConfig.apiKey,
         baseUrl: parsed.baseUrl || defaultConfig.baseUrl,
         model: parsed.model || defaultConfig.model,
         provider: parsed.provider,
