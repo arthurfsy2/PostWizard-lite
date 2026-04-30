@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 import { parsePastedEmail } from '@/lib/services/aiParserService';
 import { sanitizeRecipientInput } from '@/lib/sanitize-recipient-input';
-import { checkMaterialsAndUpdateResult } from '@/lib/helpers/materialsChecker';
 import { saveOrUpdatePostcard, buildResponseData } from '@/lib/helpers/duplicateChecker';
 
 /**
@@ -51,10 +50,7 @@ export async function POST(request: NextRequest) {
     const sanitization = sanitizeRecipientInput(emailContent);
 
     // 使用 AI 解析邮件内容（先规则脱敏，再走统一服务）
-    let parsedInfo = await parsePastedEmail(sanitization.sanitizedText);
-    
-    // 检查用户是否已填写个人素材（统一逻辑）
-    parsedInfo = await checkMaterialsAndUpdateResult(userId, parsedInfo);
+    const parsedInfo = await parsePastedEmail(sanitization.sanitizedText);
 
     // 如果 AI 解析失败，尝试用正则提取 ID 作为后备
     let postcardId: string | undefined = parsedInfo.postcardId;

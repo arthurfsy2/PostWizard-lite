@@ -12,7 +12,6 @@ import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 import { parseIMAPEmail } from '@/lib/services/aiParserService';
 import { sanitizeRecipientInput } from '@/lib/sanitize-recipient-input';
-import { checkMaterialsAndUpdateResult } from '@/lib/helpers/materialsChecker';
 import { saveOrUpdatePostcard, buildResponseData } from '@/lib/helpers/duplicateChecker';
 /**
  * POST /api/emails/[id]/parse
@@ -94,9 +93,6 @@ export async function POST(
       parsedInfo.postcardId = subjectPostcardId;
     }
     
-    // 检查用户是否已填写个人素材（统一逻辑）
-    parsedInfo = await checkMaterialsAndUpdateResult(userId, parsedInfo);
-
     console.log(`[Email Parse] AI 解析结果:`, parsedInfo);
 
     // 5. 验证必需字段

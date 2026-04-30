@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     const repliesToAnalyze = await prisma.arrivalReply.findMany({
       where: {
         userId,
-        message: { not: null, not: '' },
+        message: { not: null },
       },
       select: {
         id: true,
@@ -127,9 +127,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 获取已分析的 postcardId 列表
+    // 获取已分析的 postcardId 列表（排除 fallback 失败记录）
     const analyzedIds = await prisma.messageAnalysis.findMany({
-      where: { userId },
+      where: {
+        userId,
+        modelVersion: { not: 'fallback-v1' },
+      },
       select: { postcardId: true },
     });
     const analyzedPostcardIds = new Set(analyzedIds.map(a => a.postcardId));
@@ -229,7 +232,7 @@ export async function GET(request: NextRequest) {
     // 统计
     const [totalReplies, analyzedCount, categoryStats] = await Promise.all([
       prisma.arrivalReply.count({
-        where: { userId, message: { not: null, not: '' } },
+        where: { userId, message: { not: null } },
       }),
       prisma.messageAnalysis.count({ where: { userId } }),
       prisma.messageAnalysis.groupBy({

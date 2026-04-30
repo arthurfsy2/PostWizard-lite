@@ -22,7 +22,7 @@ export interface SentimentAnalysisResult {
   emotion: 'positive' | 'neutral' | 'negative';
   tags: string[];                    // 关键词标签 (3-5 个)
   translation?: string;              // 中文翻译（可选，非英文留言时填充）
-  _source?: 'rule-engine' | 'ai';    // 打分来源标记（内部使用，不存入数据库）
+  _source?: 'rule-engine' | 'ai' | 'fallback';  // 打分来源标记（fallback = JSON 解析失败默认值）
 }
 
 /**
@@ -93,8 +93,8 @@ ${message}
     "culturalInsight": <0-100>
   },
   "emotion": "<positive/neutral/negative>",
-  "tags": ["<标签1>", "<标签2>", "<标签3>"],
-  "translation": "<中文翻译，如果是中文则留空>"
+  "tags": ["<中文标签1>", "<中文标签2>", "<中文标签3>"],
+  "translation": "<中文翻译，保留完整语义，如果是中文则留空>"
 }`;
 }
 
@@ -211,14 +211,47 @@ export async function analyzeMessage(message: string): Promise<SentimentAnalysis
     return result;
   } catch (error) {
     console.error('[analyzeMessage] AI 分析失败:', error);
-    const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
+    const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
     return {
       score: 20,
       categories,
-      primaryCategory: 'blessing',
+      primaryCategory: 'emotional',
       emotion: 'neutral',
       tags: [],
     };
+  }
+}
+
+/**
+ * 独立翻译单条留言（仅翻译，不评分）
+ * 用于补全缺失的翻译
+ */
+export async function translateMessage(message: string): Promise<string | null> {
+  if (!message || message.trim().length < 5) return null;
+
+  // 纯中文/繁体不需要翻译
+  const nonAsciiRatio = (message.match(/[^\x00-\x7F]/g) || []).length / message.length;
+  if (nonAsciiRatio > 0.5) return null;
+
+  try {
+    const client = await createOpenAIClient();
+    const model = await getAIModel();
+
+    const response = await client.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: '你是专业翻译，只输出中文翻译结果，不要解释。' },
+        { role: 'user', content: `将以下英文留言翻译为中文，保留完整语义和情感：\n\n${message}` },
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+    });
+
+    const translation = response.choices[0]?.message?.content?.trim();
+    return translation || null;
+  } catch (error) {
+    console.error('[translateMessage] 翻译失败:', (error as Error).message);
+    return null;
   }
 }
 
@@ -332,21 +365,29 @@ export function analyzeByRules(message: string): SentimentAnalysisResult | null 
   const msg = message.trim();
   const msgLength = msg.length;
 
-  // 仅针对极短留言（<60字符）进行模板话术检测
-  if (isTemplateMessage(msg) && msgLength < 60) {
-    const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 40, culturalInsight: 10 };
+  // 极短留言（<40字符）进行模板话术检测
+  if (isTemplateMessage(msg) && msgLength < 40) {
+    // 区分纯感谢 vs 有额外内容
+    const hasExtra = msg.replace(/^(hi|hello|hey),?\s*/i, '')
+      .replace(/(thanks|thank you)[^.!?]*/i, '')
+      .replace(/(happy postcrossing|best wishes|cheers|enjoy|good luck|take care)/gi, '')
+      .replace(/[!.🤗🍀❤️\s]/g, '').length > 15;
+
+    const categories: SentimentAnalysisResult['categories'] = hasExtra
+      ? { touching: 30, emotional: 50, culturalInsight: 10 }
+      : { touching: 15, emotional: 35, culturalInsight: 5 };
+
     return {
-      score: 30,
+      score: Math.max(categories.touching, categories.emotional, categories.culturalInsight),
       categories,
       primaryCategory: 'emotional',
       emotion: 'positive',
-      tags: ['模板', '感谢'],
-      _source: 'rule-engine', // 标记来源
+      tags: hasExtra ? ['问候', '祝福'] : ['模板', '感谢'],
+      _source: 'rule-engine',
     };
   }
 
-  // 中长文本（>=60字符）全部交由 AI 分析
-  // 移除所有长文本拦截逻辑
+  // 中长文本（>=40字符）交由 AI 分析
   return null;
 }
 
@@ -363,7 +404,8 @@ export async function analyzeMessagesBatchOptimized<T extends { id: string; mess
   messages: T[],
   batchSize: number = 5,
   onProgress?: (current: number, total: number) => void,
-  concurrency: number = 3
+  concurrency: number = 3,
+  onBatchComplete?: (batch: Array<T & { analysis: SentimentAnalysisResult }>) => void
 ): Promise<Array<T & { analysis: SentimentAnalysisResult }>> {
   const results: Array<T & { analysis: SentimentAnalysisResult }> = [];
   let processedCount = 0;
@@ -385,6 +427,11 @@ export async function analyzeMessagesBatchOptimized<T extends { id: string; mess
     }
   }
 
+  // 规则引擎结果立即回调
+  if (ruleResults.length > 0 && onBatchComplete) {
+    onBatchComplete(ruleResults);
+  }
+
   console.log(`[批量分析] 规则判断：${ruleResults.length}/${messages.length} 条（仅短文本），需 AI 分析：${aiCandidates.length} 条`);
 
   // 2. 分批
@@ -395,48 +442,65 @@ export async function analyzeMessagesBatchOptimized<T extends { id: string; mess
 
   console.log(`[批量分析] 共 ${batches.length} 个批次，并行度：${concurrency}`);
 
-  // 3. 并行处理批次（带并发控制）
-  const processBatch = async (batch: T[]): Promise<Array<T & { analysis: SentimentAnalysisResult }>> => {
+  // 3. 串行处理批次（429 退避重试，避免并发加剧限流）
+  const processBatch = async (batch: T[], retries = 3): Promise<Array<T & { analysis: SentimentAnalysisResult }>> => {
+    const batchIds = batch.map(b => b.id).join(', ');
+    console.log(`[processBatch] 开始处理批次 [${batchIds}]，剩余重试: ${retries}`);
     try {
       const batchAnalysis = await analyzeBatchWithAI(batch);
+      console.log(`[processBatch] 批次 [${batchIds}] 完成，${batchAnalysis.length} 条结果`);
       return batchAnalysis;
     } catch (error) {
-      console.error(`[批量分析] AI 批量分析失败，回退到单条分析。错误:`, (error as Error).message);
-      const fallbackResults: Array<T & { analysis: SentimentAnalysisResult }> = [];
-      for (const item of batch) {
-        try {
-          const analysis = await analyzeMessage(item.message);
-          fallbackResults.push({ ...item, analysis });
-        } catch (err) {
-          const categories: SentimentAnalysisResult['categories'] = { touching: 20, funny: 10, blessing: 20, cultural: 10 };
-          fallbackResults.push({
-            ...item,
-            analysis: {
-              score: 20,
-              categories,
-              primaryCategory: 'blessing',
-              emotion: 'neutral',
-              tags: [],
-              _source: 'ai',
-            },
-          });
-        }
+      const is429 = (error as any)?.status === 429 || (error as Error).message?.includes('429');
+      if (is429 && retries > 0) {
+        const delay = (4 - retries) * 5000; // 5s, 10s, 15s 递增
+        console.log(`[批量分析] 429 限流，${delay / 1000}s 后重试（剩余 ${retries} 次）...`);
+        await new Promise(r => setTimeout(r, delay));
+        return processBatch(batch, retries - 1);
       }
-      return fallbackResults;
+      console.error(`[processBatch] 批次 [${batchIds}] 失败，回退规则引擎。错误:`, (error as Error).message);
+      // 429 或其他错误：用规则引擎兜底，不逐条调用 AI
+      return batch.map(item => {
+        const ruleResult = analyzeByRules(item.message);
+        if (ruleResult) return { ...item, analysis: ruleResult };
+        const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
+        return {
+          ...item,
+          analysis: {
+            score: 20,
+            categories,
+            primaryCategory: 'emotional' as const,
+            emotion: 'neutral' as const,
+            tags: [],
+            _source: 'fallback' as const,
+          },
+        };
+      });
     }
   };
 
-  // 并发执行：每次最多 concurrency 个批次同时请求
+  // 串行执行：每批处理完后等待 1s，避免触发限流
   for (let i = 0; i < batches.length; i += concurrency) {
     const parallelBatches = batches.slice(i, i + concurrency);
+    console.log(`[批量分析] 启动第 ${Math.floor(i / concurrency) + 1} 轮，${parallelBatches.length} 个并行批次`);
     const batchResults = await Promise.all(parallelBatches.map(batch => processBatch(batch)));
-    
+    console.log(`[批量分析] 第 ${Math.floor(i / concurrency) + 1} 轮完成`);
+
     for (const batchResult of batchResults) {
       results.push(...batchResult);
       processedCount += batchResult.length;
       if (onProgress) {
         onProgress(processedCount, messages.length);
       }
+      // 每批完成立即回调，供调用方实时入库
+      if (onBatchComplete) {
+        onBatchComplete(batchResult);
+      }
+    }
+
+    // 批次间延迟
+    if (i + concurrency < batches.length) {
+      await new Promise(r => setTimeout(r, 1500));
     }
   }
 
@@ -486,45 +550,23 @@ async function analyzeBatchWithAI<T extends { id: string; message: string }>(
 - 30-60：景点介绍（"The Eiffel Tower is in Paris"）
 - 70+：本地人视角（"What strikes me about my hometown is..."），文化对比，个人解读
 
-## Few-shot 示例：
-
-**留言**: "Hi, thanks for the card! Happy Postcrossing!"
-→ touching=20, emotional=40, culturalInsight=5
-
-**留言**: "恭喜你的宝宝！我有三个孩子，趁他们还小好好享受吧，时间眨眼就过去了！"
-→ touching=80, emotional=50, culturalInsight=5
-
-**留言**: "你的卡片让我想起我祖母…收到你的卡片时我哭了，那种温暖的感觉一模一样。"
-→ touching=95, emotional=40, culturalInsight=5
-
-**留言**: "Hi! I live in a small village. I've been going through a tough time lately - dealing with anxiety and some health issues. Postcrossing has been such a bright spot for me, connecting with kind strangers around the world."
-→ touching=95, emotional=30, culturalInsight=5
-（说明：情感脆弱、分享个人挣扎、真实故事，属于最高分走心留言）
+## 示例：
+"Hi, thanks for the card!" → touching=20, emotional=40, culturalInsight=5
+"恭喜宝宝！趁他们还小好好享受吧" → touching=80, emotional=50, culturalInsight=5
 
 ## 待分析的留言：
 
 ${batchContent}
 
-请只输出 JSON 数组（不要解释，不要换行）：
-[
-  {
-    "index": 0,
-    "categories": {
-      "touching": <0-100>,
-      "emotional": <0-100>,
-      "culturalInsight": <0-100>
-    },
-    "emotion": "<positive/neutral/negative>",
-    "tags": ["<标签1>", "<标签2>", "<标签3>"],
-    "translation": "<中文翻译，保留完整语义，如果是中文则留空>"
-  },
-  ...
-]`;
+请只输出 JSON 数组（不要解释，不要换行，按输入顺序）：
+[{"categories":{"touching":<0-100>,"emotional":<0-100>,"culturalInsight":<0-100>},"emotion":"<positive/neutral/negative>","tags":["<中文标签1>","<中文标签2>"],"translation":"<中文翻译，保留完整语义，如果是中文则留空>"}]`;
 
   console.log(`[analyzeBatchWithAI] 开始批量分析 ${batch.length} 条留言，prompt 长度: ${prompt.length} 字符`);
 
   let content = '';
   try {
+    const startTime = Date.now();
+    console.log(`[analyzeBatchWithAI] 调用 AI API... (${batch.map(b => b.id).join(', ')})`);
     const response = await client.chat.completions.create({
       model,
       messages: [
@@ -532,12 +574,12 @@ ${batchContent}
         { role: 'user', content: prompt },
       ],
       temperature: 0.3,
-      max_tokens: 8000,
+      max_tokens: 2048,
     });
     content = response.choices[0]?.message?.content || '';
-    console.log(`[analyzeBatchWithAI] AI 返回 ${content.length} 字符`);
+    console.log(`[analyzeBatchWithAI] AI 返回 ${content.length} 字符，耗时 ${Date.now() - startTime}ms`);
   } catch (apiError) {
-    console.error(`[analyzeBatchWithAI] API 调用失败:`, (apiError as Error).message);
+    console.error(`[analyzeBatchWithAI] API 调用失败:`, (apiError as Error).message, (apiError as any)?.status);
     throw apiError; // 让外层 processBatch 捕获并 fallback
   }
   
@@ -550,29 +592,25 @@ ${batchContent}
 
     return buildBatchResults(batch, parsedArray);
   } catch (parseError) {
-    console.warn('[analyzeBatchWithAI] JSON 解析失败，回退到单条分析。错误:', (parseError as Error).message);
+    console.warn('[analyzeBatchWithAI] JSON 解析失败，回退到规则引擎。错误:', (parseError as Error).message);
     console.warn('[analyzeBatchWithAI] 原始 AI 返回前 500 字符:', content.substring(0, 500));
-    const fallbackResults: Array<T & { analysis: SentimentAnalysisResult }> = [];
-    for (const item of batch) {
-      try {
-        const analysis = await analyzeMessage(item.message);
-        fallbackResults.push({ ...item, analysis });
-      } catch (err) {
-        const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
-        fallbackResults.push({
-          ...item,
-          analysis: {
-            score: 20,
-            categories,
-            primaryCategory: 'emotional',
-            emotion: 'neutral',
-            tags: [],
-            _source: 'ai',
-          },
-        });
-      }
-    }
-    return fallbackResults;
+    // 回退到规则引擎，不再逐条调用 AI（避免雪崩）
+    return batch.map(item => {
+      const ruleResult = analyzeByRules(item.message);
+      if (ruleResult) return { ...item, analysis: ruleResult };
+      const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
+      return {
+        ...item,
+        analysis: {
+          score: 20,
+          categories,
+          primaryCategory: 'emotional' as const,
+          emotion: 'neutral' as const,
+          tags: [],
+          _source: 'fallback' as const,
+        },
+      };
+    });
   }
 }
 
@@ -584,8 +622,8 @@ function buildBatchResults<T extends { id: string; message: string }>(
   parsedArray: any[]
 ): Array<T & { analysis: SentimentAnalysisResult }> {
   return batch.map((item, index) => {
-    const parsed = parsedArray.find((p: any) => p.index === index);
-    
+    const parsed = parsedArray[index];
+
     if (!parsed) {
       const categories: SentimentAnalysisResult['categories'] = { touching: 20, emotional: 20, culturalInsight: 10 };
       return {

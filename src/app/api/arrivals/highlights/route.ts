@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId,
         primaryCategory: dbCategory,
+        modelVersion: { not: 'fallback-v1' },
         message: {
           gte: '', // 确保不为空
         },

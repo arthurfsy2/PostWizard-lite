@@ -36,19 +36,21 @@ export async function GET(request: NextRequest) {
     
     console.log('[arrivals/analysis/status] arrivalReply 数量:', replies.length);
 
-    // 获取当前用户的 messageAnalysis
+    // 获取当前用户的 messageAnalysis（排除 fallback 失败记录）
     const analyses = await prisma.messageAnalysis.findMany({
       where: {
         userId: userId,
+        modelVersion: { not: 'fallback-v1' },
       },
       select: {
         postcardId: true,
+        message: true,
         aiScore: true,
         primaryCategory: true,
         translation: true,
       },
     });
-    
+
     console.log('[arrivals/analysis/status] messageAnalysis 数量:', analyses.length);
 
     const analyzedIds = new Set(analyses.map(a => a.postcardId));
@@ -63,7 +65,13 @@ export async function GET(request: NextRequest) {
       poor: analyses.filter(a => a.aiScore < 40).length,
     };
 
-    const withTranslation = analyses.filter(a => a.translation).length;
+    // 中文/繁体留言不需要翻译，视为已有翻译
+    const isMainlyChinese = (msg: string) => {
+      if (!msg) return false;
+      const nonAscii = (msg.match(/[^\x00-\x7F]/g) || []).length;
+      return nonAscii / msg.length > 0.5;
+    };
+    const withTranslation = analyses.filter(a => a.translation || isMainlyChinese(a.message)).length;
 
     // 防止除以 0
     const progress = replies.length > 0 

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLocalUserId } from '@/lib/local-user';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 /**
  * GET /api/arrivals/stats
@@ -18,9 +16,12 @@ export async function GET(request: NextRequest) {
       where: { userId: userId },
     });
 
-    // 查询所有 MessageAnalysis
+    // 查询所有 MessageAnalysis（排除 fallback 失败记录）
     const allAnalyses = await prisma.messageAnalysis.findMany({
-      where: { userId: userId },
+      where: {
+        userId: userId,
+        modelVersion: { not: 'fallback-v1' },
+      },
       select: {
         aiScore: true,
         primaryCategory: true,
@@ -51,8 +52,8 @@ export async function GET(request: NextRequest) {
         totalCount,
         analyzedCount: allAnalyses.length,
         fallbackCount,
-        fallbackPercentage: allAnalyses.length > 0 
-          ? ((fallbackCount / allAnalyses.length) * 100).toFixed(1) 
+        fallbackPercentage: allAnalyses.length > 0
+          ? ((fallbackCount / allAnalyses.length) * 100).toFixed(1)
           : '0',
         categoryStats,
       },

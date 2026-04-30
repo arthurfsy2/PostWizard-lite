@@ -36,7 +36,8 @@ export function HighlightsContainer({
 }: HighlightsContainerProps) {
   const [activeCategory, setActiveCategory] = useState<HighlightCategory>(defaultCategory);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
-  const [isPolling, setIsPolling] = useState(false); // 是否正在轮询分析进度
+  const [isTranslatingBatch, setIsTranslatingBatch] = useState(false);
+  const [translateProgress, setTranslateProgress] = useState<{ progress: number; total: number; translated: number } | null>(null);
 
   const {
     highlights,
@@ -59,6 +60,7 @@ export function HighlightsContainer({
     status,
     isLoading: isStatusLoading,
     isAnalyzing,
+    analysisProgress,
     fetchStatus,
     continueAnalysis,
   } = useAnalysisStatus();
@@ -77,28 +79,6 @@ export function HighlightsContainer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source]);
 
-  // 自动轮询：仅在用户点击"继续分析"后，每 3 秒刷新一次状态和精选
-  useEffect(() => {
-    if (!isPolling || !status || status.pending === 0) return;
-
-    const timer = setInterval(() => {
-      fetchStatus();
-      refresh();
-    }, 3000);
-
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPolling, status?.pending]);
-
-  // 分析完成时停止轮询
-  useEffect(() => {
-    if (isPolling && status && status.pending === 0) {
-      setIsPolling(false);
-      toast.success('✨ 所有留言分析完成！');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.pending]);
-
   const handleCategoryChange = (category: HighlightCategory) => {
     setActiveCategory(category);
   };
@@ -113,13 +93,66 @@ export function HighlightsContainer({
       return;
     }
 
-    setIsPolling(true); // 开始轮询
-    const result = await continueAnalysis();
+    const result = await continueAnalysis(() => {
+      // 分析完成，刷新精选数据
+      refresh();
+    });
     if (result.success) {
-      toast.success(`已开始补全剩余 ${result.count} 条留言的精选分析，请稍候...`);
+      toast.success(result.message);
     } else {
       toast.error(result.message);
-      setIsPolling(false); // 失败时停止轮询
+    }
+  };
+
+  const handleBatchTranslate = async () => {
+    setIsTranslatingBatch(true);
+    setTranslateProgress(null);
+    try {
+      const res = await fetch('/api/arrivals/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batch: true }),
+      });
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+
+            if (data.started) {
+              setTranslateProgress({ progress: 0, total: data.total, translated: 0 });
+              continue;
+            }
+
+            if (data.progress !== undefined) {
+              setTranslateProgress({ progress: data.progress, total: data.total, translated: data.translated });
+              continue;
+            }
+
+            if (data.done) {
+              toast.success(`补全翻译完成：${data.translated}/${data.total} 条`);
+              fetchStatus();
+            }
+          } catch {}
+        }
+      }
+    } catch (e) {
+      toast.error('翻译请求失败');
+    } finally {
+      setIsTranslatingBatch(false);
+      setTranslateProgress(null);
     }
   };
 
@@ -192,23 +225,54 @@ export function HighlightsContainer({
                 </button>
               </div>
 
-              {shouldShowPendingHint && (
+              {analysisProgress ? (
+                <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                  正在实时分析中，请勿关闭页面...
+                </div>
+              ) : shouldShowPendingHint && (
                 <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
                   当前已完成 {status.analyzed}/{totalStatusCount} 条留言分析，剩余 {pendingCount} 条可继续补全。若刚刚搜索过邮件或中途网络波动，可点击右上角"继续分析剩余留言"。
                 </div>
               )}
 
               <div className="mb-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-gray-600">已分析 {status.analyzed}/{status.total}</span>
-                  <span className="text-gray-600">{status.progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-green-500 to-emerald-500 h-full transition-all duration-500"
-                    style={{ width: `${status.progress}%` }}
-                  />
-                </div>
+                {analysisProgress ? (
+                  <>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-600">
+                        <Loader2 className="w-3 h-3 inline animate-spin text-orange-500 mr-1" />
+                        分析中 {analysisProgress.analyzed}/{analysisProgress.total}
+                        {analysisProgress.saved !== undefined && ` · 已保存 ${analysisProgress.saved}`}
+                      </span>
+                      <span className="text-gray-600">
+                        {analysisProgress.total > 0
+                          ? `${((analysisProgress.analyzed / analysisProgress.total) * 100).toFixed(0)}%`
+                          : '0%'}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-orange-500 to-amber-500 h-full transition-all duration-300"
+                        style={{
+                          width: `${analysisProgress.total > 0 ? (analysisProgress.analyzed / analysisProgress.total) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-600">已分析 {status.analyzed}/{status.total}</span>
+                      <span className="text-gray-600">{status.progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 h-full transition-all duration-500"
+                        style={{ width: `${status.progress}%` }}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* 详细统计 */}
@@ -227,9 +291,42 @@ export function HighlightsContainer({
                   <div className="text-gray-500">良好 (60-79)</div>
                   <div className="font-bold text-blue-600">{status.scoreDistribution.good}</div>
                 </div>
-                <div className="bg-white rounded p-2 text-center border border-slate-100">
+                <div className="bg-white rounded p-2 text-center border border-slate-100 relative">
                   <div className="text-gray-500">有翻译</div>
-                  <div className="font-bold text-purple-600">{status.withTranslation}</div>
+                  <div className="font-bold text-purple-600">
+                    {status.withTranslation} <span className="text-gray-400 font-normal">/ {status.total}</span>
+                  </div>
+                  {translateProgress ? (
+                    <div className="mt-1">
+                      <div className="flex justify-between text-xs text-gray-500 mb-0.5">
+                        <span>{translateProgress.progress}/{translateProgress.total}</span>
+                        <span>{((translateProgress.progress / translateProgress.total) * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-purple-500 h-full transition-all duration-300"
+                          style={{ width: `${(translateProgress.progress / translateProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    status.withTranslation < status.total && (
+                      <button
+                        onClick={handleBatchTranslate}
+                        disabled={isTranslatingBatch}
+                        className="mt-1 w-full text-xs text-purple-600 hover:text-purple-800 disabled:text-gray-400 transition-colors"
+                      >
+                        {isTranslatingBatch ? (
+                          <span className="flex items-center justify-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            补全中...
+                          </span>
+                        ) : (
+                          `补全 (${status.total - status.withTranslation})`
+                        )}
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
 

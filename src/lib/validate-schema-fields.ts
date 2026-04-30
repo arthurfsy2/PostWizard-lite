@@ -51,7 +51,6 @@ const SCHEMA_FIELDS: Record<string, string[]> = {
     // 关系字段
     'Session',
     'Referral',
-    'UserMaterial',
     'GeneratedContent',
     'Payment',
   ],
@@ -148,16 +147,6 @@ const SCHEMA_FIELDS: Record<string, string[]> = {
     // 关系字段
     'referrer',
   ],
-  UserMaterial: [
-    'id',
-    'userId',
-    'category',
-    'content',
-    'createdAt',
-    'updatedAt',
-    // 关系字段
-    'user',
-  ],
   QuotaLog: [
     'id',
     'userId',
@@ -188,17 +177,6 @@ const SCHEMA_FIELDS: Record<string, string[]> = {
     'expiresAt',
     'createdAt',
   ],
-  Template: [
-    'id',
-    'userId',
-    'name',
-    'content',
-    'category',
-    'createdAt',
-    'updatedAt',
-    // 关系字段
-    'user',
-  ],
   AdminLog: [
     'id',
     'adminId',
@@ -225,17 +203,6 @@ const SCHEMA_FIELDS: Record<string, string[]> = {
     'secure',
     'authUser',
     'authPass',
-    'createdAt',
-    'updatedAt',
-    // 关系字段
-    'user',
-  ],
-  CardTemplate: [
-    'id',
-    'userId',
-    'name',
-    'type',
-    'content',
     'createdAt',
     'updatedAt',
     // 关系字段

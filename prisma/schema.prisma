@@ -61,9 +61,6 @@ model ReceivedCard {
   city                String?
   postcardId          String?  @unique
   postcardIdConfirmed Boolean  @default(false)
-  cardRarity          String?
-  cardId              String?
-  hasShared           Boolean  @default(false)
 
   // 图片处理相关字段
   imageUrl              String?
@@ -104,36 +101,6 @@ model GeneratedContent {
   postcard      Postcard  @relation(fields: [postcardId], references: [id], onDelete: Cascade)
 
   @@map("generated_contents")
-}
-
-model Template {
-  id         String   @id @default(cuid())
-  userId     String?
-  name       String
-  content    String
-  category   String
-  isSystem   Boolean  @default(false)
-  usageCount Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@map("templates")
-}
-
-model UserMaterial {
-  id            String    @id @default(cuid())
-  userId        String    @default("local")
-  category      String
-  content       String    @default("")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  contentStruct String?
-  lastUsedAt    DateTime?
-  tags          String?
-  usageCount    Int       @default(0)
-
-  @@unique([userId, category])
-  @@map("user_materials")
 }
 
 model PastedEmail {
@@ -221,77 +188,6 @@ model UserProfile {
   @@map("user_profiles")
 }
 
-model MaterialProgress {
-  id               String    @id @default(cuid())
-  userId           String    @unique @default("local")
-  completionRate   Int       @default(0)
-  qualityScore     Int       @default(0)
-  categoryProgress String?
-  lastEvaluatedAt  DateTime?
-  totalMatches     Int       @default(0)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  @@map("material_progress")
-}
-
-// ===== Postcrossing 同步（可选功能） =====
-
-model PostcrossingAccount {
-  id              String    @id @default(cuid())
-  userId          String    @unique @default("local")
-  username        String
-  password        String
-  isActive        Boolean   @default(true)
-  lastSyncAt      DateTime?
-  lastSyncStatus  String?
-  lastSyncError   String?
-  cookie          String?
-  cookieExpiresAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@map("postcrossing_accounts")
-}
-
-model PostcrossingTraveling {
-  id               String    @id @default(cuid())
-  userId           String    @default("local")
-  postcardId       String
-  receiverUsername String
-  countryCode      String
-  sentDate         DateTime
-  distance         Int
-  arrivedFlag      Int       @default(0)
-  rawData          String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  parsedAt         DateTime?
-  parsedData       String?
-  profileFetchedAt DateTime?
-  profileText      String?
-  recipientAddress String?
-  recipientCity    String?
-  recipientCountry String?
-  recipientName    String?
-  recipientPostal  String?
-
-  @@index([userId])
-  @@map("postcrossing_traveling")
-}
-
-model PostcrossingSyncLog {
-  id        String   @id @default(cuid())
-  userId    String   @default("local")
-  action    String
-  details   String?
-  error     String?
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@map("postcrossing_sync_logs")
-}
-
 // ===== 本地设置 =====
 
 model Settings {
@@ -340,41 +236,6 @@ model Email {
 }
 
 // ===== 抽卡系统（娱乐彩蛋，免费） =====
-
-model GachaPool {
-  id        String         @id @default(uuid())
-  name      String
-  ssrRate   Float          @default(0.05)
-  srRate    Float          @default(0.15)
-  rRate     Float          @default(0.40)
-  nRate     Float          @default(0.40)
-  isActive  Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  cards     CardTemplate[]
-
-  @@map("gacha_pools")
-}
-
-model CardTemplate {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  imageUrl    String
-  category    String?
-  isActive    Boolean        @default(true)
-  usageCount  Int            @default(0)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  gachaPoolId String?
-  keywords    String?
-  rarity      String         @default("N")
-  weight      Int            @default(100)
-  gachaPool   GachaPool?     @relation(fields: [gachaPoolId], references: [id])
-  sortOrder   Int            @default(0)
-
-  @@map("card_templates")
-}
 
 model UserGachaLog {
   id            String   @id @default(uuid())

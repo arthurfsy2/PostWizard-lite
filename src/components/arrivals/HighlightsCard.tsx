@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Calendar, Quote, Star } from "lucide-react";
+import { MapPin, Calendar, Quote, Star, Loader2, Languages } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,27 @@ interface HighlightsCardProps {
  */
 export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
   const [showDetail, setShowDetail] = useState(false);
+  const [translation, setTranslation] = useState(highlight.translation);
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  const handleTranslate = async () => {
+    setIsTranslating(true);
+    try {
+      const res = await fetch('/api/arrivals/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postcardId: highlight.postcardId }),
+      });
+      const data = await res.json();
+      if (data.success && data.translation) {
+        setTranslation(data.translation);
+      }
+    } catch (e) {
+      console.error('翻译失败:', e);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   const flagEmoji = getFlagEmoji(highlight.country);
   
@@ -34,9 +55,9 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
   const getCategoryLabel = (category: HighlightCategory) => {
     const labels: Record<HighlightCategory, string> = {
       touching: "最走心",
-      funny: "最有趣",
-      blessing: "最祝福",
-      cultural: "文化交流",
+      emotional: "情感温度",
+      culturalInsight: "文化洞察",
+      lucky: "最Lucky",
     };
     return labels[category];
   };
@@ -44,9 +65,9 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
   const getCategoryColor = (category: HighlightCategory) => {
     const colors: Record<HighlightCategory, string> = {
       touching: "bg-pink-100 text-pink-700 border-pink-200",
-      funny: "bg-amber-100 text-amber-700 border-amber-200",
-      blessing: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      cultural: "bg-blue-100 text-blue-700 border-blue-200",
+      emotional: "bg-amber-100 text-amber-700 border-amber-200",
+      culturalInsight: "bg-blue-100 text-blue-700 border-blue-200",
+      lucky: "bg-emerald-100 text-emerald-700 border-emerald-200",
     };
     return colors[category];
   };
@@ -54,9 +75,9 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
   const getCategoryIcon = (category: HighlightCategory) => {
     const icons: Record<HighlightCategory, string> = {
       touching: "💝",
-      funny: "😄",
-      blessing: "✨",
-      cultural: "🌍",
+      emotional: "💗",
+      culturalInsight: "🌍",
+      lucky: "🍀",
     };
     return icons[category];
   };
@@ -214,15 +235,36 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
               </p>
             </div>
 
-            {/* 中文翻译（如果有） */}
-            {highlight.translation && (
+            {/* 中文翻译 */}
+            {translation ? (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50/30 p-4 rounded-lg border border-blue-100">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-medium text-blue-600">🇨🇳 中文翻译</span>
                 </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {highlight.translation}
+                  {translation}
                 </p>
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-200 flex items-center justify-between">
+                <span className="text-xs text-gray-400">暂无翻译</span>
+                <button
+                  onClick={handleTranslate}
+                  disabled={isTranslating}
+                  className="flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-800 disabled:text-gray-400 transition-colors"
+                >
+                  {isTranslating ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      翻译中...
+                    </>
+                  ) : (
+                    <>
+                      <Languages className="w-3 h-3" />
+                      重新翻译
+                    </>
+                  )}
+                </button>
               </div>
             )}
 

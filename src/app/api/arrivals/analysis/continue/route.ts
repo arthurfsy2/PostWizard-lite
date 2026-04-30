@@ -1,104 +1,111 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
-import { analyzeMessagesBatchOptimized } from '@/lib/services/sentimentAnalysis';
+import { analyzeMessagesBatchOptimized, type SentimentAnalysisResult } from '@/lib/services/sentimentAnalysis';
 import { getAIModel } from '@/lib/services/ai-config';
 import { invalidateHighlightsCache } from '@/lib/services/cache';
 
 /**
  * POST /api/arrivals/analysis/continue
- * 
- * 继续未完成的 AI 分析（断点续传）
+ *
+ * 继续未完成的 AI 分析（SSE 流式返回进度，每批完成立即入库）
  */
 export async function POST(request: NextRequest) {
-  try {
-    // 检查认证
-    const userId = getLocalUserId();
+  const userId = getLocalUserId();
 
-    // 获取当前用户的有效 arrivalReply
-    const replies = await prisma.arrivalReply.findMany({
-      where: {
-        userId: userId,
-        message: {
-          not: null,
+  // 获取当前用户的有效 arrivalReply
+  const replies = await prisma.arrivalReply.findMany({
+    where: {
+      userId: userId,
+      message: { not: null },
+    },
+    select: {
+      id: true,
+      postcardId: true,
+      userId: true,
+      message: true,
+      recipientName: true,
+      destinationCountry: true,
+      arrivedAt: true,
+    },
+  });
+
+  // 获取当前用户已有分析的记录（排除 fallback 失败的，这些需要重新分析）
+  const analyzed = await prisma.messageAnalysis.findMany({
+    where: { userId },
+    select: { postcardId: true, modelVersion: true },
+  });
+  const analyzedIds = new Set(analyzed.filter(r => r.modelVersion !== 'fallback-v1').map(r => r.postcardId));
+
+  // 过滤出需要分析的（未分析 + fallback 失败的）
+  const toAnalyze = replies.filter(r =>
+    r.message &&
+    r.message.trim().length >= 5 &&
+    !analyzedIds.has(r.postcardId)
+  );
+
+  if (toAnalyze.length === 0) {
+    return new Response(
+      `data: ${JSON.stringify({ done: true, saved: 0 })}\n\n`,
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          'X-Accel-Buffering': 'no',
         },
-      },
-      select: {
-        id: true,
-        postcardId: true,
-        userId: true,
-        message: true,
-        recipientName: true,
-        destinationCountry: true,
-        arrivedAt: true,
-      },
-    });
-
-    // 获取当前用户已有分析的记录
-    const analyzed = await prisma.messageAnalysis.findMany({
-      where: {
-        userId: userId,
-      },
-      select: { postcardId: true }
-    });
-    const analyzedIds = new Set(analyzed.map(r => r.postcardId));
-
-    // 过滤出需要分析的
-    const toAnalyze = replies.filter(r => 
-      r.message && 
-      r.message.trim().length >= 5 &&
-      !analyzedIds.has(r.postcardId)
+      }
     );
+  }
 
-    if (toAnalyze.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: '没有需要分析的记录',
-        data: { analyzed: 0, pending: 0 },
-      });
-    }
+  // 构建 postcardId → reply 映射，供回调快速查找
+  const replyMap = new Map(toAnalyze.map(r => [r.postcardId, r]));
 
-    // 异步触发 AI 分析（不等待完成）
-    const modelVersion = await getAIModel();
-    const cacheTTL = 24 * 60 * 60 * 1000;
-    const cacheValidUntil = new Date(Date.now() + cacheTTL);
+  const modelVersion = await getAIModel();
+  const cacheTTL = 24 * 60 * 60 * 1000;
+  const cacheValidUntil = new Date(Date.now() + cacheTTL);
 
-    // Fire-and-forget：不等待完成，直接返回
-    void (async () => {
-      try {
-        console.log(`[批量分析] 开始分析 ${toAnalyze.length} 条留言...`);
-        
-        // 使用优化版批量分析（规则优先 + 批量 AI）
-        const results = await analyzeMessagesBatchOptimized(
-          toAnalyze.map(r => ({
-            id: r.postcardId,
-            message: r.message,
-          })),
-          5,  // 每批 5 条（减少 token 压力，避免 JSON 截断）
-          (current, total) => {
-            console.log(`[批量分析] 进度：${current}/${total}`);
+  // SSE 流式响应
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data: any) => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch {}
+      };
+
+      // 心跳：每 2 秒发一个空注释，防止 proxy 缓冲
+      const keepalive = setInterval(() => {
+        try { controller.enqueue(encoder.encode(': keepalive\n\n')); } catch {}
+      }, 2000);
+
+      // 通知前端开始
+      send({ started: true, total: toAnalyze.length });
+
+      let savedCount = 0;
+
+      // 每批完成时立即入库保存
+      const handleBatchComplete = async (batch: Array<{ id: string; message: string; analysis: SentimentAnalysisResult }>) => {
+        for (const result of batch) {
+          const pending = replyMap.get(result.id);
+          if (!pending) {
+            console.warn(`[批量保存] 跳过: result.id=${result.id} 未在 toAnalyze 中找到匹配`);
+            continue;
           }
-        );
-        
-        console.log(`[批量分析] 分析完成，共 ${results.length} 条结果，开始保存到数据库...`);
-        
-        // 批量保存到数据库
-        let savedCount = 0;
-        for (const result of results) {
-          const pending = toAnalyze.find(r => r.postcardId === result.id);
-          if (!pending) continue;
-          
-          // 区分打分来源：规则引擎 vs AI
-          const isRuleEngine = result.analysis._source === 'rule-engine';
-          const savedModelVersion = isRuleEngine ? 'rule-engine-v1' : modelVersion;
-          
+
+          const savedModelVersion = result.analysis._source === 'rule-engine'
+            ? 'rule-engine-v1'
+            : result.analysis._source === 'fallback'
+              ? 'fallback-v1'
+              : modelVersion;
+
           try {
             await prisma.messageAnalysis.upsert({
               where: { postcardId: result.id },
               create: {
                 userId: pending.userId,
                 postcardId: result.id,
-                message: pending.message,
+                message: pending.message!,
                 sender: pending.recipientName,
                 country: pending.destinationCountry,
                 arrivedAt: pending.arrivedAt,
@@ -113,7 +120,7 @@ export async function POST(request: NextRequest) {
                 modelVersion: savedModelVersion,
               },
               update: {
-                message: pending.message,
+                message: pending.message!,
                 sender: pending.recipientName,
                 country: pending.destinationCountry,
                 arrivedAt: pending.arrivedAt,
@@ -129,41 +136,55 @@ export async function POST(request: NextRequest) {
                 analyzedAt: new Date(),
               },
             });
-            
+
             savedCount++;
-            // 每保存 10 条输出一次日志
-            if (savedCount % 10 === 0 || savedCount === results.length) {
-              console.log(`[批量保存] 进度：${savedCount}/${results.length}`);
-            }
+            send({ saved: savedCount, total: toAnalyze.length });
+            console.log(`[批量保存] ${savedCount}/${toAnalyze.length} - ${result.id} (${result.analysis._source})`);
           } catch (err) {
-            console.error(`[批量分析] ${result.id} 保存失败:`, err);
+            console.error(`[批量保存] ${result.id} 失败:`, (err as Error).message);
           }
         }
-        
+      };
+
+      try {
+        console.log(`[批量分析] 开始分析 ${toAnalyze.length} 条留言...`);
+
+        // 使用优化版批量分析，每批完成立即回调入库
+        await analyzeMessagesBatchOptimized(
+          toAnalyze.map(r => ({
+            id: r.postcardId,
+            message: r.message!,
+          })),
+          3,  // 每批 3 条（2048 token 限制下，5 条容易截断 JSON）
+          (current, total) => {
+            console.log(`[批量分析] 进度：${current}/${total}`);
+            send({ analyzed: current, total });
+          },
+          3,  // 并行度
+          handleBatchComplete  // 每批完成立即入库
+        );
+
         // 清除精选缓存
         await invalidateHighlightsCache(userId);
-        console.log(`[批量分析] 完成：成功 ${savedCount}/${results.length} 条`);
+        console.log(`[批量分析] 全部完成，成功保存 ${savedCount}/${toAnalyze.length} 条`);
+
+        send({ done: true, saved: savedCount });
       } catch (error) {
         console.error('[批量分析] 错误:', error);
+        send({ done: true, saved: savedCount, error: (error as Error).message });
       } finally {
-        await prisma.$disconnect();
+        clearInterval(keepalive);
+        try { controller.close(); } catch {}
       }
-    })();
+    },
+  });
 
-    return NextResponse.json({
-      success: true,
-      message: `开始分析 ${toAnalyze.length} 条记录`,
-      data: {
-        total: toAnalyze.length,
-        analyzed: 0,
-        pending: toAnalyze.length,
-      },
-    });
-  } catch (error) {
-    console.error('触发 AI 分析失败:', error);
-    return NextResponse.json(
-      { error: '触发 AI 分析失败', success: false },
-      { status: 500 }
-    );
-  }
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  });
 }
