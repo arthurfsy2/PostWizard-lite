@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3001 --webpack",
-    "dev:uat": "next dev --port 3002",
+    "dev": "node scripts/check-port.js 3001 && next dev --port 3001 --webpack",
+    "dev:uat": "node scripts/check-port.js 3002 && next dev --port 3002",
     "build": "NEXT_PUBLIC_GIT_HASH=$(git rev-parse --short HEAD) next build",
     "build:local": "next build",
     "start": "next start",

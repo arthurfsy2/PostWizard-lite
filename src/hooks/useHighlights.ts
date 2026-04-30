@@ -11,6 +11,7 @@ interface UseHighlightsOptions {
   category?: HighlightCategory;
   limit?: number;
   autoFetch?: boolean;
+  source?: 'arrivals' | 'received';
 }
 
 interface UseHighlightsReturn {
@@ -36,7 +37,7 @@ interface UseHighlightsReturn {
  * @returns 留言精选数据和状态
  */
 export function useHighlights(options: UseHighlightsOptions = {}): UseHighlightsReturn {
-  const { category, limit = 10, autoFetch = true } = options;
+  const { category, limit = 10, autoFetch = true, source = 'arrivals' } = options;
   
   const [highlights, setHighlights] = useState<HighlightItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,7 +78,8 @@ export function useHighlights(options: UseHighlightsOptions = {}): UseHighlights
         params.set('offset', offsetRef.current.toString());
       }
 
-      const response = await apiFetch(`/api/arrivals/highlights?${params}`);
+      const basePath = source === 'received' ? '/api/received-cards/highlights' : '/api/arrivals/highlights';
+      const response = await apiFetch(`${basePath}?${params}`);
       const result = await response.json();
 
       // 竞态：若版本已过期（说明有新请求发出），丢弃本响应
@@ -129,7 +131,7 @@ export function useHighlights(options: UseHighlightsOptions = {}): UseHighlights
         setIsLoadingMore(false);
       }
     }
-  }, [category, limit]);
+  }, [category, limit, source]);
 
   const refresh = useCallback(async () => {
     offsetRef.current = 0;
@@ -140,19 +142,19 @@ export function useHighlights(options: UseHighlightsOptions = {}): UseHighlights
     await fetchHighlights(false, true);
   }, [fetchHighlights]);
 
-  // 切换分类时重置分页
+  // 切换分类或数据源时重置分页
   useEffect(() => {
     offsetRef.current = 0;
     setHighlights([]);
     setHasMore(false);
-  }, [category]);
+  }, [category, source]);
 
   // 自动获取数据
   useEffect(() => {
     if (autoFetch) {
       fetchHighlights();
     }
-  }, [category, autoFetch, fetchHighlights]);
+  }, [category, source, autoFetch, fetchHighlights]);
 
   return {
     highlights,

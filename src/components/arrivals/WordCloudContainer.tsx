@@ -16,7 +16,7 @@ import { BarChart3, RefreshCw, Palette } from "lucide-react";
  * - 单击：带防抖的普通刷新（10 秒内不重复请求）
  * - 长按 0.8 秒：强制刷新（绕过缓存，直接读数据库）
  */
-export function WordCloudContainer() {
+export function WordCloudContainer({ source = 'arrivals' }: { source?: 'arrivals' | 'received' }) {
   const [language, setLanguage] = useState<"zh" | "en" | "all">("en");
   const [forceRefresh, setForceRefresh] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
@@ -30,6 +30,7 @@ export function WordCloudContainer() {
   const { data, error, isLoading, refresh } = useWordCloud(
     language,
     forceRefresh,
+    source,
   );
 
   const handleWordClick = (word: WordCloudWord) => {
@@ -112,7 +113,7 @@ export function WordCloudContainer() {
             </h3>
             {data && (
               <p className="text-xs text-slate-500">
-                基于 {data.totalMessages} 条明信片 / 共计 {data.totalWords} 字留言，提取了 {data.uniqueWords} 个关键词
+                基于 {data.totalMessages} 条{source === 'received' ? '收信' : '明信片'} / 共计 {data.totalWords} 字{source === 'received' ? '手写内容' : '留言'}，提取了 {data.uniqueWords} 个关键词
               </p>
             )}
           </div>

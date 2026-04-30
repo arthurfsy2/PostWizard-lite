@@ -1,18 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from './useAuth';
 
-// AI 评价维度
-export interface Dimension {
-  name: string;
-  score: number;
-  reason: string;
-}
-
-// AI 评价结果
+// AI 评价结果（三维度评分）
 export interface AIEvaluation {
-  overallScore: number;
-  dimensions: Dimension[];
+  touchingScore: number;        // 最走心 (0-100)
+  emotionalScore: number;       // 情感温度 (0-100)
+  culturalInsightScore: number; // 文化洞察 (0-100)
   summary: string;
+  primaryCategory: 'touching' | 'culturalInsight' | 'emotional';
 }
 
 // 抽卡结果

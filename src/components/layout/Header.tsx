@@ -13,6 +13,7 @@ import {
   X,
   Menu,
   Settings,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
@@ -28,6 +29,7 @@ const sendMailNav = [
 // 收信流程导航
 const receiveMailNav = [
   { name: "上传识别", href: "/received/upload", icon: Download },
+  { name: "批量上传", href: "/received/batch", icon: Upload },
   { name: "收信历史", href: "/received/history", icon: Inbox },
 ];
 

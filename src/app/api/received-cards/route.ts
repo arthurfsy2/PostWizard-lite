@@ -9,6 +9,8 @@ import fs from 'fs';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 
+export const bodySizeLimit = '20mb';
+
 /**
  * GET /api/received-cards
  * 获取当前用户收信列表（分页）
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
       where.country = country;
     }
 
-    const [total, receivedCards] = await Promise.all([
+    const [total, receivedCards, countryStats] = await Promise.all([
       prisma.receivedCard.count({ where }),
       prisma.receivedCard.findMany({
         where,
@@ -49,12 +51,19 @@ export async function GET(request: NextRequest) {
           metadata: true,
         },
       }),
+      // 国家统计（不受 country 筛选影响）
+      prisma.receivedCard.groupBy({
+        by: ['country'],
+        where: { userId },
+        _count: { country: true },
+        orderBy: { _count: { country: 'desc' } },
+      }),
     ]);
 
-    // 批量查询抽卡记录以获取稀有度信息（避免 N+1 问题）
+    // 批量查询抽卡记录以获取稀有度和评价信息（避免 N+1 问题）
     const postcardIds = receivedCards.map(card => card.postcardId).filter(Boolean);
-    const gachaLogsMap = new Map<string, { rarity: string; luckyLevel: string | null }>();
-    
+    const gachaLogsMap = new Map<string, { rarity: string; luckyLevel: string | null; aiScore: number | null; touchingScore: number | null; emotionalScore: number | null; culturalInsightScore: number | null; summary: string | null }>();
+
     if (postcardIds.length > 0) {
       const gachaLogs = await prisma.userGachaLog.findMany({
         where: {
@@ -64,14 +73,24 @@ export async function GET(request: NextRequest) {
           postcardId: true,
           rarity: true,
           luckyLevel: true,
+          aiScore: true,
+          touchingScore: true,
+          emotionalScore: true,
+          culturalInsightScore: true,
+          summary: true,
         },
       });
-      
+
       gachaLogs.forEach(log => {
         if (log.postcardId) {
           gachaLogsMap.set(log.postcardId, {
             rarity: log.rarity,
             luckyLevel: log.luckyLevel,
+            aiScore: log.aiScore,
+            touchingScore: log.touchingScore,
+            emotionalScore: log.emotionalScore,
+            culturalInsightScore: log.culturalInsightScore,
+            summary: log.summary,
           });
         }
       });
@@ -102,8 +121,6 @@ export async function GET(request: NextRequest) {
         backImageUrl: card.imageUrl,
         processedImageUrl: card.processedImageUrl,
         originalImageUrl: card.originalImageUrl,
-        originalImageUrl: card.originalImageUrl,
-        processedImageUrl: card.processedImageUrl,
         imageProcessingStatus: card.imageProcessingStatus,
         frontImageUrl: metadata.frontImageUrl,
         shareImageUrl: metadata.shareImageUrl,
@@ -114,6 +131,13 @@ export async function GET(request: NextRequest) {
         // 抽卡关联信息
         rarity: gachaInfo?.rarity || null,
         luckyLevel: gachaInfo?.luckyLevel || null,
+        gachaEvaluation: gachaInfo ? {
+          aiScore: gachaInfo.aiScore,
+          touchingScore: gachaInfo.touchingScore,
+          emotionalScore: gachaInfo.emotionalScore,
+          culturalInsightScore: gachaInfo.culturalInsightScore,
+          summary: gachaInfo.summary,
+        } : null,
       };
     });
 
@@ -125,6 +149,9 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / pageSize),
       },
+      byCountry: countryStats
+        .filter(s => s.country && s.country !== 'UN')
+        .map(s => ({ country: s.country, count: s._count.country })),
     });
   } catch (error: any) {
     console.error('[ReceivedCards API GET] Error:', error.message, error.code, error.meta);
@@ -239,19 +266,59 @@ export async function POST(request: NextRequest) {
     let ocrError = false;
     let ocrErrorMessage = '';
 
+    // 从文件名提取 postcard ID（如 DE-16306421.jpg → DE-16306421）
+    const filenameMatch = backImage.name.match(/^([A-Z]{2}-\d{5,})/i);
+    const filenamePostcardId = filenameMatch ? filenameMatch[1].toUpperCase() : null;
+    console.log('[Upload] 文件名解析', {
+      fileName: backImage.name,
+      matched: !!filenameMatch,
+      extractedId: filenamePostcardId,
+    });
+
+    // 文件名已有 ID 时，先检查重复，跳过不必要的 OCR 调用
+    if (filenamePostcardId) {
+      const earlyDuplicate = await checkDuplicateReceivedCard(filenamePostcardId, userId);
+      if (earlyDuplicate.exists && earlyDuplicate.receivedCard) {
+        console.log('[Upload] 文件名 ID 已存在，跳过 OCR:', filenamePostcardId);
+        fs.unlinkSync(backTemp.tmpPath);
+        if (frontTemp) fs.unlinkSync(frontTemp.tmpPath);
+        return NextResponse.json({
+          error: 'DUPLICATE_POSTCARD_ID',
+          message: `该明信片 ID (${filenamePostcardId}) 已存在于历史记录中`,
+          duplicateCardId: earlyDuplicate.receivedCard.id,
+          duplicateInfo: {
+            postcardId: earlyDuplicate.receivedCard.postcardId,
+            createdAt: earlyDuplicate.receivedCard.createdAt,
+            formattedTime: earlyDuplicate.receivedCard.formattedTime,
+            country: earlyDuplicate.receivedCard.country,
+            city: earlyDuplicate.receivedCard.city,
+          },
+          action: 'overwrite',
+        }, { status: 409 });
+      }
+    }
+
     try {
       const arrayBuffer = await backImage.arrayBuffer();
       const base64 = Buffer.from(arrayBuffer).toString('base64');
       console.log('[OCR] 开始识别图片', {
         userId,
         imageSize: base64.length,
+        filenamePostcardId,
       });
       ocrResult = await recognizePostcard(base64);
       console.log('[OCR] 识别成功', {
         postcardId: ocrResult?.postcardId,
-        postcardIdConfidence: ocrResult?.postcardIdConfidence,
         confidence: ocrResult?.confidence,
       });
+
+      // 文件名 ID 优先于 OCR 识别结果
+      if (filenamePostcardId) {
+        console.log('[Upload] 文件名 ID 覆盖 OCR 结果:', filenamePostcardId, '→ 替换', ocrResult?.postcardId);
+        ocrResult.postcardId = filenamePostcardId;
+      } else {
+        console.log('[Upload] 文件名无有效 ID，使用 OCR 结果:', ocrResult?.postcardId);
+      }
     } catch (error: any) {
       console.error('[OCR] 识别失败:', {
         userId,
@@ -260,31 +327,9 @@ export async function POST(request: NextRequest) {
       });
       ocrError = true;
       ocrErrorMessage = error.message;
-    }
-
-    // 检测是否重复（收信专用函数）
-    if (ocrResult?.postcardId) {
-      const duplicate = await checkDuplicateReceivedCard(ocrResult.postcardId, userId);
-      
-      if (duplicate.exists && duplicate.receivedCard) {
-        // 发现重复，清理临时文件
-        fs.unlinkSync(backTemp.tmpPath);
-        if (frontTemp) fs.unlinkSync(frontTemp.tmpPath);
-        
-        // 返回提示
-        return NextResponse.json({
-          error: 'DUPLICATE_POSTCARD_ID',
-          message: `该明信片 ID (${ocrResult.postcardId}) 已存在于历史记录中`,
-          duplicateCardId: duplicate.receivedCard.id,
-          duplicateInfo: {
-            postcardId: duplicate.receivedCard.postcardId,
-            createdAt: duplicate.receivedCard.createdAt,
-            formattedTime: duplicate.receivedCard.formattedTime,
-            country: duplicate.receivedCard.country,
-            city: duplicate.receivedCard.city,
-          },
-          action: 'overwrite',
-        }, { status: 409 }); // 409 Conflict
+      // OCR 失败但文件名有 ID 时，保留文件名 ID
+      if (filenamePostcardId) {
+        ocrResult = { postcardId: filenamePostcardId };
       }
     }
 
@@ -336,7 +381,7 @@ export async function POST(request: NextRequest) {
       metadata = {};
     }
 
-    const responseData = {
+    const responseData: any = {
       id: receivedCard.id,
       postcardId: receivedCard.postcardId,
       senderUsername: metadata.senderUsername,
@@ -352,6 +397,13 @@ export async function POST(request: NextRequest) {
       isOcrManualEdit: false,
       createdAt: receivedCard.createdAt,
     };
+
+    // 附加 OCR 错误信息（前端可据此提示用户）
+    if (ocrError) {
+      responseData.ocrError = true;
+      responseData.ocrErrorMessage = ocrErrorMessage;
+      responseData.ocrQuotaExhausted = ocrErrorMessage.includes('OCR_QUOTA_EXHAUSTED');
+    }
 
     // 异步触发图片自动增强（不阻塞响应）
     // 注意：这里不等待处理完成，直接返回响应

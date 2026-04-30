@@ -3,7 +3,7 @@
  * 参考 PRD: arrivals-wordcloud-pm-final.md 第八点五节
  */
 
-export type HighlightCategory = 'touching' | 'emotional' | 'culturalInsight';
+export type HighlightCategory = 'touching' | 'emotional' | 'culturalInsight' | 'lucky';
 
 export interface HighlightCategoryInfo {
   key: HighlightCategory;
@@ -71,5 +71,16 @@ export const HIGHLIGHT_CATEGORIES: HighlightCategoryInfo[] = [
     label: '文化洞察',
     icon: '🌍',
     description: '有本地视角，不是景点介绍',
+  },
+];
+
+// 收信精选分类配置（含 Lucky）
+export const RECEIVED_HIGHLIGHT_CATEGORIES: HighlightCategoryInfo[] = [
+  ...HIGHLIGHT_CATEGORIES,
+  {
+    key: 'lucky',
+    label: '最Lucky',
+    icon: '🍀',
+    description: '明信片编号有特殊数字组合',
   },
 ];

@@ -21,10 +21,10 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // 放行静态资源、登录页、登录 API、Next.js 内部路径
+  // 放行静态资源、登录页、所有 API、Next.js 内部路径
   if (
     pathname.startsWith('/login') ||
-    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
     pathname.endsWith('.svg') ||

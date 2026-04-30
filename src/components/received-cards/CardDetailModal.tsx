@@ -24,10 +24,20 @@ import {
   Crop,
   RotateCw,
   ImageIcon,
+  Star,
+  Check,
 } from 'lucide-react';
 import { getFlagEmoji } from '@/lib/flag-emoji';
 import { getCountryNameCN } from '@/lib/country-codes';
 
+
+interface GachaEvaluation {
+  aiScore: number | null;
+  touchingScore: number | null;
+  emotionalScore: number | null;
+  culturalInsightScore: number | null;
+  summary: string | null;
+}
 
 interface ReceivedCard {
   id: string;
@@ -47,6 +57,9 @@ interface ReceivedCard {
   isPublic: boolean;
   receivedAt: string | null;
   createdAt: string;
+  rarity?: string | null;
+  luckyLevel?: string | null;
+  gachaEvaluation?: GachaEvaluation | null;
 }
 
 interface CardDetailModalProps {
@@ -105,11 +118,16 @@ export function CardDetailModal({
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
   const [rotation, setRotation] = useState(0);
+  const [isEditingId, setIsEditingId] = useState(false);
+  const [editedPostcardId, setEditedPostcardId] = useState('');
+  const [savingId, setSavingId] = useState(false);
 
   useEffect(() => {
     if (card) {
       setActiveTab('content');
       setEditedHandwrittenText(card.handwrittenText || '');
+      setIsEditingId(false);
+      setEditedPostcardId(card.postcardId || '');
     }
   }, [card]);
 
@@ -171,7 +189,47 @@ export function CardDetailModal({
     }
   };
 
+  const handleSavePostcardId = async () => {
+    if (!card) return;
 
+    const newId = editedPostcardId.trim();
+    if (!newId) {
+      alert('请输入明信片 ID');
+      return;
+    }
+
+    setSavingId(true);
+    try {
+      const token = localStorage.getItem('auth-storage');
+      const response = await fetch(`/api/received-cards/${card.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          postcardId: newId,
+          postcardIdConfirmed: true,
+        }),
+      });
+
+      if (response.ok) {
+        setIsEditingId(false);
+        window.location.reload();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        if (data.error === 'DUPLICATE_POSTCARD_ID') {
+          alert(`该明信片 ID (${newId}) 已被其他记录使用`);
+        } else {
+          throw new Error(data.message || data.error || '保存失败');
+        }
+      }
+    } catch (error: any) {
+      alert(error.message || '保存失败，请重试');
+    } finally {
+      setSavingId(false);
+    }
+  };
 
   if (!card) return null;
 
@@ -223,16 +281,57 @@ export function CardDetailModal({
           </div>
 
           {/* Postcard ID Badge */}
-          {card.postcardId && (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-sm font-mono">
-              <span>🆔 {card.postcardId}</span>
-              {card.postcardIdConfirmed && (
-                <span className="rounded-full bg-green-400/80 px-2 py-0.5 text-xs font-bold text-white">
-                  已确认
-                </span>
-              )}
-            </div>
-          )}
+          <div className="mt-3">
+            {isEditingId ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editedPostcardId}
+                  onChange={(e) => setEditedPostcardId(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg bg-white/90 text-gray-900 text-sm font-mono focus:ring-2 focus:ring-white/50 focus:outline-none w-48"
+                  placeholder="如 CN-1234567"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSavePostcardId}
+                  disabled={savingId}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-green-500/80 hover:bg-green-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
+                >
+                  {savingId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  保存
+                </button>
+                <button
+                  onClick={() => setIsEditingId(false)}
+                  className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors"
+                >
+                  取消
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setEditedPostcardId(card.postcardId || '');
+                  setIsEditingId(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-sm font-mono hover:bg-white/30 transition-colors cursor-pointer"
+                title="点击修改明信片 ID"
+              >
+                {card.postcardId ? (
+                  <>
+                    <span>🆔 {card.postcardId}</span>
+                    {card.postcardIdConfirmed && (
+                      <span className="rounded-full bg-green-400/80 px-2 py-0.5 text-xs font-bold text-white">
+                        已确认
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="opacity-70">点击设置 ID</span>
+                )}
+                <Edit3 className="h-3 w-3 opacity-70" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 内容区域 */}
@@ -272,13 +371,22 @@ export function CardDetailModal({
                 <Mail className="h-4 w-4 mr-1.5" />
                 手写内容
               </TabsTrigger>
-              <TabsTrigger 
-                value="translation" 
+              <TabsTrigger
+                value="translation"
                 className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-orange-600"
               >
                 <Languages className="h-4 w-4 mr-1.5" />
                 中文翻译
               </TabsTrigger>
+              {card.gachaEvaluation && (
+                <TabsTrigger
+                  value="evaluation"
+                  className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-orange-600"
+                >
+                  <Star className="h-4 w-4 mr-1.5" />
+                  抽卡评价
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* 手写内容 */}
@@ -326,8 +434,8 @@ export function CardDetailModal({
                 </pre>
                 {card.translatedText && (
                   <div className="absolute top-3 right-3">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => handleCopy(card.translatedText!)}
                       disabled={copying}
@@ -340,6 +448,67 @@ export function CardDetailModal({
                 )}
               </div>
             </TabsContent>
+
+            {/* 抽卡评价 */}
+            {card.gachaEvaluation && (
+              <TabsContent value="evaluation" className="space-y-4">
+                {/* 总分 + 稀有度 */}
+                <div className="flex items-center gap-3">
+                  {card.gachaEvaluation.aiScore != null && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-sm font-semibold">
+                      <Star className="w-4 h-4 fill-current" />
+                      总分: {(card.gachaEvaluation.aiScore / 10).toFixed(1)}
+                    </div>
+                  )}
+                  {card.rarity && (
+                    <span className="px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200 text-xs font-medium">
+                      {card.rarity}
+                    </span>
+                  )}
+                  {card.luckyLevel && card.luckyLevel !== "none" && (
+                    <span className="text-xs text-amber-600">
+                      {card.luckyLevel === "superLucky" ? "🌟 超级幸运" : card.luckyLevel === "special" ? "💎 特殊" : "🍀 幸运"}
+                    </span>
+                  )}
+                </div>
+
+                {/* AI 评语 */}
+                {card.gachaEvaluation.summary && (
+                  <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50/80 to-pink-50/80 p-5 shadow-inner">
+                    <p className="text-xs font-medium text-purple-600 mb-2">🤖 AI 评语</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      {card.gachaEvaluation.summary}
+                    </p>
+                  </div>
+                )}
+
+                {/* 维度评分 */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { name: "最走心", score: card.gachaEvaluation.touchingScore, icon: "💝" },
+                    { name: "情感温度", score: card.gachaEvaluation.emotionalScore, icon: "💗" },
+                    { name: "文化洞察", score: card.gachaEvaluation.culturalInsightScore, icon: "🌍" },
+                  ].map((dim) => (
+                    <div key={dim.name} className="bg-gray-50 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs text-gray-500">
+                          {dim.icon} {dim.name}
+                        </span>
+                        <span className="text-sm font-bold text-gray-900">
+                          {dim.score != null ? (dim.score / 10).toFixed(1) : "-"}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-orange-400 to-amber-400 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, dim.score || 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
 
           {/* 操作按钮 */}
@@ -395,8 +564,8 @@ export function CardDetailModal({
                   调整图片
                 </Button>
 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setIsEditing(true)}
                   className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300"
@@ -405,8 +574,8 @@ export function CardDetailModal({
                   编辑
                 </Button>
 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowDeleteConfirm(true)}
                   className="text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"

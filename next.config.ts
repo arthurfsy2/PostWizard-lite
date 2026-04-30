@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    middlewareClientMaxBodySize: '200mb',
+  },
   async redirects() {
     return [
       {

@@ -24,21 +24,21 @@ export const RARITY_CONFIG: Record<string, RarityConfig> = {
   SSR: {
     name: 'SSR',
     probability: 0.05,
-    minScore: 70,  // 调整为70
+    minScore: 240,  // 三维度总分 >= 240 (均分 80+)
     color: '#FFD700',
     glowColor: 'rgba(255, 215, 0, 0.6)',
   },
   SR: {
     name: 'SR',
     probability: 0.15,
-    minScore: 50,  // 调整为50
+    minScore: 180,  // 三维度总分 >= 180 (均分 60+)
     color: '#C0C0C0',
     glowColor: 'rgba(192, 192, 192, 0.5)',
   },
   R: {
     name: 'R',
     probability: 0.40,
-    minScore: 30,  // 调整为30
+    minScore: 120,  // 三维度总分 >= 120 (均分 40+)
     color: '#CD7F32',
     glowColor: 'rgba(205, 127, 50, 0.4)',
   },
@@ -51,18 +51,13 @@ export const RARITY_CONFIG: Record<string, RarityConfig> = {
   },
 };
 
-// AI 评价维度
-export interface Dimension {
-  name: string;
-  score: number;
-  reason: string;
-}
-
+// AI 评价（与收信 sentiment analysis 统一的三维度体系）
 export interface AIEvaluation {
-  overallScore: number;
-  dimensions: Dimension[];
+  touchingScore: number;        // 最走心 (0-100)
+  emotionalScore: number;       // 情感温度 (0-100)
+  culturalInsightScore: number; // 文化洞察 (0-100)
   summary: string;
-  suggestedRarity: 'SSR' | 'SR' | 'R' | 'N';
+  primaryCategory: 'touching' | 'culturalInsight' | 'emotional';
 }
 
 // 幸运等级类型（三级体系）
@@ -82,110 +77,140 @@ export interface GachaResult {
   luckyBonus?: number;  // 幸运加分
 }
 
-// 分析 Lucky 等级（三级体系：Super → Special → Lucky）
-function analyzeLuckyLevel(postcardId: string): { 
-  level: LuckyLevel; 
-  bonus: number; 
+// 分析 Lucky 等级（扑克牌型体系，要求聚集检测）
+function analyzeLuckyLevel(postcardId: string): {
+  level: LuckyLevel;
+  bonus: number;
   reason: string;
   label: string;
 } {
   const numbers = postcardId.replace(/[^0-9]/g, '');
-  
+
   if (numbers.length < 2) {
     return { level: 'none', bonus: 0, reason: '', label: '' };
   }
-  
-  // ===== Super Lucky 检测（3位+，+15分）=====
-  // 3位及以上相同数字：111, 2222, 33333
-  if (/(.)\1{2,}/.test(numbers)) {
-    return { 
-      level: 'superLucky', 
-      bonus: 15, 
-      reason: '🌟 超级幸运！Postcard ID 包含稀有数字组合（重复数字）',
-      label: 'Super Lucky!'
+
+  // 提取所有连续相同数字的游程 [{ digit, len }]
+  const runs: { digit: string; len: number }[] = [];
+  let i = 0;
+  while (i < numbers.length) {
+    let j = i + 1;
+    while (j < numbers.length && numbers[j] === numbers[i]) j++;
+    runs.push({ digit: numbers[i], len: j - i });
+    i = j;
+  }
+
+  const maxRun = Math.max(...runs.map(r => r.len));
+
+  // ===== 🃏 扑克牌型检测（按稀有度从高到低，要求聚集）=====
+
+  // Five of a Kind: 连续 5+ 个相同数字 → +20
+  if (maxRun >= 5) {
+    return {
+      level: 'superLucky',
+      bonus: 20,
+      reason: '🃏 五条！Postcard ID 包含 5 个连续相同数字',
+      label: 'Five of a Kind!'
     };
   }
-  
-  // 4位及以上递增：1234, 5678, 12345
-  if (/1234|2345|3456|4567|5678|6789|12345|23456|34567|45678|56789/.test(numbers)) {
-    return { 
-      level: 'superLucky', 
-      bonus: 15, 
-      reason: '🌟 超级幸运！Postcard ID 包含稀有数字组合（递增连号）',
-      label: 'Super Lucky!'
+
+  // Four of a Kind: 连续 4+ 个相同数字 → +15
+  if (maxRun >= 4) {
+    return {
+      level: 'superLucky',
+      bonus: 15,
+      reason: '🃏 四条！Postcard ID 包含 4 个连续相同数字',
+      label: 'Four of a Kind!'
     };
   }
-  
-  // 4位及以上递减：9876, 4321, 98765
-  if (/9876|8765|7654|6543|5432|4321|98765|87654|76543|65432|54321/.test(numbers)) {
-    return { 
-      level: 'superLucky', 
-      bonus: 15, 
-      reason: '🌟 超级幸运！Postcard ID 包含稀有数字组合（递减连号）',
-      label: 'Super Lucky!'
+
+  // Full House: 一组连续 3+ 相同 + 另一组连续 2+ 相同（不同数字） → +15
+  const hasRun3 = runs.some(r => r.len >= 3);
+  const hasRun2Other = (digit: string) => runs.some(r => r.digit !== digit && r.len >= 2);
+  if (hasRun3) {
+    const tripleDigit = runs.find(r => r.len >= 3)!.digit;
+    if (hasRun2Other(tripleDigit)) {
+      return {
+        level: 'superLucky',
+        bonus: 15,
+        reason: '🃏 葫芦！Postcard ID 包含聚集的 3+2 数字组合',
+        label: 'Full House!'
+      };
+    }
+  }
+
+  // Straight: 4位及以上连续递增或递减 → +10
+  const straightUp = /1234|2345|3456|4567|5678|6789|12345|23456|34567|45678|56789/;
+  const straightDown = /9876|8765|7654|6543|5432|4321|98765|87654|76543|65432|54321/;
+  if (straightUp.test(numbers) || straightDown.test(numbers)) {
+    return {
+      level: 'special',
+      bonus: 10,
+      reason: '🃏 顺子！Postcard ID 包含 4 位及以上连续数字',
+      label: 'Straight!'
     };
   }
-  
-  // ===== Special 检测（ABAB/AABB/镜像，+10分）=====
-  // ABAB 模式：0909, 1212, 2323, 4545
-  if (/(\d)(\d)\1\2/.test(numbers)) {
-    return { 
-      level: 'special', 
-      bonus: 10, 
-      reason: '💎 特殊！Postcard ID 包含 ABAB 数字模式',
-      label: 'Special'
+
+  // Three of a Kind: 连续 3 个相同数字 → +10
+  if (maxRun >= 3) {
+    return {
+      level: 'special',
+      bonus: 10,
+      reason: '🃏 三条！Postcard ID 包含 3 个连续相同数字',
+      label: 'Three of a Kind!'
     };
   }
-  
-  // AABB 模式：5566, 7788, 1122
-  if (/(\d)\1(\d)\2/.test(numbers)) {
-    return { 
-      level: 'special', 
-      bonus: 10, 
-      reason: '💎 特殊！Postcard ID 包含 AABB 数字模式',
-      label: 'Special'
+
+  // Two Pair: 两组相邻的连续 2+ 相同数字（如 3377、8811） → +5
+  let hasAdjacentPair = false;
+  for (let k = 0; k < runs.length - 1; k++) {
+    if (runs[k].len >= 2 && runs[k + 1].len >= 2) { hasAdjacentPair = true; break; }
+  }
+  if (hasAdjacentPair) {
+    return {
+      level: 'lucky',
+      bonus: 5,
+      reason: '🃏 两对！Postcard ID 包含两对相邻的重复数字',
+      label: 'Two Pair'
     };
   }
-  
-  // 镜像模式：1221, 6996, 2332, 9889
-  if (/(\d)(\d)\2\1/.test(numbers)) {
-    return { 
-      level: 'special', 
-      bonus: 10, 
-      reason: '💎 特殊！Postcard ID 包含镜像数字模式',
-      label: 'Special'
+
+  // Alternate: ABABA 交替模式（两个不同数字交替 5+ 位） → +5
+  const altMatch = numbers.match(/(\d)(\d)(?:\1\2)+\1/);
+  if (altMatch && altMatch[1] !== altMatch[2]) {
+    return {
+      level: 'lucky',
+      bonus: 5,
+      reason: '🃏 交替！Postcard ID 包含 ABABA 交替数字模式',
+      label: 'Alternate'
     };
   }
-  
-  // ===== Lucky 检测（2-3位连号，+5分）=====
-  if (/123|234|345|456|567|678|789|987|876|765|654|543|432|321/.test(numbers)) {
-    return { 
-      level: 'lucky', 
-      bonus: 5, 
-      reason: '🍀 幸运！Postcard ID 包含连号数字',
-      label: 'Lucky'
-    };
+
+  // Palindrome: 回文模式（ABCBA） → +5
+  const len = numbers.length;
+  if (len >= 4) {
+    const half = Math.floor(len / 2);
+    const isPalindrome = numbers.slice(0, half) === numbers.slice(len - half).split('').reverse().join('');
+    if (isPalindrome) {
+      return {
+        level: 'lucky',
+        bonus: 5,
+        reason: '🃏 回文！Postcard ID 数字呈镜像对称',
+        label: 'Palindrome'
+      };
+    }
   }
-  
+
   return { level: 'none', bonus: 0, reason: '', label: '' };
 }
 
 
 
-// 根据内容质量计算稀有度
-function calculateRarity(aiScore: number, content: string): 'SSR' | 'SR' | 'R' | 'N' {
-  const length = content.length;
-  
-  // 字数权重
-  const lengthScore = Math.min(length / 100 * 20, 20); // 最多 20 分
-  
-  // 组合分数
-  const totalScore = aiScore + lengthScore;
-  
-  // 根据总分数确定稀有度
-  if (totalScore >= 80) return 'SSR';
-  if (totalScore >= 60) return 'SR';
-  if (totalScore >= 40) return 'R';
+// 根据三维度总分 (0-300) 计算稀有度
+function calculateRarity(totalScore: number): 'SSR' | 'SR' | 'R' | 'N' {
+  if (totalScore >= 240) return 'SSR';  // avg 80+
+  if (totalScore >= 180) return 'SR';   // avg 60+
+  if (totalScore >= 120) return 'R';    // avg 40+
   return 'N';
 }
 
@@ -199,40 +224,67 @@ async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
       throw new Error('AI API key not configured');
     }
 
-    const prompt = `请分析以下明信片内容，从 4 个维度进行专业评分（0-100 分）：
+    const prompt = `请分析以下明信片内容，从 3 个维度进行评分（每个维度 0-100 分），并给出一段正面评价。
 
-1. **内容详实度**（字数、信息量、描述丰富程度）
-2. **文化价值**（是否包含历史、地理、文化知识）
-3. **个人故事**（是否有情感表达、个人经历）
-4. **语言表达**（流畅度、语法正确性、修辞手法）
+## 评分维度
 
-明信片内容：
+1. **touchingScore**（最走心）— 情感真挚度、个人故事、走心程度
+2. **emotionalScore**（情感温度）— 温暖程度、美好祝愿、正能量传递
+3. **culturalInsightScore**（文化洞察）— 文化知识、地域特色、独特视角
+
+## 评分锚点
+
+### touchingScore（最走心）
+- 5-20：仅简单感谢或套话（"谢谢你的明信片"）
+- 30-50：简单但真诚的问候，有一定个人色彩
+- 60-80：包含个人故事、旅行经历、真实情感流露
+- 80-100：深刻的情感表达、独特的人生感悟、令人动容的叙述
+
+### emotionalScore（情感温度）
+- 5-20：模板化内容，缺乏温度
+- 30-50：通用祝福语，有基本善意
+- 60-80：真诚的祝愿、温暖的问候、积极的能量
+- 80-100：极具感染力的温暖表达、深度共情、让人感到被关怀
+
+### culturalInsightScore（文化洞察）
+- 5-20：无任何文化元素
+- 30-50：提及基本事实（地名、景点名称等）
+- 60-80：包含当地视角、文化背景、历史故事
+- 80-100：独特的文化见解、深度的文化分享、令人增长见识的内容
+
+## 明信片内容
 """${content}"""
 
-请返回以下 JSON 格式：
+## 输出格式
+请严格返回以下 JSON 格式（不要包含其他内容）：
 {
-  "overallScore": 75,
-  "dimensions": [
-    { "name": "内容详实度", "score": 80, "reason": "描述详细，字数充足" },
-    { "name": "文化价值", "score": 70, "reason": "提及了当地特色" },
-    { "name": "个人故事", "score": 75, "reason": "有个人情感表达" },
-    { "name": "语言表达", "score": 75, "reason": "语言流畅自然" }
-  ],
-  "summary": "这是一张充满情感的明信片，内容丰富，值得收藏。",
-  "suggestedRarity": "SR"
+  "touchingScore": 75,
+  "emotionalScore": 60,
+  "culturalInsightScore": 50,
+  "summary": "这是一张充满个人故事的明信片，字里行间流露出真挚的情感。",
+  "primaryCategory": "touching"
 }
 
-评分标准：
-- 内容详实度：字数多、描述详细、信息丰富得分高
-- 文化价值：包含历史、地理、风俗、景点等文化元素得分高
-- 个人故事：有情感表达、个人经历、独特观点得分高
-- 语言表达：语法正确、修辞得当、流畅自然得分高
+## 重要规则
 
-稀有度判定：
-- SSR: 70分以上，内容优秀，值得珍藏
-- SR: 50-69分，内容丰富，质量良好
-- R: 30-49分，内容普通，标准明信片
-- N: 30分以下，内容简短，简单问候`;
+### summary 评价风格
+- 用欣赏的眼光看待每张明信片，每一张都是对方花时间手写、花钱买邮票寄出的心意
+- 只需突出这张明信片最值得欣赏的亮点
+- 禁止使用"建议"、"可以补充"、"如果能...就更好了"等建议性语句
+- 禁止使用"缺乏"、"不足"、"有限"、"浅层"、"普通"等否定性词语
+- 即使内容简短，也要找到积极的表达角度（如"简洁真挚"、"温馨问候"）
+- summary 应为 1-2 句话，语气温暖、正面
+
+### primaryCategory 判定
+- primaryCategory = 三个维度中得分最高的那个维度
+- touching：touchingScore 最高
+- emotional：emotionalScore 最高
+- culturalInsight：culturalInsightScore 最高
+
+### 评分原则
+- 每个维度独立评分，0-100 分
+- 不要因为某个维度高就压低另一个维度
+- 三个分数的总和决定了最终稀有度（SSR: 240+, SR: 180+, R: 120+, N: <120）`;
 
     const response = await fetch(aiConfig.baseUrl + '/chat/completions', {
       method: 'POST',
@@ -242,25 +294,22 @@ async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
       },
       body: JSON.stringify({
         model: aiConfig.model,
-        input: {
-          messages: [
-            { role: 'system', content: '你是一个专业的明信片内容评价助手。' },
-            { role: 'user', content: prompt },
-          ],
-        },
-        parameters: {
-          result_format: 'message',
-          temperature: 0.7,
-        },
+        messages: [
+          { role: 'system', content: '你是一个专业的明信片内容评价助手。' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.7,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`API request failed: ${response.status} ${errorBody.substring(0, 200)}`);
     }
 
     const data = await response.json();
-    const aiResponse = data.output?.choices?.[0]?.message?.content;
+    // 兼容 OpenAI 格式和 DashScope 原生格式
+    const aiResponse = data.choices?.[0]?.message?.content || data.output?.choices?.[0]?.message?.content;
     
     if (!aiResponse) {
       throw new Error('Empty AI response');
@@ -273,49 +322,101 @@ async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
     }
 
     const evaluation: AIEvaluation = JSON.parse(jsonMatch[0]);
-    
+
     // 验证数据结构
-    if (!evaluation.overallScore || !evaluation.dimensions || !evaluation.summary) {
+    if (
+      typeof evaluation.touchingScore !== 'number' ||
+      typeof evaluation.emotionalScore !== 'number' ||
+      typeof evaluation.culturalInsightScore !== 'number' ||
+      !evaluation.summary
+    ) {
       throw new Error('Incomplete evaluation data');
+    }
+
+    // 钳位分数到 0-100
+    evaluation.touchingScore = Math.min(100, Math.max(0, evaluation.touchingScore));
+    evaluation.emotionalScore = Math.min(100, Math.max(0, evaluation.emotionalScore));
+    evaluation.culturalInsightScore = Math.min(100, Math.max(0, evaluation.culturalInsightScore));
+
+    // 验证 primaryCategory = 最高分维度
+    const validCategories = ['touching', 'culturalInsight', 'emotional'] as const;
+    if (!evaluation.primaryCategory || !validCategories.includes(evaluation.primaryCategory as any)) {
+      // 自动推导：取最高分维度
+      const scores = {
+        touching: evaluation.touchingScore,
+        emotional: evaluation.emotionalScore,
+        culturalInsight: evaluation.culturalInsightScore,
+      };
+      evaluation.primaryCategory = (Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0]) as typeof evaluation.primaryCategory;
     }
 
     return evaluation;
   } catch (error) {
-    // console.error('AI evaluation error:', error);
-    // 返回默认评价
+    console.error('[GachaService] AI evaluation failed, using fallback:', (error as Error).message);
     return generateDefaultEvaluation(content);
   }
 }
 
-// 生成默认评价（AI 失败时使用）
+// 生成默认评价（AI 失败时使用，基于关键词的三维度 fallback）
 function generateDefaultEvaluation(content: string): AIEvaluation {
   const length = content.length;
-  
-  // 基于字数的简单评分
-  const detailScore = Math.min(length / 1.5, 100);
-  const cultureScore = content.includes('文化') || content.includes('历史') ? 75 : 50;
-  const storyScore = content.includes('我') || content.includes('我的') ? 70 : 50;
-  const languageScore = 70;
-  
-  const overallScore = Math.round((detailScore + cultureScore + storyScore + languageScore) / 4);
-  
-  let rarity: 'SSR' | 'SR' | 'R' | 'N' = 'N';
-  if (overallScore >= 80) rarity = 'SSR';
-  else if (overallScore >= 60) rarity = 'SR';
-  else if (overallScore >= 40) rarity = 'R';
-  
+
+  // 基于内容特征的关键词检测
+  const hasCulture = /文化|历史|传统|风俗|节日|美食|建筑|景点/.test(content);
+  const hasEmotion = /喜欢|爱|想念|感动|开心|快乐|幸福|感谢|希望|梦想/.test(content);
+  const hasStory = /我|我的|我们|旅行|经历|故事|第一次/.test(content);
+  const hasNature = /海|山|花|天空|星星|月亮|太阳|森林|河流/.test(content);
+
+  // touchingScore：基于 hasStory, hasEmotion, length
+  let touchingScore = 20;
+  if (hasStory) touchingScore += 30;
+  if (hasEmotion) touchingScore += 20;
+  if (length > 100) touchingScore += 15;
+  if (length > 200) touchingScore += 10;
+  touchingScore = Math.min(touchingScore, 100);
+
+  // emotionalScore：基于 hasEmotion, hasNature, length
+  let emotionalScore = 20;
+  if (hasEmotion) emotionalScore += 30;
+  if (hasNature) emotionalScore += 15;
+  if (length > 80) emotionalScore += 15;
+  if (length > 150) emotionalScore += 10;
+  emotionalScore = Math.min(emotionalScore, 100);
+
+  // culturalInsightScore：基于 hasCulture, length
+  let culturalInsightScore = 15;
+  if (hasCulture) culturalInsightScore += 40;
+  if (length > 100) culturalInsightScore += 15;
+  if (length > 200) culturalInsightScore += 10;
+  culturalInsightScore = Math.min(culturalInsightScore, 100);
+
+  // 根据内容特征生成多样化 summary
+  const summaryParts: string[] = [];
+  if (length > 200) summaryParts.push('这是一封内容详实的明信片');
+  else if (length > 100) summaryParts.push('这是一封用心书写的明信片');
+  else summaryParts.push('这是一封简洁的明信片');
+
+  if (hasCulture) summaryParts.push('蕴含着丰富的文化气息');
+  if (hasEmotion) summaryParts.push('字里行间流露出真挚的情感');
+  if (hasNature) summaryParts.push('描绘了美好的自然意象');
+  if (hasStory) summaryParts.push('承载着独特的个人故事');
+
+  const summary = summaryParts.join('，') + '。';
+
+  // primaryCategory = 最高分维度
+  const scores = {
+    touching: touchingScore,
+    emotional: emotionalScore,
+    culturalInsight: culturalInsightScore,
+  };
+  const primaryCategory = (Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0]) as 'touching' | 'culturalInsight' | 'emotional';
+
   return {
-    overallScore,
-    dimensions: [
-      { name: '内容详实度', score: Math.round(detailScore), reason: length > 100 ? '内容充实详细' : '内容较为简短' },
-      { name: '文化价值', score: cultureScore, reason: cultureScore > 60 ? '包含文化元素' : '文化元素较少' },
-      { name: '个人故事', score: storyScore, reason: storyScore > 60 ? '有个人情感表达' : '个人故事较少' },
-      { name: '语言表达', score: languageScore, reason: '语言流畅自然' },
-    ],
-    summary: length > 100 
-      ? '这是一张内容丰富、充满情感的明信片，展现了寄信人的用心。'
-      : '这是一张简洁的明信片，传递着简单的问候与祝福。',
-    suggestedRarity: rarity,
+    touchingScore,
+    emotionalScore,
+    culturalInsightScore,
+    summary,
+    primaryCategory,
   };
 }
 
@@ -337,69 +438,44 @@ export class GachaService {
         luckyLevel: 'none',
         luckyBonus: 0,
         aiEvaluation: {
-          overallScore: existing.aiScore || 0,
-          dimensions: [
-            { name: '内容详实度', score: existing.contentScore || 0, reason: '历史评价' },
-            { name: '文化价值', score: existing.cultureScore || 0, reason: '历史评价' },
-            { name: '个人故事', score: existing.storyScore || 0, reason: '历史评价' },
-            { name: '语言表达', score: 70, reason: '历史评价' },
-          ],
+          touchingScore: existing.touchingScore || 0,
+          emotionalScore: existing.emotionalScore || 0,
+          culturalInsightScore: existing.culturalInsightScore || 0,
           summary: existing.summary || '这是一张已收藏的明信片。',
-          suggestedRarity: existing.rarity as 'SSR' | 'SR' | 'R' | 'N',
+          primaryCategory: (existing.primaryCategory as 'touching' | 'culturalInsight' | 'emotional') || 'emotional',
         },
       };
     }
     
     // 2. 生成 AI 评价
-    let aiEvaluation = await generateAIEvaluation(content);
-    
-    // 3. 添加随机因子（±5分）
-    const randomFactor = Math.floor(Math.random() * 11) - 5; // -5 到 +5
-    aiEvaluation.overallScore = Math.min(100, Math.max(0, aiEvaluation.overallScore + randomFactor));
-    
-    // 4. 检测 Lucky 等级
+    const aiEvaluation = await generateAIEvaluation(content);
+
+    // 3. 检测 Lucky 等级（仅用于展示，不影响稀有度）
     const luckyInfo = analyzeLuckyLevel(postcardId);
-    
-    // 5. 应用 Lucky 加分并添加维度
+
+    // 在 summary 中附带幸运信息
     if (luckyInfo.level !== 'none') {
-      aiEvaluation.overallScore = Math.min(100, aiEvaluation.overallScore + luckyInfo.bonus);
-      
-      // 添加幸运加成维度
-      aiEvaluation.dimensions.push({
-        name: '幸运加成',
-        score: luckyInfo.bonus,
-        reason: luckyInfo.reason
-      });
-      
-      // 在 summary 中体现
-      aiEvaluation.summary += luckyInfo.level === 'superLucky' 
-        ? ' 此外，这张明信片的编号超级幸运！' 
-        : ' 此外，这张明信片的编号很lucky！';
+      aiEvaluation.summary += ' ' + luckyInfo.reason;
     }
-    
-    // 6. 根据调整后分数重新计算稀有度（使用新阈值）
-    const finalScore = aiEvaluation.overallScore;
-    let rarity: 'SSR' | 'SR' | 'R' | 'N';
-    if (finalScore >= 70) rarity = 'SSR';
-    else if (finalScore >= 50) rarity = 'SR';
-    else if (finalScore >= 30) rarity = 'R';
-    else rarity = 'N';
-    
-    // 更新 suggestedRarity
-    aiEvaluation.suggestedRarity = rarity;
-    
-    // 7. 持久化评估记录到 UserGachaLog
+
+    // 4. 计算总分和稀有度（lucky 不影响稀有度）
+    const totalScore = aiEvaluation.touchingScore + aiEvaluation.emotionalScore + aiEvaluation.culturalInsightScore;
+    const rarity = calculateRarity(totalScore);
+
+    // 5. 持久化评估记录到 UserGachaLog
     await prisma.userGachaLog.create({
       data: {
         userId,
         postcardId,
         rarity,
-        aiScore: finalScore,
-        contentScore: aiEvaluation.dimensions.find(d => d.name === '内容详实度')?.score,
-        cultureScore: aiEvaluation.dimensions.find(d => d.name === '文化价值')?.score,
-        storyScore: aiEvaluation.dimensions.find(d => d.name === '个人故事')?.score,
-        languageScore: aiEvaluation.dimensions.find(d => d.name === '语言表达')?.score,
+        aiScore: totalScore,
+        touchingScore: aiEvaluation.touchingScore,
+        emotionalScore: aiEvaluation.emotionalScore,
+        culturalInsightScore: aiEvaluation.culturalInsightScore,
         summary: aiEvaluation.summary,
+        primaryCategory: aiEvaluation.primaryCategory,
+        luckyLevel: luckyInfo.level === 'none' ? null : luckyInfo.level,
+        luckyBonus: luckyInfo.bonus || null,
         obtainedAt: new Date(),
       }
     });

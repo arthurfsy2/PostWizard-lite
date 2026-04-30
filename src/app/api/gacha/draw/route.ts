@@ -49,9 +49,11 @@ export async function POST(request: NextRequest) {
         luckyLevel: result.luckyLevel,
         luckyBonus: result.luckyBonus,
         aiEvaluation: result.aiEvaluation || {
-          overallScore: 0,
-          dimensions: [],
+          touchingScore: 0,
+          emotionalScore: 0,
+          culturalInsightScore: 0,
           summary: '暂无评价',
+          primaryCategory: 'emotional',
         },
       },
     });

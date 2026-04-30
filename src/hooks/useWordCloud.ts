@@ -12,11 +12,12 @@ import { apiFetch } from '@/lib/fetch';
  * @param language - 语言模式：'en' | 'zh' | 'all'
  * @param forceRefresh - 是否强制刷新（绕过缓存，从数据库重新生成）
  */
-export function useWordCloud(language: 'zh' | 'en' | 'all' = 'en', forceRefresh: boolean = false) {
+export function useWordCloud(language: 'zh' | 'en' | 'all' = 'en', forceRefresh: boolean = false, source: 'arrivals' | 'received' = 'arrivals') {
+  const basePath = source === 'received' ? '/api/received-cards/wordcloud' : '/api/arrivals/wordcloud';
   // 生成唯一 key，包含 force 参数
   const cacheKey = forceRefresh
-    ? `/api/arrivals/wordcloud?language=${language}&t=${Date.now()}`
-    : `/api/arrivals/wordcloud?language=${language}`;
+    ? `${basePath}?language=${language}&t=${Date.now()}`
+    : `${basePath}?language=${language}`;
   
   const { data, error, isLoading, mutate } = useSWR<WordCloudData>(
     cacheKey,

@@ -2,24 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Star, Heart, BookOpen, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
-// 安全的 HTML 净化函数（避免 isomorphic-dompurify 的 Node.js 兼容问题）
-const sanitizeHtml = (html: string): string => {
-  if (typeof window === 'undefined') {
-    // 服务端：简单转义
-    return html
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#x27;');
-  }
-  // 客户端：使用 DOM API 净化
-  const div = document.createElement('div');
-  div.textContent = html;
-  return div.innerHTML;
-};
-
+import { X, Star, BookOpen, Share2, ChevronLeft } from 'lucide-react';
 interface CardDrawDialogProps {
   open: boolean;
   onClose: () => void;
@@ -42,13 +25,10 @@ export interface CardData {
   senderCity?: string;
   aiEvaluation: {
     summary: string;
-    dimensions: {
-      label: string;
-      score: number;
-      icon?: string;
-    }[];
-    reasons: string[];
-    overallScore: number;
+    touchingScore: number;
+    emotionalScore: number;
+    culturalInsightScore: number;
+    primaryCategory: 'touching' | 'culturalInsight' | 'emotional';
   };
 }
 
@@ -151,9 +131,9 @@ const LuckyBadge: React.FC<{ level?: 'none' | 'lucky' | 'special' | 'superLucky'
   );
 };
 
-const CircularScore: React.FC<{ score: number }> = ({ score }) => {
+const CircularScore: React.FC<{ totalScore: number }> = ({ totalScore }) => {
   const circumference = 2 * Math.PI * 36;
-  const strokeDashoffset = circumference - (score / 10) * circumference;
+  const strokeDashoffset = circumference - (totalScore / 300) * circumference;
   return (
     <div className="relative w-20 h-20">
       <svg className="w-full h-full transform -rotate-90">
@@ -178,14 +158,14 @@ const CircularScore: React.FC<{ score: number }> = ({ score }) => {
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl font-bold text-slate-900">{score.toFixed(1)}</span>
+        <span className="text-xl font-bold text-slate-900">{totalScore}</span>
         <span className="text-[10px] text-slate-500">综合</span>
       </div>
     </div>
   );
 };
 
-const DimensionItem: React.FC<{ label: string; score: number; icon?: string; index: number }> = ({
+const DimensionItem: React.FC<{ label: string; score: number; icon: string; index: number }> = ({
   label, score, icon, index
 }) => (
   <motion.div
@@ -203,7 +183,7 @@ const DimensionItem: React.FC<{ label: string; score: number; icon?: string; ind
       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${(score / 10) * 100}%` }}
+          animate={{ width: `${score}%` }}
           transition={{ delay: 0.2 + 0.1 * index, duration: 0.5, ease: 'easeOut' }}
           className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"
         />
@@ -211,54 +191,6 @@ const DimensionItem: React.FC<{ label: string; score: number; icon?: string; ind
     </div>
   </motion.div>
 );
-
-const ReasonsPanel: React.FC<{ reasons: string[]; rarity: string }> = ({ reasons, rarity }) => {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div className="border-t border-slate-100 pt-2">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 text-xs text-slate-500 hover:text-orange-500 transition-colors w-full"
-      >
-        <Star className="w-3 h-3" />
-        <span>为什么是{rarity}？</span>
-        <motion.span
-          animate={{ rotate: expanded ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="ml-auto"
-        >
-          <ChevronRight className="w-3 h-3 rotate-90" />
-        </motion.span>
-      </button>
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
-          >
-            <div className="pt-2 space-y-1.5">
-              {reasons.map((reason, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.05 * idx }}
-                  className="flex items-start gap-1.5 text-[10px] text-slate-600"
-                >
-                  <span className="text-emerald-500 font-bold mt-0.5">✓</span>
-                  <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(reason) }} />
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
 
 export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDialogProps) {
   const [particles, setParticles] = useState<{ id: number; delay: number; duration: number }[]>([]);
@@ -380,15 +312,17 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
         transition={{ delay: 0.5 }}
         className="flex items-center justify-center gap-3 mb-2"
       >
-        <CircularScore score={cardData.aiEvaluation.overallScore} />
+        <CircularScore totalScore={cardData.aiEvaluation.touchingScore + cardData.aiEvaluation.emotionalScore + cardData.aiEvaluation.culturalInsightScore} />
         <div className="text-left">
           <p className="text-xs text-slate-500">综合评分</p>
-          <p className="text-base font-bold text-slate-900">{cardData.aiEvaluation.overallScore.toFixed(1)}/10</p>
+          <p className="text-base font-bold text-slate-900">{cardData.aiEvaluation.touchingScore + cardData.aiEvaluation.emotionalScore + cardData.aiEvaluation.culturalInsightScore}/300</p>
           <p className="text-[10px] text-slate-400">滑动查看详情 →</p>
         </div>
       </motion.div>
     </div>
   );
+
+  const totalScore = cardData.aiEvaluation.touchingScore + cardData.aiEvaluation.emotionalScore + cardData.aiEvaluation.culturalInsightScore;
 
   const EvaluationPage = () => (
     <div className="flex flex-col h-full">
@@ -397,7 +331,7 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
           <Star className="w-4 h-4 text-orange-500" />
           <h2 className="text-lg font-bold text-slate-900">内容评价</h2>
         </div>
-        <p className="text-[10px] text-slate-500">基于内容的多维度分析</p>
+        <p className="text-[10px] text-slate-500">三维评分 · 总分 {totalScore}/300</p>
       </motion.div>
 
       <motion.div
@@ -412,12 +346,9 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
       <div className="flex-1 overflow-y-auto">
         <h3 className="text-xs font-semibold text-slate-900 mb-2">维度评分</h3>
         <div className="space-y-2">
-          {cardData.aiEvaluation.dimensions.map((dim, idx) => (
-            <DimensionItem key={idx} label={dim.label} score={dim.score} icon={dim.icon} index={idx} />
-          ))}
-        </div>
-        <div className="mt-4">
-          <ReasonsPanel reasons={cardData.aiEvaluation.reasons} rarity={cardData.rarity} />
+          <DimensionItem label="最走心" score={cardData.aiEvaluation.touchingScore} icon="💝" index={0} />
+          <DimensionItem label="情感温度" score={cardData.aiEvaluation.emotionalScore} icon="💗" index={1} />
+          <DimensionItem label="文化洞察" score={cardData.aiEvaluation.culturalInsightScore} icon="🌍" index={2} />
         </div>
       </div>
 

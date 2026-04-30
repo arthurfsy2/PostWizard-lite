@@ -27,18 +27,6 @@ import ImageViewer from "@/components/received/ImageViewer";
 import { getFlagEmoji } from "@/lib/flag-emoji";
 import { getCountryNameCN } from "@/lib/country-codes";
 
-// 获取维度图标
-function getDimensionIcon(name: string): string {
-  const iconMap: Record<string, string> = {
-    内容详实度: "📝",
-    文化价值: "🏛️",
-    个人故事: "💭",
-    语言表达: "❤️",
-    情感表达: "❤️",
-  };
-  return iconMap[name] || "✨";
-}
-
 interface Template {
   id: string;
   name: string;
@@ -199,13 +187,13 @@ export default function UploadPage() {
           setUploading(false);
           return;
         }
-        
-        if (data.error === "OCR_QUOTA_EXCEEDED") {
-          setError("本月免费 OCR 次数已用完，请升级订阅");
-          router.push("/donate");
-          return;
-        }
+
         throw new Error(data.error || "上传失败");
+      }
+
+      // 检测 OCR 配额耗尽警告（卡片已创建，但手写内容为空）
+      if (data.ocrQuotaExhausted) {
+        setError("⚠️ AI 识别服务不可用：免费额度已耗尽。图片已上传，但手写内容为空。请联系管理员升级 API 套餐。");
       }
 
       // 保存 cardId 用于后续编辑
@@ -248,15 +236,10 @@ export default function UploadPage() {
         luckyBonus: gachaResult.luckyBonus,
         aiEvaluation: {
           summary: gachaResult.aiEvaluation.summary,
-          dimensions: gachaResult.aiEvaluation.dimensions.map((dim: any) => ({
-            label: dim.name,
-            score: Math.round(dim.score / 10), // 后端 0-100 转前端 0-10
-            icon: getDimensionIcon(dim.name),
-          })),
-          reasons: gachaResult.aiEvaluation.dimensions.map(
-            (dim: any) => `${dim.name}: ${dim.reason}`,
-          ),
-          overallScore: gachaResult.aiEvaluation.overallScore / 10, // 后端 0-100 转前端 0-10
+          touchingScore: gachaResult.aiEvaluation.touchingScore,
+          emotionalScore: gachaResult.aiEvaluation.emotionalScore,
+          culturalInsightScore: gachaResult.aiEvaluation.culturalInsightScore,
+          primaryCategory: gachaResult.aiEvaluation.primaryCategory,
         },
       };
 

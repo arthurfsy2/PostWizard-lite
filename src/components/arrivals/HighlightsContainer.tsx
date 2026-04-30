@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw, TrendingUp } from "lucide-react";
+import { Loader2, RefreshCw, TrendingUp, Quote, Star, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HIGHLIGHT_CATEGORIES, type HighlightCategory, type HighlightCategoryInfo } from "@/types/highlights";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { HIGHLIGHT_CATEGORIES, RECEIVED_HIGHLIGHT_CATEGORIES, type HighlightCategory, type HighlightCategoryInfo } from "@/types/highlights";
 import { useHighlights } from "@/hooks/useHighlights";
 import { useAnalysisStatus } from "@/hooks/useAnalysisStatus";
 import { HighlightsCard } from "./HighlightsCard";
 import { HighlightsEmptyState } from "./HighlightsEmptyState";
+import { getFlagEmoji } from "@/lib/flag-emoji";
+import { getCountryNameCN } from "@/lib/country-codes";
 import { toast } from "sonner";
 
 interface HighlightsContainerProps {
@@ -17,6 +20,8 @@ interface HighlightsContainerProps {
   limit?: number;
   /** 是否显示头部信息 */
   showHeader?: boolean;
+  /** 数据源：arrivals（留言精选）或 received（收信精选） */
+  source?: 'arrivals' | 'received';
 }
 
 /**
@@ -27,6 +32,7 @@ export function HighlightsContainer({
   defaultCategory = "touching",
   limit = 20,
   showHeader = true,
+  source = "arrivals",
 }: HighlightsContainerProps) {
   const [activeCategory, setActiveCategory] = useState<HighlightCategory>(defaultCategory);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
@@ -46,6 +52,7 @@ export function HighlightsContainer({
     category: activeCategory,
     limit,
     autoFetch: true,
+    source,
   });
 
   const {
@@ -62,11 +69,13 @@ export function HighlightsContainer({
   const shouldShowContinueButton = pendingCount > 0;
   const shouldShowPendingHint = pendingCount > 0 && totalStatusCount > 0;
 
-  // 初始加载时获取分析状态（仅挂载时执行一次）
+  // 初始加载时获取分析状态（仅挂载时执行一次，仅 arrivals）
   useEffect(() => {
-    fetchStatus();
+    if (source === 'arrivals') {
+      fetchStatus();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [source]);
 
   // 自动轮询：仅在用户点击"继续分析"后，每 3 秒刷新一次状态和精选
   useEffect(() => {
@@ -123,18 +132,18 @@ export function HighlightsContainer({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-xl shadow-md">
-                💬
+                {source === 'received' ? '🃏' : '💬'}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900">留言精选</h2>
+                <h2 className="text-lg font-bold text-gray-900">{source === 'received' ? '收信精选' : '留言精选'}</h2>
                 {analyzedCount > 0 && (
                   <p className="text-xs text-gray-500">
-                    已分析 {analyzedCount} 条留言
+                    已分析 {analyzedCount} 条{source === 'received' ? '收信' : '留言'}
                     {totalStatusCount > 0 && <span className="ml-1">/ {totalStatusCount} 条</span>}
                     {cached && <span className="ml-1 text-blue-500">(缓存)</span>}
                   </p>
                 )}
-                {shouldShowPendingHint && (
+                {source === 'arrivals' && shouldShowPendingHint && (
                   <p className="mt-1 text-xs text-orange-600">
                     还有 {pendingCount} 条留言尚未完成分析，可继续补全。
                   </p>
@@ -142,7 +151,7 @@ export function HighlightsContainer({
               </div>
             </div>
             <div className="flex gap-2">
-              {shouldShowContinueButton && (
+              {source === 'arrivals' && shouldShowContinueButton && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -169,8 +178,8 @@ export function HighlightsContainer({
             </div>
           </div>
 
-          {/* 分析状态面板 */}
-          {status && (
+          {/* 分析状态面板（仅 arrivals） */}
+          {source === 'arrivals' && status && (
             <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg p-4 border border-slate-200">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-700">📊 分析进度</h3>
@@ -182,10 +191,10 @@ export function HighlightsContainer({
                   刷新
                 </button>
               </div>
-              
+
               {shouldShowPendingHint && (
                 <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
-                  当前已完成 {status.analyzed}/{totalStatusCount} 条留言分析，剩余 {pendingCount} 条可继续补全。若刚刚搜索过邮件或中途网络波动，可点击右上角“继续分析剩余留言”。
+                  当前已完成 {status.analyzed}/{totalStatusCount} 条留言分析，剩余 {pendingCount} 条可继续补全。若刚刚搜索过邮件或中途网络波动，可点击右上角"继续分析剩余留言"。
                 </div>
               )}
 
@@ -237,7 +246,7 @@ export function HighlightsContainer({
 
       {/* Tab 切换 */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {HIGHLIGHT_CATEGORIES.map((cat) => (
+        {(source === 'received' ? RECEIVED_HIGHLIGHT_CATEGORIES : HIGHLIGHT_CATEGORIES).map((cat) => (
           <TabButton
             key={cat.key}
             category={cat}
@@ -279,12 +288,16 @@ export function HighlightsContainer({
       {/* 数据列表 */}
       {!isLoading && !error && !emptyState && highlights.length > 0 && (
         <div className="space-y-4">
-          {highlights.map((highlight, index) => (
-            <HighlightsCard
-              key={highlight.id}
-              highlight={highlight}
-              index={index}
-            />
+          {highlights.map((item: any, index: number) => (
+            source === 'received' ? (
+              <ReceivedHighlightCard key={item.id} item={item} index={index} />
+            ) : (
+              <HighlightsCard
+                key={item.id}
+                highlight={item}
+                index={index}
+              />
+            )
           ))}
         </div>
       )}
@@ -292,7 +305,7 @@ export function HighlightsContainer({
       {/* 无数据状态 */}
       {!isLoading && !error && !emptyState && highlights.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          <p>暂无精选留言</p>
+          <p>{source === 'received' ? '暂无收信精选，上传明信片并抽卡后可在此查看' : '暂无精选留言'}</p>
         </div>
       )}
     </div>
@@ -327,5 +340,237 @@ function TabButton({
       <span className="text-base">{category.icon}</span>
       <span>{category.label}</span>
     </button>
+  );
+}
+
+const RARITY_COLORS: Record<string, string> = {
+  SSR: "from-yellow-400 to-amber-500",
+  SR: "from-slate-300 to-slate-400",
+  R: "from-orange-400 to-amber-500",
+  N: "from-slate-400 to-slate-500",
+};
+
+const RARITY_BADGE_CLASS: Record<string, string> = {
+  SSR: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  SR: "bg-slate-100 text-slate-600 border-slate-200",
+  R: "bg-orange-100 text-orange-700 border-orange-200",
+  N: "bg-gray-100 text-gray-600 border-gray-200",
+};
+
+const RARITY_ICON: Record<string, string> = {
+  SSR: "👑",
+  SR: "💎",
+  R: "🔥",
+  N: "📌",
+};
+
+/**
+ * 收信精选卡片（样式与 arrivals HighlightsCard 统一）
+ */
+function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
+  const [showDetail, setShowDetail] = useState(false);
+
+  // 从 postcardId 前缀推断国家代码（当 country 为空或 UN 时）
+  const effectiveCountry = (item.country && item.country !== 'UN')
+    ? item.country
+    : (item.postcardId?.match(/^([A-Z]{2})-/)?.[1] || item.country || '');
+  const flagEmoji = getFlagEmoji(effectiveCountry);
+  const text = item.ocrText || "";
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const getRankColor = (idx: number) => {
+    if (idx === 0) return "bg-gradient-to-br from-yellow-400 to-amber-500 text-white";
+    if (idx === 1) return "bg-gradient-to-br from-gray-300 to-gray-400 text-white";
+    if (idx === 2) return "bg-gradient-to-br from-orange-300 to-amber-400 text-white";
+    return "bg-gray-100 text-gray-600";
+  };
+
+  const rarity = item.rarity || "N";
+
+  return (
+    <>
+      <div
+        onClick={() => setShowDetail(true)}
+        className="
+          group cursor-pointer
+          bg-gradient-to-r from-white to-gray-50/50
+          hover:shadow-lg hover:shadow-orange-500/10
+          hover:-translate-y-0.5
+          transition-all duration-300 ease-out
+          border-l-4 border-orange-400 hover:border-orange-500
+          overflow-hidden
+          rounded-lg border border-gray-200
+        "
+      >
+        <div className="p-4 sm:p-5">
+          {/* 头部信息 */}
+          <div className="flex items-start gap-3 mb-3">
+            {/* 排名 */}
+            <div
+              className={`
+                w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+                ${getRankColor(index)}
+              `}
+            >
+              {index + 1}
+            </div>
+
+            {/* 国家/发件人 */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-2xl">{flagEmoji}</span>
+                <span className="font-semibold text-gray-900 truncate">
+                  {getCountryNameCN(effectiveCountry) || effectiveCountry || "未知"}
+                </span>
+                {item.senderUsername && (
+                  <span className="text-sm text-gray-500">· {item.senderUsername}</span>
+                )}
+                {item.luckyReason && (
+                  <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{item.luckyReason}</span>
+                )}
+              </div>
+            </div>
+
+            {/* AI 评分 */}
+            {item.aiScore > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-xs font-semibold">
+                <Star className="w-3 h-3 fill-current" />
+                {(item.aiScore / 10).toFixed(1)}
+              </div>
+            )}
+          </div>
+
+          {/* OCR 文本预览 */}
+          {text && (
+            <div className="relative">
+              <Quote className="absolute top-0 left-0 w-5 h-5 text-orange-200 -translate-x-1 -translate-y-1" />
+              <p className="text-sm text-gray-600 line-clamp-3 pl-3 leading-relaxed italic">
+                {text.length > 150 ? `${text.slice(0, 150)}...` : text}
+              </p>
+            </div>
+          )}
+
+          {/* 底部信息 */}
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+            <div className="flex items-center gap-3 text-xs text-gray-500">
+              {item.createdAt && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {formatDate(item.createdAt)}
+                </span>
+              )}
+              <span className="font-mono text-gray-400">{item.postcardId}</span>
+            </div>
+
+            {/* 稀有度标签 */}
+            <span
+              className={`
+                inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full border
+                ${RARITY_BADGE_CLASS[rarity] || RARITY_BADGE_CLASS.N}
+              `}
+            >
+              {RARITY_ICON[rarity] || "📌"} {rarity}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 详情弹窗 */}
+      <Dialog open={showDetail} onOpenChange={setShowDetail}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-2xl">{flagEmoji}</span>
+              <span>{getCountryNameCN(effectiveCountry) || effectiveCountry || "未知"}</span>
+              {item.senderUsername && (
+                <span className="text-sm font-normal text-gray-500">· {item.senderUsername}</span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* 评分和稀有度 */}
+            <div className="flex items-center gap-3">
+              {item.aiScore > 0 && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-sm font-semibold">
+                  <Star className="w-4 h-4 fill-current" />
+                  评分: {(item.aiScore / 10).toFixed(1)}
+                </div>
+              )}
+              <span
+                className={`
+                  inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border
+                  ${RARITY_BADGE_CLASS[rarity] || RARITY_BADGE_CLASS.N}
+                `}
+              >
+                {RARITY_ICON[rarity] || "📌"} {rarity}
+              </span>
+              {item.luckyReason && (
+                <span className="text-xs text-amber-600">{item.luckyReason}</span>
+              )}
+            </div>
+
+            {/* 图片 */}
+            {item.imageUrl && (
+              <div className="rounded-lg overflow-hidden border border-gray-100">
+                <img src={item.imageUrl} alt="" className="w-full object-cover max-h-60" />
+              </div>
+            )}
+
+            {/* OCR 原文 */}
+            {item.ocrText && (
+              <div className="bg-gradient-to-r from-gray-50 to-orange-50/30 p-4 rounded-lg border border-gray-100">
+                <Quote className="w-5 h-5 text-orange-300 mb-2" />
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed italic">
+                  {item.ocrText}
+                </p>
+              </div>
+            )}
+
+            {/* 翻译 */}
+            {item.translation && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50/30 p-4 rounded-lg border border-blue-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-medium text-blue-600">🇨🇳 中文翻译</span>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {item.translation}
+                </p>
+              </div>
+            )}
+
+            {/* AI 评语 */}
+            {item.summary && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50/30 p-4 rounded-lg border border-purple-100">
+                <p className="text-xs font-medium text-purple-600 mb-2">🤖 AI 评语</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{item.summary}</p>
+              </div>
+            )}
+
+            {/* 元数据 */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">明信片 ID</p>
+                <p className="font-mono font-semibold text-gray-900">{item.postcardId}</p>
+              </div>
+              {item.createdAt && (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">日期</p>
+                  <p className="font-semibold text-gray-900">{formatDate(item.createdAt)}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

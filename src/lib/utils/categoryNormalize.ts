@@ -24,7 +24,7 @@ export function normalizeCategory(cat: string | null | undefined): HighlightCate
   }
 
   // 验证是否为有效分类 key
-  const validKeys: readonly HighlightCategory[] = ['touching', 'emotional', 'culturalInsight'];
+  const validKeys: readonly HighlightCategory[] = ['touching', 'emotional', 'culturalInsight', 'lucky'];
   return validKeys.includes(cat as HighlightCategory) ? cat as HighlightCategory : null;
 }
 

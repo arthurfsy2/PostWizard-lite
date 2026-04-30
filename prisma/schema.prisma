@@ -384,13 +384,13 @@ model UserGachaLog {
   postcardId    String?  @unique
   obtainedAt    DateTime @default(now())
   aiScore       Int?
-  contentScore  Int?
-  cultureScore  Int?
-  languageScore Int?
-  storyScore    Int?
-  summary       String?
-  luckyLevel    String?
-  luckyBonus    Int?
+  touchingScore        Int?
+  emotionalScore       Int?
+  culturalInsightScore Int?
+  summary         String?
+  primaryCategory String?
+  luckyLevel      String?
+  luckyBonus      Int?
 
   @@index([userId])
   @@index([userId, obtainedAt])
