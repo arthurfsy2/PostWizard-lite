@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Crop, RotateCw, Edit3, RefreshCw, Crown, AlertCircle, Check, ImageIcon } from 'lucide-react';
+import { Crop, RotateCw, Edit3, RefreshCw, AlertCircle, ImageIcon } from 'lucide-react';
 
 interface CardData {
   id: string;
@@ -24,15 +24,6 @@ interface CardData {
   isOcrManualEdit: boolean;
 }
 
-interface Template {
-  id: string;
-  name: string;
-  nameEn?: string;
-  thumbnail: string;
-  isPremium: boolean;
-  locked?: boolean;
-}
-
 export default function EditCardPage() {
   const router = useRouter();
   const params = useParams();
@@ -42,12 +33,6 @@ export default function EditCardPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cardData, setCardData] = useState<CardData | null>(null);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
-  
-  // 检查是否有锁定的付费模板
-  const hasLockedTemplates = templates.some(t => t.locked);
 
   // 编辑表单
   const [formData, setFormData] = useState({
@@ -105,28 +90,6 @@ export default function EditCardPage() {
 
     loadCard();
   }, [cardId, token]);
-
-  // 加载模板列表
-  useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        const response = await fetch('/api/card-templates');
-        if (response.ok) {
-          const data = await response.json();
-          setTemplates(data.data || []);
-          // 默认选择第一个非付费模板
-          const freeTemplate = data.data.find((t: Template) => !t.isPremium);
-          if (freeTemplate) {
-            setSelectedTemplate(freeTemplate.id);
-          }
-        }
-      } catch (error) {
-        // console.error('Failed to load templates:', error);
-      }
-    };
-
-    loadTemplates();
-  }, []);
 
   // 保存编辑
   const handleSave = async () => {
@@ -213,48 +176,6 @@ export default function EditCardPage() {
       alert(error.message || '重新识别失败');
     } finally {
       setReOcrLoading(false);
-    }
-  };
-
-  // 生成分享图
-  const handleGenerate = async () => {
-    if (!token) return;
-    if (!selectedTemplate) {
-      alert('请先选择一个模板再生成分享图');
-      return;
-    }
-
-    setGenerating(true);
-    try {
-      const response = await fetch(`/api/received-cards/${cardId}/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          templateId: selectedTemplate,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // 跳转到预览页面
-        router.push(`/received/history/${cardId}/preview?templateId=${selectedTemplate}`);
-      } else {
-        const data = await response.json();
-        if (data.error === 'PREMIUM_TEMPLATE_REQUIRED') {
-          if (confirm('该模板需要付费会员，是否前往升级？')) {
-            router.push('/donate');
-          }
-        } else {
-          throw new Error(data.error || '生成失败');
-        }
-      }
-    } catch (error: any) {
-      alert(error.message || '生成失败');
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -555,90 +476,6 @@ export default function EditCardPage() {
             className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all"
           >
             取消
-          </button>
-        </div>
-
-        {/* 模板选择 */}
-        <div className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">🎨 选择模板</h2>
-            {hasLockedTemplates && !user?.isPaidUser && (
-              <button
-                onClick={() => router.push('/donate')}
-                className="text-sm px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full font-medium hover:from-amber-500 hover:to-orange-600 transition-all flex items-center gap-1"
-              >
-                <span>👑</span>
-                <span>升级解锁更多模板</span>
-              </button>
-            )}
-          </div>
-          
-          {/* 升级提示 */}
-          {hasLockedTemplates && !user?.isPaidUser && (
-            <div className="mb-4 p-3 bg-amber-50/80 border border-amber-200/50 rounded-xl">
-              <p className="text-sm text-amber-800">
-                💡 升级付费会员可解锁 <strong>{templates.filter(t => t.isPremium).length}</strong> 款专属模板，生成更精美的分享图！
-              </p>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {templates.map((template) => (
-              <div
-                key={template.id}
-                onClick={() => !template.locked && setSelectedTemplate(template.id)}
-                className={`relative border-0 rounded-xl p-4 cursor-pointer transition-all duration-300 ${
-                  selectedTemplate === template.id
-                    ? 'bg-orange-50 shadow-lg ring-2 ring-orange-500'
-                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                } ${template.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {template.locked && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-xl">
-                    <span className="text-2xl">🔒</span>
-                  </div>
-                )}
-                <div className="aspect-square bg-white rounded-lg mb-2 overflow-hidden flex items-center justify-center shadow-sm">
-                  {template.thumbnail ? (
-                    <img
-                      src={template.thumbnail}
-                      alt={template.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTVlN2ViIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOWE5ZWE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+1LbQsdGBPC90ZXh0Pjwvc3ZnPg==';
-                      }}
-                    />
-                  ) : (
-                    <div className="text-center text-gray-400">
-                      <div className="text-4xl mb-2">🎨</div>
-                      <div className="text-xs">暂无预览</div>
-                    </div>
-                  )}
-                </div>
-                <h3 className="font-medium text-sm text-gray-800">{template.name}</h3>
-                {template.isPremium && (
-                  <span className="text-xs text-yellow-600">👑 付费</span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={handleGenerate}
-            disabled={generating || !selectedTemplate}
-            className="w-full mt-6 px-6 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-medium hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-          >
-            {generating ? (
-              <span className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                生成中...
-              </span>
-            ) : (
-              '生成分享图'
-            )}
           </button>
         </div>
 

@@ -73,8 +73,6 @@ export async function GET(request: NextRequest) {
   try {
     const userId = getLocalUserId();
 
-    const pool = await gachaService.getGachaPool();
-
     // 获取用户抽卡历史
     let history = null;
     let stats = null;
@@ -88,7 +86,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        pool: pool || null,
+        pool: null,
         rarities: {
           SSR: { name: 'SSR', probability: '5%', color: '#FFD700', description: '世界著名地标' },
           SR: { name: 'SR', probability: '15%', color: '#C0C0C0', description: '著名景点' },

@@ -58,12 +58,24 @@ async function processOne(
 
   // OCR 识别
   let ocrResult: any = null;
+  let ocrQuotaExhausted = false;
   try {
     const base64 = buffer.toString('base64');
     ocrResult = await recognizePostcard(base64);
   } catch (ocrError: any) {
-    cleanupFile(tmpPath);
-    return { index: 0, status: 'error', error: `OCR 失败: ${ocrError.message}` };
+    const is429 = ocrError.message?.includes('429') || ocrError.message?.includes('rate limit');
+    if (is429) ocrQuotaExhausted = true;
+
+    // 429 或有文件名 ID 时继续处理，否则返回错误
+    const filenameId = extractPostcardId(image.name);
+    if (!is429 && !filenameId) {
+      cleanupFile(tmpPath);
+      return { index: 0, status: 'error', error: `OCR 失败: ${ocrError.message}` };
+    }
+    // 用文件名 ID 作为 fallback
+    if (filenameId) {
+      ocrResult = { postcardId: filenameId };
+    }
   }
 
   // 文件名 ID 优先
@@ -172,6 +184,7 @@ async function processOne(
       translatedText: metadata.translatedText,
       detectedLang: metadata.detectedLang,
       backImageUrl: receivedCard.imageUrl,
+      ocrQuotaExhausted,
     },
     gacha: gachaResult ? {
       rarity: gachaResult.rarity,

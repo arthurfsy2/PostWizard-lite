@@ -430,8 +430,6 @@ export async function POST(request: NextRequest) {
               console.log(`[批量分析] 完成：成功 ${results.length} 条`);
             } catch (error) {
               console.error('[批量分析] 错误:', error);
-            } finally {
-              await prisma.$disconnect();
             }
           })();
         }

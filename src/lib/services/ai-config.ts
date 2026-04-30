@@ -96,5 +96,6 @@ export async function createOpenAIClient(): Promise<OpenAI> {
   return new OpenAI({
     apiKey: config.apiKey,
     baseURL: normalizeAIUrl(config.baseUrl, config.provider),
+    timeout: 60000, // 60s 超时，防止请求挂起
   });
 }

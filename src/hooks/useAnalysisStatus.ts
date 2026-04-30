@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-// 使用 @/lib/api 而不是 @/lib/auth-fetch
 import { apiFetch } from '@/lib/fetch';
 
 export interface AnalysisStatus {
@@ -18,22 +17,30 @@ export interface AnalysisStatus {
   progress: string;
 }
 
+export interface AnalysisProgress {
+  analyzed: number;
+  total: number;
+  saved?: number;
+}
+
 interface UseAnalysisStatusReturn {
   status: AnalysisStatus | null;
   isLoading: boolean;
   isAnalyzing: boolean;
+  analysisProgress: AnalysisProgress | null;
   error: string | null;
   fetchStatus: () => Promise<void>;
-  continueAnalysis: () => Promise<{ success: boolean; message: string; count: number }>;
+  continueAnalysis: (onDone?: () => void) => Promise<{ success: boolean; message: string; count: number }>;
 }
 
 /**
- * 获取和管理 AI 分析状态的 Hook
+ * 获取和管理 AI 分析状态的 Hook（SSE 实时进度）
  */
 export function useAnalysisStatus(): UseAnalysisStatusReturn {
   const [status, setStatus] = useState<AnalysisStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -57,34 +64,89 @@ export function useAnalysisStatus(): UseAnalysisStatusReturn {
     }
   }, []);
 
-  const continueAnalysis = useCallback(async () => {
+  const continueAnalysis = useCallback(async (onDone?: () => void) => {
     try {
       setIsAnalyzing(true);
+      setAnalysisProgress(null);
       setError(null);
 
       const response = await apiFetch('/api/arrivals/analysis/continue', {
         method: 'POST',
       });
-      const result = await response.json();
 
-      if (result.success) {
-        // 延迟刷新状态（等待分析完成）
-        setTimeout(() => {
-          fetchStatus();
-        }, 5000);
-
-        return {
-          success: true,
-          message: result.message,
-          count: result.data?.total || 0,
-        };
-      } else {
-        setError(result.error || '触发分析失败');
-        return { success: false, message: result.error, count: 0 };
+      if (!response.ok || !response.body) {
+        throw new Error('请求失败');
       }
+
+      // 读取 SSE 流
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResult: { success: boolean; message: string; count: number } = {
+        success: false,
+        message: '分析未完成',
+        count: 0,
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+
+            if (data.started) {
+              setAnalysisProgress({ analyzed: 0, total: data.total });
+              continue;
+            }
+
+            if (data.analyzed !== undefined) {
+              setAnalysisProgress(prev => ({
+                analyzed: data.analyzed,
+                total: data.total || prev?.total || 0,
+                saved: prev?.saved,
+              }));
+              continue;
+            }
+
+            if (data.saved !== undefined && !data.done) {
+              setAnalysisProgress(prev => ({
+                analyzed: prev?.analyzed || 0,
+                total: prev?.total || 0,
+                saved: data.saved,
+              }));
+              continue;
+            }
+
+            if (data.done) {
+              finalResult = {
+                success: !data.error,
+                message: data.error
+                  ? `分析出错: ${data.error}`
+                  : `分析完成，已保存 ${data.saved} 条`,
+                count: data.saved || 0,
+              };
+            }
+          } catch {}
+        }
+      }
+
+      // 刷新最终状态
+      await fetchStatus();
+      setAnalysisProgress(null);
+
+      if (onDone) onDone();
+      return finalResult;
     } catch (err) {
       console.error('触发 AI 分析失败:', err);
       setError('触发分析失败，请重试');
+      setAnalysisProgress(null);
       return { success: false, message: '触发分析失败', count: 0 };
     } finally {
       setIsAnalyzing(false);
@@ -95,6 +157,7 @@ export function useAnalysisStatus(): UseAnalysisStatusReturn {
     status,
     isLoading,
     isAnalyzing,
+    analysisProgress,
     error,
     fetchStatus,
     continueAnalysis,

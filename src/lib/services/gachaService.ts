@@ -3,14 +3,6 @@ import { getAIConfigFromDB } from './ai-config';
 
 const prisma = new PrismaClient();
 
-// 稀有度概率配置
-const RARITY_PROBABILITIES = {
-  SSR: 0.05, // 5%
-  SR: 0.15,  // 15%
-  R: 0.40,   // 40%
-  N: 0.40,   // 40%
-};
-
 // 稀有度配置
 export interface RarityConfig {
   name: string;
@@ -224,48 +216,73 @@ async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
       throw new Error('AI API key not configured');
     }
 
-    const prompt = `请分析以下明信片内容，从 3 个维度进行评分（每个维度 0-100 分），并给出一段正面评价。
+    const prompt = `你是一位专业的明信片内容评价师。请对以下明信片的 3 个维度独立评分（每项 0-100），并给出正面评价。
 
-## 评分维度
+## 3 个维度（独立评分，可以同时高分）：
 
-1. **touchingScore**（最走心）— 情感真挚度、个人故事、走心程度
-2. **emotionalScore**（情感温度）— 温暖程度、美好祝愿、正能量传递
-3. **culturalInsightScore**（文化洞察）— 文化知识、地域特色、独特视角
+| 维度 | 含义 | 低分特征 | 高分特征 |
+|------|------|----------|----------|
+| **touchingScore**（走心） | 真情实感、个人故事、深度共鸣 | 泛泛感谢、客套话 | 有个人故事、情感脆弱、让人共鸣 |
+| **emotionalScore**（情感温度） | 真诚祝愿、有温度的祝福 | 模板化万能祝福 | 针对收信人的真诚期盼，包含情感词 |
+| **culturalInsightScore**（文化洞察） | 本地视角、文化对比、个人解读 | 景点介绍、百科式陈述 | 本地人视角、非显而易见的事实 |
 
-## 评分锚点
+## 评分锚点（严格对标）：
 
-### touchingScore（最走心）
-- 5-20：仅简单感谢或套话（"谢谢你的明信片"）
-- 30-50：简单但真诚的问候，有一定个人色彩
-- 60-80：包含个人故事、旅行经历、真实情感流露
-- 80-100：深刻的情感表达、独特的人生感悟、令人动容的叙述
+**touchingScore（走心）：**
+- 5-20：只有感谢，无个人情感
+- 30-50：简单回应，有礼貌但不深入
+- 60-80：提及个人细节（骑行、宠物、天气、旅行经历）
+- 85+：有故事、情感脆弱（心理健康、家庭压力、人生感悟）、让人共鸣
 
-### emotionalScore（情感温度）
-- 5-20：模板化内容，缺乏温度
-- 30-50：通用祝福语，有基本善意
-- 60-80：真诚的祝愿、温暖的问候、积极的能量
-- 80-100：极具感染力的温暖表达、深度共情、让人感到被关怀
+**emotionalScore（情感温度）：**
+- 5-20：模板化万能祝福（"祝你幸福快乐健康"）
+- 30-60：普通祝福，有针对性但不算真诚
+- 70+：包含情感词（strength, comfort, warmth, hope you feel），有温度
 
-### culturalInsightScore（文化洞察）
-- 5-20：无任何文化元素
-- 30-50：提及基本事实（地名、景点名称等）
-- 60-80：包含当地视角、文化背景、历史故事
-- 80-100：独特的文化见解、深度的文化分享、令人增长见识的内容
+**culturalInsightScore（文化洞察）：**
+- 5-20：没有文化内容
+- 30-60：景点介绍（"The Eiffel Tower is in Paris"）
+- 70+：本地人视角（"What strikes me about my hometown is..."），文化对比，个人解读
 
-## 明信片内容
-"""${content}"""
+## Few-shot 示例：
 
-## 输出格式
-请严格返回以下 JSON 格式（不要包含其他内容）：
+**明信片**: "Thanks for the card! Happy Postcrossing! Hope you have a great day!"
+→ touching=15, emotional=35, culturalInsight=5
+
+**明信片**: "你好！这是我第一次寄明信片到中国，希望你能喜欢。今天东京下雪了，很美。祝你新年快乐！"
+→ touching=35, emotional=55, culturalInsight=40
+
+**明信片**: "我是一名退休教师，看到你也是老师，感到特别亲切。教育是一份神圣的工作，我们把最好的年华都献给了讲台。希望你桃李满天下！"
+→ touching=75, emotional=60, culturalInsight=10
+
+**明信片**: "收到你的卡片时我正在医院陪护母亲，你的祝福让我忍不住落泪。谢谢你，陌生人。世界因为有你这样温暖的人而美好。"
+→ touching=95, emotional=50, culturalInsight=5
+
+**明信片**: "作为柏林人，我想告诉你一个游客不知道的事：柏林墙倒塌那晚，我父亲骑着自行车穿过检查站，和陌生人拥抱哭泣。这座城市骨子里有一种经历过苦难后的坚韧和自由。"
+→ touching=65, emotional=30, culturalInsight=90
+
+**明信片**: "我养了三只猫，它们每天早上轮流踩我脸叫我起床。养猫的人都懂这种甜蜜的折磨。希望你也有毛茸茸的幸福！"
+→ touching=55, emotional=65, culturalInsight=5
+
+## 待评价的明信片内容：
+
+"""
+${content}
+"""
+
+请只输出 JSON（不要解释）：
 {
-  "touchingScore": 75,
-  "emotionalScore": 60,
-  "culturalInsightScore": 50,
-  "summary": "这是一张充满个人故事的明信片，字里行间流露出真挚的情感。",
-  "primaryCategory": "touching"
+  "touchingScore": <0-100>,
+  "emotionalScore": <0-100>,
+  "culturalInsightScore": <0-100>,
+  "summary": "<1-2句正面评价>",
+  "primaryCategory": "<touching|emotional|culturalInsight>"
 }
 
 ## 重要规则
+
+### primaryCategory 判定
+- primaryCategory = 三个维度中得分最高的那个维度
 
 ### summary 评价风格
 - 用欣赏的眼光看待每张明信片，每一张都是对方花时间手写、花钱买邮票寄出的心意
@@ -273,18 +290,7 @@ async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
 - 禁止使用"建议"、"可以补充"、"如果能...就更好了"等建议性语句
 - 禁止使用"缺乏"、"不足"、"有限"、"浅层"、"普通"等否定性词语
 - 即使内容简短，也要找到积极的表达角度（如"简洁真挚"、"温馨问候"）
-- summary 应为 1-2 句话，语气温暖、正面
-
-### primaryCategory 判定
-- primaryCategory = 三个维度中得分最高的那个维度
-- touching：touchingScore 最高
-- emotional：emotionalScore 最高
-- culturalInsight：culturalInsightScore 最高
-
-### 评分原则
-- 每个维度独立评分，0-100 分
-- 不要因为某个维度高就压低另一个维度
-- 三个分数的总和决定了最终稀有度（SSR: 240+, SR: 180+, R: 120+, N: <120）`;
+- summary 应为 1-2 句话，语气温暖、正面`;
 
     const response = await fetch(aiConfig.baseUrl + '/chat/completions', {
       method: 'POST',
@@ -524,13 +530,6 @@ export class GachaService {
     return result;
   }
   
-  // 获取卡池信息
-  async getGachaPool() {
-    return prisma.gachaPool.findFirst({
-      where: { isActive: true },
-      include: { cards: { where: { isActive: true } } },
-    });
-  }
 }
 
 // 导出单例
