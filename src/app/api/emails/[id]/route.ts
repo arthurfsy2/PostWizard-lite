@@ -14,24 +14,6 @@ export async function GET(
 
     const email = await prisma.email.findUnique({
       where: { id },
-      include: {
-        emailConfig: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        postcards: {
-          select: {
-            id: true,
-            postcardId: true,
-            recipientName: true,
-            recipientCountry: true,
-            status: true,
-          },
-        },
-      },
     });
 
     if (!email) {

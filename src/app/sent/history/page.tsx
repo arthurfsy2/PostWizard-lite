@@ -576,7 +576,7 @@ export default function HistoryPage() {
               </p>
               <Button
                 className="mt-6 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 shadow-lg shadow-orange-500/25 hover:from-orange-600 hover:to-amber-600"
-                onClick={() => router.push('/sent/create')}
+                onClick={() => router.push('/sent/parse')}
               >
                 去生成内容
                 <ChevronRight className="ml-2 h-4 w-4" />

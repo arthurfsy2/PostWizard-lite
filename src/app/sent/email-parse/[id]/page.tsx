@@ -37,29 +37,29 @@ export default function EmailDetailPage() {
   const router = useRouter();
   const params = useParams();
   const postcardId = params.id as string; // 使用 postcardId 作为参数
-  
+
   // 支持从 URL 参数中读取唯一的 parseKey（处理重复 postcardId）
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const parseKey = searchParams.get('parseKey');
-  
+
   const { token, user, isLoading: authLoading, fetchUser } = useAuthStore();
-  
+
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Step 状态
   const [currentStep, setCurrentStep] = useState(2); // 从 Step 2 开始
   const [completedSteps, setCompletedSteps] = useState<number[]>([1, 2]);
-  
+
   // Step 2 状态
-  const [tone, setTone] = useState('friendly');
   const [isGenerating, setIsGenerating] = useState(false);
-  
+
   // Step 3 状态
   const [generatedContent, setGeneratedContent] = useState<any>(null);
+  const [generatedContents, setGeneratedContents] = useState<any[]>([]);
   const [copied, setCopied] = useState(false);
-  
+
   // 素材状态
   const [hasMaterials, setHasMaterials] = useState<boolean | null>(null);
 
@@ -76,7 +76,7 @@ export default function EmailDetailPage() {
   // 获取素材状态（统一逻辑）- 只执行一次，避免循环依赖
   useEffect(() => {
     if (!token || !isAuthenticated || hasMaterials !== null) return;
-    
+
     const fetchMaterialsStatus = async () => {
       try {
         const response = await fetch('/api/profile', {
@@ -92,7 +92,7 @@ export default function EmailDetailPage() {
         console.error('[EmailDetail] 获取素材状态失败:', error);
       }
     };
-    
+
     fetchMaterialsStatus();
   }, [token, isAuthenticated, hasMaterials]);
 
@@ -101,14 +101,14 @@ export default function EmailDetailPage() {
     // 优先使用 parseKey（处理重复 postcardId 的情况）
     const storageKey = parseKey || `email_parse_data_${postcardId}`;
     const stored = sessionStorage.getItem(storageKey);
-    
+
     if (stored) {
       try {
         const data = JSON.parse(stored) as ParsedData;
         setParsedData(data);
         setCurrentStep(2);
         setCompletedSteps([1, 2]);
-        
+
         // 从 parsedData 中获取 hasMaterials（如果 API 已返回）
         if (data.hasMaterials !== undefined) {
           setHasMaterials(data.hasMaterials);
@@ -125,28 +125,28 @@ export default function EmailDetailPage() {
   // 处理生成内容
   const handleGenerate = async () => {
     if (!parsedData) return;
-    
+
     // 如果没有 id，需要先创建 Postcard 记录
     if (!parsedData.id) {
       try {
         const response = await fetch('/api/content/paste', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             content: parsedData.messageToSender,
             isFromEmail: true,
             emailId: null, // 不再需要 emailId
             postcardId: parsedData.postcardId,
           }),
         });
-        
+
         const result = await response.json();
         if (result.success && result.data) {
           setParsedData({ ...parsedData, id: result.data.id });
-          
+
           // 处理重复检测
           if (result.isDuplicate) {
             const confirmOverwrite = window.confirm(
@@ -154,7 +154,7 @@ export default function EmailDetailPage() {
               `是否要覆盖原有内容？\n\n` +
               `点击"确定"覆盖，点击"取消"使用原有记录。`
             );
-            
+
             if (!confirmOverwrite) {
               // 使用原有记录，继续生成
               setParsedData({ ...parsedData, id: result.data.id });
@@ -169,26 +169,27 @@ export default function EmailDetailPage() {
 
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/content/generate', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          recipientId: parsedData.id,
-          tone,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        setGeneratedContent(result.data);
+      const tones = ['precise', 'warm', 'cultural'];
+      const results = await Promise.all(
+        tones.map(t =>
+          fetch('/api/content/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ recipientId: parsedData.id, tone: t }),
+          }).then(r => r.json())
+        )
+      );
+      const contents = results.filter((r: any) => r.success && r.data).map((r: any) => r.data);
+      if (contents.length > 0) {
+        setGeneratedContents(contents);
+        setGeneratedContent(contents[0]);
         setCompletedSteps([...completedSteps, 3]);
         setCurrentStep(3);
       } else {
-        alert(result.error || '生成失败，请重试');
+        alert('生成失败，请重试');
       }
     } catch (err) {
       alert('生成失败，请重试');
@@ -198,10 +199,11 @@ export default function EmailDetailPage() {
   };
 
   // 处理导出 Markdown
-  const handleExportMarkdown = async () => {
-    if (!generatedContent?.id) return;
+  const handleExportMarkdown = async (contentId?: string) => {
+    const id = contentId || generatedContent?.id;
+    if (!id) return;
     try {
-      const response = await fetch(`/api/content/${generatedContent.id}/export/markdown`, {
+      const response = await fetch(`/api/content/${id}/export/markdown`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -212,7 +214,7 @@ export default function EmailDetailPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = result.data.filename || `postcard-${generatedContent.id}.md`;
+        a.download = result.data.filename || `postcard-${id}.md`;
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -222,10 +224,11 @@ export default function EmailDetailPage() {
   };
 
   // 处理导出 PDF
-  const handleExportPdf = async () => {
-    if (!generatedContent?.id) return;
+  const handleExportPdf = async (contentId?: string) => {
+    const id = contentId || generatedContent?.id;
+    if (!id) return;
     try {
-      const response = await fetch(`/api/content/${generatedContent.id}/export/pdf`, {
+      const response = await fetch(`/api/content/${id}/export/pdf`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -234,7 +237,7 @@ export default function EmailDetailPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `postcard-${parsedData?.postcardId || generatedContent.id}.pdf`;
+      a.download = `postcard-${parsedData?.postcardId || id}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -244,12 +247,12 @@ export default function EmailDetailPage() {
 
   // 返回列表
   const handleBackToEmails = () => {
-    router.push('/emails');
+    router.push('/sent/email-parse');
   };
 
   // 新建一张
   const handleCreateNew = () => {
-    router.push('/emails');
+    router.push('/sent/email-parse');
   };
 
   if (authLoading || isLoading) {
@@ -266,7 +269,7 @@ export default function EmailDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-12">
         {/* 返回按钮 */}
         <Button
@@ -305,8 +308,6 @@ export default function EmailDetailPage() {
           <div className="mt-8">
             <Step2Card
               parsedData={parsedData}
-              tone={tone}
-              onToneChange={setTone}
               onGenerate={handleGenerate}
               onBack={handleBackToEmails}
               isGenerating={isGenerating}
@@ -320,9 +321,12 @@ export default function EmailDetailPage() {
         {currentStep === 3 && generatedContent && (
           <div className="mt-8">
             <Step3Card
+              generatedContents={generatedContents}
               generatedContent={generatedContent}
-              onCopy={() => {
-                navigator.clipboard.writeText(generatedContent.markdown);
+              onCopy={(content) => {
+                const target = content || generatedContent;
+                const text = target?.contentEn || target?.content || '';
+                navigator.clipboard.writeText(text);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
@@ -330,12 +334,22 @@ export default function EmailDetailPage() {
               onExportPdf={handleExportPdf}
               onBack={() => setCurrentStep(2)}
               onCreateNew={handleCreateNew}
+              onConfirm={async (content) => {
+                setGeneratedContent(content);
+                if (content?.postcardId) {
+                  await fetch('/api/content/confirm-selection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contentId: content.id, postcardId: content.postcardId }),
+                  });
+                }
+              }}
               copied={copied}
             />
           </div>
         )}
       </main>
-      
+
       <Footer />
     </div>
   );

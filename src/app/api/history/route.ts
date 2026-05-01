@@ -61,9 +61,10 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: [
+        { selected: 'desc' },
+        { createdAt: 'desc' },
+      ],
     });
 
     const seenPostcardIds = new Set<string>();

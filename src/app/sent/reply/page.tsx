@@ -89,7 +89,7 @@ function OnboardingGuide({ onStartSearch }: { onStartSearch: () => void }) {
       <div className="bg-gradient-to-r from-orange-500/8 via-amber-500/6 to-emerald-500/8 px-6 py-6 sm:px-8">
         <h3 className="text-center text-xl font-bold text-slate-900">欢迎使用送达回复功能</h3>
         <p className="mt-2 text-center text-sm leading-7 text-slate-500">
-          从邮箱中找回那些“明信片安全送达”的温暖回信，把旅程和回复整理成一条清晰的时间线。
+          从邮箱中找回那些"明信片安全送达"的温暖回信，把旅程和回复整理成一条清晰的时间线。
         </p>
       </div>
 
@@ -326,7 +326,18 @@ function EmptyTabContent({ type, title }: { type: "timeline" | "wordcloud" | "hi
   );
 }
 
-export default function ArrivalsPage() {
+function PageLoadingSpinner() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto" />
+        <p className="text-slate-600">加载中...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function ReplyPage() {
   const [showSearchDialog, setShowSearchDialog] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -485,4 +496,3 @@ export default function ArrivalsPage() {
     </div>
   );
 }
-

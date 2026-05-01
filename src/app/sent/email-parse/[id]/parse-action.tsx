@@ -20,22 +20,22 @@ export function ParseAction({ emailId, emailSubject, emailFrom }: ParseActionPro
     e.stopPropagation(); // 阻止事件冒泡到父级 Card
     setIsLoading(true);
     try {
-      const token = typeof window !== 'undefined' 
+      const token = typeof window !== 'undefined'
         ? (localStorage.getItem('auth-storage') ? JSON.parse(localStorage.getItem('auth-storage')!).state.token : null)
         : null;
-      
-      const res = await fetch(`/api/emails/${emailId}/parse`, { 
+
+      const res = await fetch(`/api/emails/${emailId}/parse`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
       });
-      
+
       if (!res.ok) {
         const data = await res.json();
         if (res.status === 402) {
-          toast.error('功能需升级到付费', { 
+          toast.error('功能需升级到付费', {
             description: data.error || '当前账户为免费版，请升级后使用',
             duration: 5000,
           });
@@ -44,13 +44,13 @@ export function ParseAction({ emailId, emailSubject, emailFrom }: ParseActionPro
         toast.error(data.error || '解析失败，请稍后重试');
         return;
       }
-      
+
       const data = await res.json();
       if (data.success) {
         // 使用 postcardId 作为 key（更简洁）
         const postcardId = data.data.postcardId;
         const storageKey = `email_parse_data_${postcardId}`;
-        
+
         // 检查是否已存在相同 postcardId 的数据
         const existing = sessionStorage.getItem(storageKey);
         if (existing) {
@@ -59,7 +59,7 @@ export function ParseAction({ emailId, emailSubject, emailFrom }: ParseActionPro
             // 比较日期，保留最新的
             const existingDate = new Date(existingData.createdAt || 0);
             const newDate = new Date(data.data.createdAt || Date.now());
-            
+
             if (newDate > existingDate) {
               // 新数据更新，覆盖
               sessionStorage.setItem(storageKey, JSON.stringify(data.data));
@@ -71,7 +71,7 @@ export function ParseAction({ emailId, emailSubject, emailFrom }: ParseActionPro
               console.log(`[ParseAction] postcardId ${postcardId} 已存在，创建唯一 key: ${uniqueKey}`);
               // 使用唯一 key 跳转
               setTimeout(() => {
-                router.push(`/emails/${postcardId}?parseKey=${encodeURIComponent(uniqueKey)}`);
+                router.push(`/sent/email-parse/${postcardId}?parseKey=${encodeURIComponent(uniqueKey)}`);
               }, 800);
               setIsLoading(false);
               return;
@@ -85,12 +85,12 @@ export function ParseAction({ emailId, emailSubject, emailFrom }: ParseActionPro
           // 不存在，直接保存
           sessionStorage.setItem(storageKey, JSON.stringify(data.data));
         }
-        
+
         toast.success('解析成功，正在跳转...');
-        
+
         // 跳转到详情页（使用 postcardId，更简洁的 URL）
         setTimeout(() => {
-          router.push(`/emails/${postcardId}`);
+          router.push(`/sent/email-parse/${postcardId}`);
         }, 800);
       } else {
         toast.error(data.error || '解析失败，请稍后重试');

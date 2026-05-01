@@ -30,6 +30,7 @@ export interface AIParsedResult {
   
   // 结构化偏好
   interests: string[];
+  coreInterests: string[];  // 最核心的 3-5 个兴趣（用于生成 prompt）
   dislikes: string[];
   messageToSender: string;
   cardPreference: string;
@@ -88,6 +89,7 @@ function buildSystemPrompt(source: ContentSource): string {
   "distance": 8500,
   "languages": ["语言 1", "语言 2", "语言 3"],
   "interests": ["兴趣 1 | 中文翻译", "兴趣 2 | 中文翻译"],
+  "coreInterests": ["最核心的兴趣 1 | 中文翻译", "最核心的兴趣 2 | 中文翻译"],
   "dislikes": ["不喜欢的内容 | 中文翻译"],
   "messageToSender": "用户想说的话 | 中文翻译",
   "cardPreference": "any | 任何类型",
@@ -100,6 +102,7 @@ function buildSystemPrompt(source: ContentSource): string {
 ${addressInstruction}
 - **languages 字段：提取用户会说的所有语言（在 "Languages:" 后面），返回字符串数组，如 ["German", "English", "Finnish (in learning state)", "Italian (a little)"]**
 - **interests 字段：请完整提取用户在简介中提到的所有兴趣爱好、喜欢的主题、收藏偏好等，不要遗漏！保留原文 + 中文翻译，用 | 分隔。例如用户提到 "ice hockey, motorsports, animals, music, videogames, movies, collecting pins..." 应该全部列出。**
+- **coreInterests 字段：从 interests 中选出最核心的 3-5 个兴趣（最能代表这个人个性的、写明信片时最值得回应的）。选择标准：① 有故事性的优先（如"收集别针"比"音乐"更有话题）② 与 Postcrossing 相关的优先（如明信片收藏、旅行）③ 避免过于泛泛的（如"movies"不如"Star Wars"具体）。格式与 interests 相同。**
 - **cardsSent/cardsReceived：如果邮件中提到 "X postcards sent, Y received"，请提取这两个数字**
 - **postcardId 字段：如果提示词中已提供明信片 ID（如 "明信片 ID：CN-1234567"），必须直接使用该值，不要从邮件内容中重新提取！**
 - dislikes 字段：提取用户不喜欢的内容，如果没有则返回 []
@@ -263,6 +266,7 @@ export async function parseWithAI(
         postcardId: parsed.postcardId || config.extraInfo?.postcardId || '',
         distance: parsed.distance ? Number(parsed.distance) : undefined,
         interests: Array.isArray(parsed.interests) ? parsed.interests : [],
+        coreInterests: Array.isArray(parsed.coreInterests) ? parsed.coreInterests : [],
         dislikes: Array.isArray(parsed.dislikes) ? parsed.dislikes : [],
         messageToSender: parsed.messageToSender || '',
         cardPreference: parsed.cardPreference || 'any',
@@ -306,6 +310,7 @@ function getDefaultResult(source: ContentSource): AIParsedResult {
     postcardId: '',
     distance: undefined,
     interests: [],
+    coreInterests: [],
     dislikes: [],
     messageToSender: '',
     cardPreference: 'any',

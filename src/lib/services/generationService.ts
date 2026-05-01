@@ -35,6 +35,8 @@ export interface GenerationResult {
   contentZh: string; // 中文版（辅助）
   contentBody: string; // 兼容旧版（英文版）
   contentType: string;
+  tone?: string;
+  postcardId: string;
   usedTokens: number;
   matchedMaterials: MatchedMaterial[]; // 匹配的素材列表
 }
@@ -275,7 +277,7 @@ export class GenerationService {
         // 匹配素材（用于标记哪些与收件人兴趣相关）
         matchedMaterials = this.matchMaterials(
           allMaterials,
-          postcard.recipientInterests,
+          postcard.coreInterests || postcard.recipientInterests,
         );
       }
     }
@@ -425,11 +427,12 @@ export class GenerationService {
       usedTokens = contentEn.length / 4;
     }
 
-    // 检查是否已存在相同的 postcardId 和当前用户 ID 的记录
+    // 检查是否已存在相同的 postcardId、tone 和当前用户 ID 的记录
     const existingContent = await prisma.generatedContent.findFirst({
       where: {
         postcardId,
-        userId: currentUserId, // 使用当前用户 ID 而非明信片创建者
+        userId: currentUserId,
+        tone: options.tone || 'friendly',
       },
     });
 
@@ -475,6 +478,8 @@ export class GenerationService {
       contentZh,
       contentBody: contentEn,
       contentType: generatedContent.contentType,
+      tone: options.tone,
+      postcardId,
       usedTokens: generatedContent.usedTokens || 0,
       matchedMaterials,
     };
@@ -654,11 +659,55 @@ export class GenerationService {
   }
 
   /**
+   * 公开方法：构建指定版本的 prompt（供测试脚本使用）
+   */
+  buildPromptForVersion(
+    postcard: any,
+    options: GenerationOptions,
+    allMaterials: any[] = [],
+    matchedMaterials: MatchedMaterial[] = [],
+    version: 'v1' | 'v2' = 'v2',
+  ): string {
+    return this.buildGenerationPrompt(postcard, options, allMaterials, matchedMaterials, version);
+  }
+
+  /**
+   * 公开方法：从 userProfile 构建素材列表（供测试脚本使用）
+   */
+  buildMaterials(profile: any): any[] {
+    return this.buildMaterialsFromProfile(profile);
+  }
+
+  /**
+   * 公开方法：匹配素材与收件人兴趣（供测试脚本使用）
+   */
+  matchMaterialsForTest(materials: any[], recipientInterests: string | null): MatchedMaterial[] {
+    return this.matchMaterials(materials, recipientInterests);
+  }
+
+  /**
    * 构建生成提示词
    * @param allMaterials 所有个人要素（始终显示）
    * @param matchedMaterials 与收件人兴趣匹配的要素（用于标记）
+   * @param version prompt 版本：v1=baseline, v2=optimized（默认 v2）
    */
   private buildGenerationPrompt(
+    postcard: any,
+    options: GenerationOptions,
+    allMaterials: any[] = [],
+    matchedMaterials: MatchedMaterial[] = [],
+    version: 'v1' | 'v2' = 'v2',
+  ): string {
+    if (version === 'v1') {
+      return this.buildPromptV1(postcard, options, allMaterials, matchedMaterials);
+    }
+    return this.buildPromptV2(postcard, options, allMaterials, matchedMaterials);
+  }
+
+  /**
+   * Prompt v1: baseline 版本（原始 prompt）
+   */
+  private buildPromptV1(
     postcard: any,
     options: GenerationOptions,
     allMaterials: any[] = [],
@@ -701,7 +750,7 @@ export class GenerationService {
 - **开头格式**：${month} ${day}, ${year} {temp}°C {weather_emoji}
   - temp 和 weather_emoji 请根据合理天气填写（如 25°C ☀️）
 - **语言**：英文，每封下方附中文对照翻译
-- **素材使用**：从个人要素中**提炼 1-2 句话**融入信中，绝不能大段复制粘贴素材原文
+- **素材使用**：从个人要素中**提取多处细节**充实各段落（自我介绍、兴趣分享等），用自己的话自然转述，不要大段复制粘贴素材原文
 
 ### 3. 结构要求（必须遵守）
 按以下顺序组织内容：
@@ -717,7 +766,7 @@ export class GenerationService {
 - **国家**: ${postcard.recipientCountry}
 - **城市**: ${postcard.recipientCity}
 ${postcard.recipientAge ? `- **年龄**: ${postcard.recipientAge}` : ""}
-${postcard.recipientInterests ? `- **兴趣爱好**: ${postcard.recipientInterests}` : ""}
+${(postcard.coreInterests || postcard.recipientInterests) ? `- **兴趣爱好**: ${postcard.coreInterests || postcard.recipientInterests}` : ""}
 ${postcard.recipientBio ? `- **个人介绍**: ${postcard.recipientBio}` : ""}
 ${options.extraInfo?.languages ? `- **语言能力**: ${options.extraInfo.languages}` : ""}
 ${options.extraInfo?.pronouns ? `- **代词**: ${options.extraInfo.pronouns}` : ""}
@@ -798,16 +847,16 @@ ${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? 
 
 ## ❌ 错误示例（不要这样写）
 
-**素材**: "My daughter Xiaoxiao just turned 3 and loves animals"
+**素材**: "My daughter just turned 3 and loves animals"
 
-**错误输出**: "...my daughter Xiaoxiao just turned 3 and loves animals like marmots and quokkas..."
+**错误输出**: "...my daughter just turned 3 and loves animals like marmots and quokkas..."
 
-**错误原因**: 
+**错误原因**:
 - 素材只说"喜欢动物"，没有提到具体喜欢什么动物
 - AI 自行添加了"土拨鼠和短尾矮袋鼠"作为例子
 - 这是不合理的具体化，除非素材明确说"喜欢土拨鼠和短尾矮袋鼠"
 
-**正确写法**: "...my daughter Xiaoxiao just turned 3 and loves animals..."（保持原样，不添加具体例子）
+**正确写法**: "...my daughter just turned 3 and loves animals..."（保持原样，不添加具体例子）
 
 ---
 
@@ -824,6 +873,202 @@ ${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? 
 **为什么正确**: 
 - "software developer" 和 "photography walks" 都是素材中明确的事实
 - 没有添加素材中没有的具体细节`);
+
+    return parts.join("");
+  }
+
+  /**
+   * Prompt v2: 优化版 — 强化字数、深化兴趣回应、增加对话感
+   */
+  private buildPromptV2(
+    postcard: any,
+    options: GenerationOptions,
+    allMaterials: any[] = [],
+    matchedMaterials: MatchedMaterial[] = [],
+  ): string {
+    const now = new Date();
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const month = monthNames[now.getMonth()];
+    const day = now.getDate();
+    const year = now.getFullYear();
+
+    const parts: string[] = [];
+
+    parts.push(`你是一位专业的 Postcrossing 明信片收、寄信助手。请根据以下信息，生成一封"走心"的英文明信片内容——像一个真实的朋友在写信，而不是在填模板。
+
+## ⚠️ 核心约束（必须遵守）
+
+### 1. 内容真实性原则（不可违反）
+- **所有内容必须基于以下"我的个人素材"中明确写出的事实**
+- **严禁编造**任何未经确认的经历、职业、所在地、物品或故事
+- **严禁举例说明**：不要列举具体例子（如"喜欢动物，比如熊猫和老虎"），除非素材中明确列出了这些例子
+- 如果不确定某个信息，宁可不写，也不要编造或过度具体化
+
+### 1.5 素材丰富度要求（非常重要）
+- 你的素材库中有**多个维度的信息**（个人简介、故事素材、兴趣标签等）
+- **每封信必须使用至少 3 个不同的素材细节**，不要每次都只用相同的 1-2 个
+- 从故事素材（随心记）中选取一个有趣的故事或经历融入信中——这是让内容"走心"的关键
+- 不同的收件人应该让你选择不同的素材组合，而不是千篇一律
+
+### 2. 字数要求（硬性约束）
+- **英文正文（不含日期行和签名）必须在 90-120 词之间**
+- ⚠️ **不足 90 词的输出将被拒绝**——你有丰富的个人素材可用，请充分利用它们充实每个段落
+- ⚠️ **超出 120 词的输出将被拒绝**——如果素材太长，选择最相关的细节
+- **写满 90 词的方法**：在自我介绍中多用 1-2 个素材细节，在兴趣分享中多写一句个人感受
+- **建议分布**：自我介绍 30-40 词 + 兴趣回应 40-50 词 + 祝愿 10-15 词
+- **字数不足时**：在自我介绍中多加一句个人感受（如"每天骑车是我最放松的时刻"），在兴趣回应中多加一句好奇的延伸（如"我一直想了解这项运动的入门门槛"）
+
+### 3. 结构要求（必须遵守，每段有最少句数要求）
+按以下顺序组织内容：
+1. **日期行**：${month} ${day}, ${year} {temp}°C {weather_emoji}
+   - temp 和 weather_emoji 请根据合理天气填写（如 25°C ☀️）
+2. **问候**（1-2 句）：用收件人的名字打招呼
+3. **自我介绍**（2-3 句）：来自哪里、做什么的、一个有趣的细节（只能用素材事实）
+4. **兴趣回应 + 个人分享**（3-5 句，全文最重要的部分）：
+   - **情况 A：素材与收件人兴趣有真实关联** → 自然地建立连接，分享相关经历
+   - **情况 B：素材与收件人兴趣没有关联** → **不要编造连接！** 如实分享随心记中的内容，然后真诚地对收件人的兴趣表示好奇
+   - 两种情况都必须包含：**至少 1 个开放式问题**
+   - 🚫 **严禁编造**：不能说"我对 X 也很感兴趣"或"作为一个 Y，我觉得 Z 很有趣"——除非素材中明确提到
+   - ✅ **正确做法**：如果没有关联，就大方地说 "I'd love to hear more about your interest in..." 或 "What got you into...?"
+   - 禁止：泛泛的 "That's interesting!" / "I noticed from your profile..." / "That's wonderful!"
+5. **祝愿**（1 句）：针对收件人具体情况的真诚祝愿
+6. **签名**
+
+### 4. 对话感要求（必须遵守）
+- **必须包含至少 1 个开放式问题**（让收件人有话可回，而不是 yes/no 问题）
+- 如果收件人 bio 中有情感表达（如热爱某事物、家庭信息），**必须回应这种情感**
+- 语气要像朋友间的闲聊，不是百科全书式的陈述
+- 语言${options.extraInfo?.languages ? `（收件人懂 ${options.extraInfo.languages}，如果收件人的语言包含中文，可以适当加入一两句中文问候）` : '用英文'}
+
+## 收件人信息
+- **姓名**: ${postcard.recipientName}
+- **国家**: ${postcard.recipientCountry}
+- **城市**: ${postcard.recipientCity}
+${postcard.recipientAge ? `- **年龄**: ${postcard.recipientAge}` : ""}
+${(postcard.coreInterests || postcard.recipientInterests) ? `- **兴趣爱好**: ${postcard.coreInterests || postcard.recipientInterests}` : ""}
+${postcard.recipientBio ? `- **个人介绍**: ${postcard.recipientBio}` : ""}
+${options.extraInfo?.languages ? `- **语言能力**: ${options.extraInfo.languages}` : ""}
+${options.extraInfo?.pronouns ? `- **代词**: ${options.extraInfo.pronouns}` : ""}
+${options.extraInfo?.birthday ? `- **生日**: ${options.extraInfo.birthday}` : ""}
+${options.extraInfo?.sentDate ? `- **发送日期**: ${options.extraInfo.sentDate}` : ""}
+${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraInfo.aboutText.substring(0, 500)}${options.extraInfo.aboutText.length > 500 ? "...(已截断)" : ""}` : ""}
+
+## 我的个人要素（只能使用以下事实，严禁编造）
+
+### 📋 要素使用指南
+1. **个人简介**（来源：个人简介输入框）- 核心自我介绍，优先在开头部分使用
+2. **故事素材**（来源：随心记）- 随心记的英文翻译，个人故事、经历分享
+3. **兴趣标签** - AI 识别的兴趣关键词，用于匹配收件人兴趣
+
+`);
+
+    // 构建匹配关键词集合，用于标记
+    const matchedKeywords = new Set(
+      matchedMaterials
+        .map((m) => m.matchedKeyword?.toLowerCase())
+        .filter(Boolean),
+    );
+
+    if (allMaterials.length > 0) {
+      allMaterials.forEach((material, index) => {
+        const categoryZh = material.category || "素材";
+        const contentLower = material.content?.toLowerCase() || "";
+        const isMatched =
+          matchedKeywords.size > 0 &&
+          Array.from(matchedKeywords).some((kw) => contentLower.includes(kw));
+
+        if (categoryZh === "兴趣标签") {
+          parts.push(`\n【${categoryZh}】关键词：${material.content}`);
+        } else {
+          const matchMarker = isMatched ? " ✅ 匹配收件人兴趣" : "";
+          parts.push(
+            `\n========== ${index + 1}. 【${categoryZh}】${matchMarker} ==========\n${material.content}\n`,
+          );
+        }
+      });
+
+      if (matchedMaterials.length > 0) {
+        parts.push(
+          `\n💡 **匹配提示**：以上标记 ✅ 的素材与收件人兴趣相关，请优先使用这些素材来建立真实连接。`,
+        );
+      }
+
+      parts.push(
+        "\n\n⚠️ **素材使用约束**：\n" +
+          "- 只能从上述要素中提取事实写入明信片\n" +
+          "- 不能编造素材中没有的经历、职业或观点\n" +
+          "- **可以做**：在素材事实后面添加自己的感受（如\"骑车是我最放松的时刻\"）、表达好奇（如\"我一直想试试射箭\"）、用更生动的语言转述原文\n" +
+          "- **不能做**：把两个独立事实拼接成新故事（如素材说\"喜欢动物\"和\"上幼儿园\"，不能编出\"幼儿园的小兔子\"）、添加素材中没有的具体细节\n" +
+          "- **鼓励使用多处素材细节**：用你自己的话自然转述，充实自我介绍和兴趣分享\n" +
+          "- 匹配的故事素材（✅ 标记）可用于回应收件人兴趣\n" +
+          "- **没有匹配素材时**：直接引用随心记内容分享，不要编造与收件人兴趣的关联\n" +
+          "- 个人简介用于开场自我介绍\n" +
+          "- 不要大段复制粘贴素材原文，用自己的话转述",
+      );
+    } else {
+      parts.push("\n📝 暂无个人要素，请只写简短问候和祝愿，不要编造个人信息。");
+    }
+
+    parts.push(`
+
+## 语气风格
+${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? "- 轻松、随意" : options.tone === "precise" ? `- 语气：准确、简洁
+- 只使用素材中的原始事实，不添加感受或联想
+- 如果素材与收件人兴趣无关联，直接提问即可，不要编造连接` : options.tone === "warm" ? `- 语气：温暖、真诚
+- 基于素材事实，可以添加个人感受和好奇
+- 用朋友聊天的口吻，表达对收件人兴趣的真诚好奇` : options.tone === "cultural" ? `- 语气：开放、文化交流
+- 侧重分享你所在城市/国家的生活细节
+- 用本地人的视角介绍有趣的文化差异` : "- 友好、温暖、真诚"}
+- 像真实朋友写的信，有温度、有个性
+- 禁止使用模板化套话
+
+## ❌ 禁止使用的套话
+- "I noticed from your profile that..."
+- "That's wonderful!"
+- "How interesting!"
+- "I hope this card finds you well"
+- "Wishing you all the best"
+- "Happy Postcrossing!"
+- 任何听起来像 AI 生成的客套话
+
+## 输出格式
+请输出 JSON 格式：
+{
+  "en": "${month} ${day}, ${year} 25°C ☀️\\n\\nHi ${postcard.recipientName},\\n\\n...(正文，90-120 词)...\\n\\nBest,\\nYour Name",
+  "zh": "中文翻译"
+}
+
+## ✅ 正确示例
+
+### 示例 1：素材与收件人兴趣有关联时（约 100 词）
+
+**素材**: "I'm a software developer who loves weekend photography walks. My daughter just turned 3."
+**收件人**: Tijn, Netherlands, 爱好 photography and street art
+
+**正确输出**:
+{
+  "en": "Jul 15, 2024 26°C ☀️\\n\\nHi Tijn,\\n\\nGreetings from Shenzhen! I'm a software developer who escapes code by wandering the city with my camera on weekends. There's something meditative about framing the world one shot at a time.\\n\\nI see you're into photography too — do you have a favorite style or subject? I've been trying to capture more street scenes lately. Also curious about the street art scene in your area — any hidden gems worth checking out?\\n\\nWishing you great light for your next shoot!\\n\\nWarm regards,\\nPostWizard User",
+  "zh": "...中文翻译..."
+}
+
+**为什么好**: 素材明确提到摄影 → 与收件人兴趣真实关联 → 自然连接，不编造
+
+### 示例 2：素材与收件人兴趣没有关联时（约 100 词）
+
+**素材**: 个人简介中有运动目标和家庭信息，随心记中有职业转变和新爱好探索
+**收件人**: Tijn, Netherlands, 爱好 vintage cars and flea markets
+
+**正确输出**:
+{
+  "en": "Jul 15, 2024 26°C ☀️\\n\\nHi Tijn,\\n\\nGreetings from Shenzhen! I recently took a leap and left my job to teach myself coding. Been building an open-source project, which keeps me up late but loving it. When I need a break, I go for long rides — working towards a big milestone goal!\\n\\nYour passion for vintage cars sounds fascinating — what got you into it? I'd love to hear the story. And flea markets seem like such an adventure.\\n\\nWishing you sunny skies for your next outing!\\n\\nBest,\\nArthur",
+  "zh": "...中文翻译..."
+}
+
+**为什么好**:
+- 使用了 3 个素材细节：职业转变、开源项目、运动目标
+- 用随心记充实自我介绍 → 内容丰富不空洞
+- 与收件人兴趣没有关联 → 不编造，诚实好奇
+- 🚫 没有说 "As a coder, I appreciate the engineering of vintage cars" → 这就是编造`);
 
     return parts.join("");
   }
@@ -903,6 +1148,7 @@ ${matchedMaterials.length > 0 ? `我也喜欢${matchedMaterials.map((m) => m.con
             recipientAge: true,
             recipientGender: true,
             recipientInterests: true,
+            coreInterests: true,
             recipientBio: true,
           },
         },

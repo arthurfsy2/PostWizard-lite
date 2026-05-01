@@ -28,8 +28,6 @@ interface AIParsedRecipient {
 
 interface Step2CardProps {
   parsedData: AIParsedRecipient;
-  tone: string;
-  onToneChange: (tone: string) => void;
   onGenerate: () => void;
   onBack: () => void;
   isGenerating: boolean;
@@ -39,8 +37,6 @@ interface Step2CardProps {
 
 export function Step2Card({
   parsedData,
-  tone,
-  onToneChange,
   onGenerate,
   onBack,
   isGenerating,
@@ -226,24 +222,6 @@ export function Step2Card({
             ) : (
               /* 有素材时才显示生成按钮 */
               <div className="pt-4 border-t border-slate-200 space-y-3">
-                <div>
-                  <Label htmlFor="tone" className="text-sm font-medium text-slate-700 mb-2 block">
-                    你希望生成什么风格的内容？
-                  </Label>
-                  <select
-                    id="tone"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500"
-                    value={tone}
-                    onChange={(e) => onToneChange(e.target.value)}
-                  >
-                    <option value="friendly">友好热情</option>
-                    <option value="casual">轻松随意</option>
-                    <option value="formal">正式礼貌</option>
-                    <option value="humorous">幽默风趣</option>
-                    <option value="poetic">文艺诗意</option>
-                  </select>
-                </div>
-
                 <div className="flex gap-3">
                   <Button
                     onClick={onBack}

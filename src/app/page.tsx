@@ -141,7 +141,7 @@ export default function HomePage() {
 
               {/* 双 CTA 按钮 - 寄信/收信双功能 */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 animate-in fade-in slide-in-from-bottom-12 duration-700 delay-150">
-                <Link href="/sent/create">
+                <Link href="/sent/parse">
                   <Button
                     size="lg"
                     className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg shadow-orange-500/25 h-14 px-8 text-base rounded-xl group"

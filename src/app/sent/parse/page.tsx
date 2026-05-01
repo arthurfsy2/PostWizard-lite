@@ -43,31 +43,31 @@ interface AIParsedRecipient {
 function PastePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   // 编辑模式状态
   const editId = searchParams.get('editId');
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
-  
+
   // 3 步流程状态
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  
+
   // Step 1 状态
   const [emailContent, setEmailContent] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Step 2 状态
   const [parsedData, setParsedData] = useState<AIParsedRecipient | null>(null);
-  const [tone, setTone] = useState('friendly');
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasMaterials, setHasMaterials] = useState<boolean | null>(null);
-  
+
   // Step 3 状态
+  const [generatedContents, setGeneratedContents] = useState<any[]>([]);
   const [generatedContent, setGeneratedContent] = useState<any>(null);
   const [copied, setCopied] = useState(false);
-  
+
   // 重复记录确认对话框状态
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateInfo, setDuplicateInfo] = useState<{
@@ -136,11 +136,6 @@ function PastePageContent() {
             });
           }
 
-          // 预填充语气设置
-          if (content.tone) {
-            setTone(content.tone);
-          }
-
           // 预填充 Step 3 状态（生成内容）
           setGeneratedContent({
             id: content.id,
@@ -187,7 +182,7 @@ function PastePageContent() {
     try {
       const response = await fetch('/api/content/paste', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ content: emailContent }),
@@ -241,26 +236,26 @@ function PastePageContent() {
 
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/content/generate', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recipientId: parsedData.id,
-          tone,
-        }),
-      });
+      const tones = ['precise', 'warm', 'cultural'];
+      const results = await Promise.all(
+        tones.map(t =>
+          fetch('/api/content/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipientId: parsedData.id, tone: t }),
+          }).then(r => r.json())
+        )
+      );
+      const contents = results.filter(r => r.success && r.data).map(r => r.data);
 
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        setGeneratedContent(result.data);
+      if (contents.length > 0) {
+        setGeneratedContents(contents);
+        setGeneratedContent(contents[0]);
         // 完成 Step 2，进入 Step 3
         setCompletedSteps([...completedSteps, 2]);
         setCurrentStep(3);
       } else {
-        alert(result.error || '生成失败，请重试');
+        alert('生成失败，请重试');
       }
     } catch (err) {
       // console.error('生成失败:', err);
@@ -270,15 +265,16 @@ function PastePageContent() {
     }
   };
 
-  const handleCopy = async () => {
-    const contentEn = generatedContent?.contentEn || generatedContent?.content || generatedContent?.contentBody || '';
-    const contentZh = generatedContent?.contentZh || '';
-    
+  const handleCopy = async (content?: any) => {
+    const target = content || generatedContent;
+    const contentEn = target?.contentEn || target?.content || target?.contentBody || '';
+    const contentZh = target?.contentZh || '';
+
     let textToCopy = contentEn;
     if (contentZh) {
       textToCopy = `【英文版】\n${contentEn}\n\n【中文版】\n${contentZh}`;
     }
-    
+
     if (textToCopy) {
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
@@ -286,16 +282,17 @@ function PastePageContent() {
     }
   };
 
-  const handleExportMarkdown = async () => {
-    if (!generatedContent?.id) return;
+  const handleExportMarkdown = async (contentId?: string) => {
+    const id = contentId || generatedContent?.id;
+    if (!id) return;
     try {
-      const result = await exportMarkdownMutation.mutateAsync(generatedContent.id);
+      const result = await exportMarkdownMutation.mutateAsync(id);
       if (result.success && result.markdown) {
         const blob = new Blob([result.markdown], { type: 'text/markdown' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = result.filename || `postcard-${generatedContent.id}.md`;
+        a.download = result.filename || `postcard-${id}.md`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -308,18 +305,19 @@ function PastePageContent() {
   };
 
 
-  const handleExportPdf = async () => {
-    if (!generatedContent?.id) return;
+  const handleExportPdf = async (contentId?: string) => {
+    const id = contentId || generatedContent?.id;
+    if (!id) return;
     try {
       const result = await exportPdfMutation.mutateAsync({
-        contentIds: [generatedContent.id],
+        contentIds: [id],
         format: 'a4',
       });
 
       if (result.success && result.pdf) {
         const link = document.createElement('a');
         link.href = result.pdf;
-        link.download = `postcard-${parsedData?.postcardId || generatedContent.id}.pdf`;
+        link.download = `postcard-${parsedData?.postcardId || id}.pdf`;
         link.click();
       } else {
         alert(result.error || '导出失败，请重试');
@@ -341,7 +339,7 @@ function PastePageContent() {
     setEmailContent('');
     setParsedData(null);
     setGeneratedContent(null);
-    setTone('friendly');
+    setGeneratedContents([]);
     setError('');
   };
 
@@ -359,7 +357,7 @@ function PastePageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-12">
         {/* Hero Section */}
         <section className="relative mb-8 overflow-hidden">
@@ -418,8 +416,6 @@ function PastePageContent() {
             <div className="mt-8">
               <Step2Card
                 parsedData={parsedData}
-                tone={tone}
-                onToneChange={setTone}
                 onGenerate={handleGenerate}
                 onBack={handleBackToStep1}
                 isGenerating={isGenerating}
@@ -433,12 +429,23 @@ function PastePageContent() {
           {currentStep === 3 && generatedContent && !isEditLoading && (
             <div className="mt-8">
               <Step3Card
+                generatedContents={generatedContents}
                 generatedContent={generatedContent}
                 onCopy={handleCopy}
                 onExportMarkdown={handleExportMarkdown}
                 onExportPdf={handleExportPdf}
                 onBack={handleBackToStep2}
                 onCreateNew={handleCreateNew}
+                onConfirm={async (content) => {
+                  setGeneratedContent(content);
+                  if (content?.postcardId) {
+                    await fetch('/api/content/confirm-selection', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ contentId: content.id, postcardId: content.postcardId }),
+                    });
+                  }
+                }}
                 copied={copied}
               />
             </div>

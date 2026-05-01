@@ -32,6 +32,23 @@ export async function GET(
       },
     });
 
+    // 如果找到的记录未选中，检查同 postcardId 下是否有已选中的版本
+    if (generatedContent && !generatedContent.selected) {
+      const selectedVersion = await prisma.generatedContent.findFirst({
+        where: {
+          postcardId: generatedContent.postcardId,
+          userId: userId,
+          selected: true,
+        },
+        include: {
+          postcard: true,
+        },
+      });
+      if (selectedVersion) {
+        generatedContent = selectedVersion;
+      }
+    }
+
     if (!generatedContent) {
       let postcard = await prisma.postcard.findFirst({
         where: {
@@ -54,9 +71,10 @@ export async function GET(
           include: {
             postcard: true,
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
+          orderBy: [
+            { selected: 'desc' },
+            { createdAt: 'desc' },
+          ],
         });
 
         generatedContent = contentByPostcardCode;
@@ -69,9 +87,10 @@ export async function GET(
           include: {
             postcard: true,
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
+          orderBy: [
+            { selected: 'desc' },
+            { createdAt: 'desc' },
+          ],
         });
       }
     }

@@ -20,9 +20,9 @@ import { useState, useRef, useEffect } from "react";
 
 // 寄信流程导航
 const sendMailNav = [
-  { name: "粘贴解析", href: "/sent/create", icon: Clipboard },
-  { name: "邮件解析", href: "/emails", icon: Mail },
-  { name: "送达回复", href: "/arrivals", icon: Send },
+  { name: "粘贴解析", href: "/sent/parse", icon: Clipboard },
+  { name: "邮件解析", href: "/sent/email-parse", icon: Mail },
+  { name: "送达回复", href: "/sent/reply", icon: Send },
   { name: "历史记录", href: "/sent/history", icon: History },
 ];
 
@@ -83,8 +83,7 @@ export function Header() {
                 className={cn(
                   "flex items-center space-x-1 px-3 py-2 rounded-lg transition-all",
                   sendDropdownOpen ||
-                    pathname.startsWith("/sent") ||
-                    pathname.startsWith("/emails")
+                    pathname.startsWith("/sent")
                     ? "bg-orange-100 text-orange-700"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted",
                 )}

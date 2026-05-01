@@ -39,6 +39,7 @@ model Postcard {
   recipientAge       Int?
   recipientGender    String?
   recipientInterests String?
+  coreInterests      String?
   recipientBio       String?
   status             String             @default("draft")
   sentDate           DateTime?
@@ -95,6 +96,7 @@ model GeneratedContent {
   language      String    @default("zh")
   postcardId    String
   tone          String    @default("friendly")
+  selected      Boolean   @default(false)
   usedTokens    Int       @default(0)
   contentZh     String?
   updatedAt     DateTime? @updatedAt

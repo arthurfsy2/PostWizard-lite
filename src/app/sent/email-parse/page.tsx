@@ -27,6 +27,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -75,6 +76,8 @@ import type { EmailConfig } from "@/lib/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { apiFetch } from '@/lib/fetch';
+import { PageLoadingSpinner } from '@/components/ui/page-loading-spinner';
+import { motion } from 'framer-motion';
 
 // localStorage key for remembering folder preference
 const STORAGE_KEY_EMAILS_FOLDER = "emails_last_folder";
@@ -111,7 +114,7 @@ function buildSafeParsedData(parsed: any) {
   };
 }
 
-export default function EmailsPage() {
+export default function EmailParsePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { isLoading: authLoading, isAuthenticated } = useAuth();
@@ -119,7 +122,7 @@ export default function EmailsPage() {
   // ========== 状态 ==========
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [searchDialogStep, setSearchDialogStep] = useState<"config" | "search" | "results">("config");
-  
+
   // 搜索相关状态
   const [searchResults, setSearchResults] = useState<Email[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,7 +131,7 @@ export default function EmailsPage() {
   const [folderPath, setFolderPath] = useState<string>("INBOX");
   const [availableFolders, setAvailableFolders] = useState<string[]>([]);
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
-  
+
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -139,6 +142,14 @@ export default function EmailsPage() {
 
   // 邮箱配置编辑状态
   const [editingConfig, setEditingConfig] = useState<EmailConfig | null>(null);
+
+  // 已送达的明信片 ID 集合
+  const [arrivedIds, setArrivedIds] = useState<Set<string>>(new Set());
+
+  // 邮件预览弹窗
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewEmail, setPreviewEmail] = useState<{ subject: string; from: string; date: string; body: string } | null>(null);
 
   // ========== Hooks ==========
   const { data: savedEmailsData, refetch: refetchSavedEmails } = useSavedEmails();
@@ -191,8 +202,29 @@ export default function EmailsPage() {
     }
   }, [savedEmailsData]);
 
+  // 加载已送达的明信片 ID
+  useEffect(() => {
+    const fetchArrivedIds = async () => {
+      try {
+        const response = await apiFetch('/api/arrivals?limit=1000');
+        const result = await response.json();
+        if (result.success && result.data?.arrivals) {
+          const ids = new Set<string>(
+            result.data.arrivals
+              .map((a: any) => a.postcardId)
+              .filter(Boolean)
+          );
+          setArrivedIds(ids);
+        }
+      } catch (err) {
+        console.error('Failed to fetch arrived IDs:', err);
+      }
+    };
+    fetchArrivedIds();
+  }, []);
+
   // ========== 处理函数 ==========
-  
+
   if (authLoading) return <PageLoadingSpinner />;
 
   // 刷新文件夹列表
@@ -232,7 +264,7 @@ export default function EmailsPage() {
         setCurrentPage(1);
         setSearchDialogStep("results");
         await refetchSavedEmails();
-        
+
         if (emails.length === 0) {
           toast.info("未找到邮件");
         } else {
@@ -252,7 +284,7 @@ export default function EmailsPage() {
     setParsingText("正在解析邮件内容...");
 
     try {
-      const res = await apiFetch(`/emails/${email.id}/parse`, {
+      const res = await apiFetch(`/api/emails/${email.id}/parse`, {
         method: "POST",
       });
 
@@ -274,7 +306,7 @@ export default function EmailsPage() {
         const storageKey = `email_parse_data_${postcardId}`;
         sessionStorage.setItem(storageKey, JSON.stringify(safeParsedData));
         toast.success("解析成功，正在跳转...");
-        setTimeout(() => router.push(`/emails/${postcardId}`), 800);
+        setTimeout(() => router.push(`/sent/email-parse/${postcardId}`), 800);
       } else {
         toast.error(data.error || "解析失败");
       }
@@ -316,18 +348,73 @@ export default function EmailsPage() {
     toast.success("邮箱配置成功！");
   };
 
+  // 预览邮件完整内容
+  const handlePreviewEmail = async (email: Email) => {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    setPreviewEmail(null);
+
+    try {
+      const res = await apiFetch(`/api/emails/${email.id}`);
+      const result = await res.json();
+      if (result.success && result.data) {
+        const data = result.data;
+        // 优先用 sanitized 内容，其次 htmlContent，最后 content
+        const rawBody = data.content || data.htmlContent || '';
+        const body = rawBody
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, '\n')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+        setPreviewEmail({
+          subject: data.subject || email.subject,
+          from: data.from || email.from,
+          date: data.receivedAt || email.date,
+          body,
+        });
+      } else {
+        toast.error('加载邮件内容失败');
+        setPreviewOpen(false);
+      }
+    } catch {
+      toast.error('加载邮件内容失败');
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  // 从邮件主题中提取明信片 ID（格式：XX-1234567）
+  const extractPostcardId = (subject: string): string | null => {
+    const match = subject.match(/[A-Z]{2}-\d{7}/);
+    return match ? match[0] : null;
+  };
+
   // 过滤和排序
   const filteredResults = searchResults
     .filter((email) => {
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
+      const postcardId = extractPostcardId(email.subject || '');
       return (
         email.subject?.toLowerCase().includes(q) ||
         email.from?.toLowerCase().includes(q) ||
-        email.bodyPreview?.toLowerCase().includes(q)
+        email.bodyPreview?.toLowerCase().includes(q) ||
+        (postcardId && postcardId.toLowerCase().includes(q))
       );
     })
     .sort((a, b) => {
+      // 未送达的排在前面
+      const aId = extractPostcardId(a.subject || '');
+      const bId = extractPostcardId(b.subject || '');
+      const aArrived = aId ? arrivedIds.has(aId) : false;
+      const bArrived = bId ? arrivedIds.has(bId) : false;
+      if (aArrived !== bArrived) return aArrived ? 1 : -1;
+
       let c = 0;
       switch (sortBy) {
         case "date": c = new Date(a.date).getTime() - new Date(b.date).getTime(); break;
@@ -359,7 +446,7 @@ export default function EmailsPage() {
       <Header />
 
       <main className="container mx-auto px-4 py-8 relative">
-        
+
         {/* 紧凑 Header Bar */}
         <div className="max-w-4xl mx-auto mb-8">
           <div className="flex items-center justify-between bg-white rounded-2xl shadow-lg border border-slate-200/60 p-4">
@@ -368,7 +455,7 @@ export default function EmailsPage() {
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md">
                 <Mail className="h-6 w-6 text-white" />
               </div>
-              
+
               {/* 标题 */}
               <div>
                 <h1 className="text-xl font-bold text-slate-900">邮件列表</h1>
@@ -404,7 +491,7 @@ export default function EmailsPage() {
 
         {/* 搜索结果区域 */}
         <div className="max-w-4xl mx-auto">
-          
+
           {/* 有结果时显示工具栏 */}
           {filteredResults.length > 0 && (
             <div className="bg-white rounded-xl shadow border border-slate-200/60 p-4 mb-4 transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)">
@@ -481,7 +568,7 @@ export default function EmailsPage() {
                 {hasConfig ? "暂无搜索结果" : "请先配置邮箱"}
               </h3>
               <p className="text-slate-500 text-sm mb-4">
-                {hasConfig 
+                {hasConfig
                   ? "尝试调整搜索条件或文件夹"
                   : "绑定邮箱后即可搜索和解析明信片收件人邮件"}
               </p>
@@ -500,26 +587,94 @@ export default function EmailsPage() {
           {/* 结果列表 */}
           {filteredResults.length > 0 && (
             <div className="space-y-3">
-              {paginatedResults.map((email) => (
-                <ListItemCard
-                  key={email.id}
-                  leftIcon={<Mail className="h-5 w-5 text-orange-600" />}
-                  leftGradient="from-orange-100 to-amber-100"
-                  title={email.subject || "(无主题)"}
-                  subtitle={email.from}
-                  rightTop={formatDate(email.date)}
-                  rightBottom={email.bodyPreview || "无内容"}
-                  bottomRight={
-                    <span className="text-orange-600 font-medium flex items-center">
-                      解析邮件
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </span>
-                  }
-                  onClick={() => handleParseAndRedirect(email)}
-                  isLoading={parsingEmailId === email.id}
-                  loadingText={parsingEmailId === email.id ? parsingText : "解析中..."}
-                />
-              ))}
+              {paginatedResults.map((email) => {
+                const postcardId = extractPostcardId(email.subject || '');
+                const isArrived = postcardId ? arrivedIds.has(postcardId) : false;
+                return (
+                  <motion.div
+                    key={email.id}
+                    whileHover={{ scale: 1.01, x: 4 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <div
+                      className={cn(
+                        "w-full rounded-xl border p-4 transition-all duration-200",
+                        isArrived
+                          ? "bg-emerald-50/50 border-emerald-200"
+                          : "bg-white border-slate-200 hover:border-orange-300 hover:shadow-md cursor-pointer"
+                      )}
+                      onClick={() => handlePreviewEmail(email)}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        {/* 左侧图标 + 内容 */}
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={cn(
+                            "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center shadow-sm",
+                            isArrived
+                              ? "bg-gradient-to-br from-emerald-100 to-teal-100"
+                              : "bg-gradient-to-br from-orange-100 to-amber-100"
+                          )}>
+                            {isArrived
+                              ? <Check className="h-5 w-5 text-emerald-600" />
+                              : <Mail className="h-5 w-5 text-orange-600" />
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-slate-800 text-base truncate">
+                              {postcardId || email.subject || "(无主题)"}
+                            </h4>
+                            {postcardId && (
+                              <p className="text-sm text-slate-500 truncate mt-0.5">
+                                {email.subject}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 右侧日期 */}
+                        <div className="flex-shrink-0 text-right">
+                          <div className="font-mono text-sm font-medium text-slate-700 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+                            {formatDate(email.date)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 底部操作栏 */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                        <span className="text-xs text-slate-400">点击查看邮件内容</span>
+                        {isArrived ? (
+                          <span className="text-emerald-600 text-sm font-medium flex items-center gap-1">
+                            <Check className="w-4 h-4" />
+                            已送达
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleParseAndRedirect(email);
+                            }}
+                            disabled={parsingEmailId === email.id}
+                            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
+                          >
+                            {parsingEmailId === email.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                解析中...
+                              </>
+                            ) : (
+                              <>
+                                解析邮件
+                                <ChevronRight className="w-4 h-4 ml-1" />
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
 
               {/* 分页 */}
               {totalPages > 1 && (
@@ -530,7 +685,7 @@ export default function EmailsPage() {
                         {currentPage === 1 ? (
                           <PaginationFirst className="opacity-50 pointer-events-none" />
                         ) : (
-                          <PaginationFirst 
+                          <PaginationFirst
                             onClick={() => setCurrentPage(1)}
                             className="transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)"
                           />
@@ -540,7 +695,7 @@ export default function EmailsPage() {
                         {currentPage === 1 ? (
                           <PaginationPrevious className="opacity-50 pointer-events-none" />
                         ) : (
-                          <PaginationPrevious 
+                          <PaginationPrevious
                             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                             className="transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)"
                           />
@@ -549,9 +704,9 @@ export default function EmailsPage() {
 
                       {currentPage > 1 && (
                         <PaginationItem>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setCurrentPage(currentPage - 1)}
                             className="transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1) hover:bg-orange-50 hover:text-orange-600"
                           >
@@ -562,9 +717,9 @@ export default function EmailsPage() {
                       )}
 
                       <PaginationItem>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="pointer-events-none bg-orange-50 border-orange-200 text-orange-700 font-medium shadow-sm"
                         >
                           {currentPage}
@@ -573,9 +728,9 @@ export default function EmailsPage() {
 
                       {currentPage < totalPages && (
                         <PaginationItem>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setCurrentPage(currentPage + 1)}
                             className="transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1) hover:bg-orange-50 hover:text-orange-600"
                           >
@@ -589,7 +744,7 @@ export default function EmailsPage() {
                         {currentPage === totalPages ? (
                           <PaginationNext className="opacity-50 pointer-events-none" />
                         ) : (
-                          <PaginationNext 
+                          <PaginationNext
                             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                             className="transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)"
                           />
@@ -599,7 +754,7 @@ export default function EmailsPage() {
                         {currentPage === totalPages ? (
                           <PaginationLast className="opacity-50 pointer-events-none" />
                         ) : (
-                          <PaginationLast 
+                          <PaginationLast
                             onClick={() => setCurrentPage(totalPages)}
                             className="transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)"
                           />
@@ -620,9 +775,9 @@ export default function EmailsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {searchDialogStep === "results" && (
-                <ArrowLeft 
-                  className="w-4 h-4 cursor-pointer hover:text-orange-600 transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)" 
-                  onClick={() => setSearchDialogStep("config")} 
+                <ArrowLeft
+                  className="w-4 h-4 cursor-pointer hover:text-orange-600 transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)"
+                  onClick={() => setSearchDialogStep("config")}
                 />
               )}
               {searchDialogStep === "config" ? (
@@ -768,41 +923,67 @@ export default function EmailsPage() {
                       找到 {searchResults.length} 封邮件，点击即可解析
                     </div>
                     <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                      {searchResults.map((email) => (
+                      {searchResults.map((email) => {
+                        const postcardId = extractPostcardId(email.subject || '');
+                        const isArrived = postcardId ? arrivedIds.has(postcardId) : false;
+                        return (
                         <div
                           key={email.id}
                           onClick={() => {
+                            if (isArrived) return;
                             handleParseAndRedirect(email);
                             setSearchDialogOpen(false);
                           }}
                           className={cn(
                             "p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-orange-300 hover:bg-orange-50/50 transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1) shadow-sm",
-                            parsingEmailId === email.id && "opacity-50 pointer-events-none"
+                            parsingEmailId === email.id && "opacity-50 pointer-events-none",
+                            isArrived && "opacity-60 cursor-default hover:border-slate-200 hover:bg-white"
                           )}
                         >
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md flex-shrink-0">
-                              <Mail className="w-5 h-5 text-white" />
+                            <div className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center shadow-md flex-shrink-0",
+                              isArrived
+                                ? "bg-gradient-to-br from-emerald-500 to-teal-500"
+                                : "bg-gradient-to-br from-blue-500 to-cyan-500"
+                            )}>
+                              {isArrived
+                                ? <Check className="w-5 h-5 text-white" />
+                                : <Mail className="w-5 h-5 text-white" />
+                              }
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-slate-900 truncate">
-                                {email.subject || "(无主题)"}
-                              </div>
-                              <div className="text-xs text-slate-500 truncate">
-                                {email.from}
-                              </div>
+                              {postcardId ? (
+                                <>
+                                  <div className="font-mono font-bold text-orange-600 text-sm">
+                                    {postcardId}
+                                  </div>
+                                  <div className="text-xs text-slate-500 truncate mt-0.5">
+                                    {email.subject}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="font-medium text-slate-900 truncate">
+                                  {email.subject || "(无主题)"}
+                                </div>
+                              )}
                               <div className="text-xs text-slate-400 mt-1">
                                 {formatDate(email.date)}
                               </div>
                             </div>
                             {parsingEmailId === email.id ? (
                               <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                            ) : isArrived ? (
+                              <span className="text-emerald-600 text-xs font-medium flex items-center gap-1">
+                                <Check className="w-3.5 h-3.5" />
+                                已送达
+                              </span>
                             ) : (
                               <ChevronRight className="h-4 w-4 text-slate-400" />
                             )}
                           </div>
                         </div>
-                      ))}
+                      )})}
                     </div>
                     <div className="flex justify-between items-center pt-3 border-t">
                       <Button
@@ -826,6 +1007,38 @@ export default function EmailsPage() {
                 )}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 邮件预览弹窗 */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 w-5 text-orange-500" />
+              邮件内容
+            </DialogTitle>
+            <DialogDescription>
+              查看邮件原始内容，确认收件人信息
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            {previewLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+              </div>
+            ) : previewEmail ? (
+              <div className="space-y-4">
+                <div className="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                  <div className="text-sm text-slate-500 mb-1">主题</div>
+                  <div className="font-medium text-slate-900">{previewEmail.subject}</div>
+                </div>
+                <div className="rounded-lg bg-white p-4 border border-slate-200 whitespace-pre-wrap text-sm text-slate-700 leading-relaxed">
+                  {previewEmail.body || "（无内容）"}
+                </div>
+              </div>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
