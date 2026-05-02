@@ -49,6 +49,8 @@ next-env.d.ts
 *.db-journal
 *.db-wal
 *.db-shm
+*.db.bak*
+prisma/prisma/
 
 # user uploaded files
 /public/uploads/*
@@ -85,3 +87,6 @@ tmp-*.ts
 tmp-*.js
 *.tmp
 data/wordcloud-dictionary.json
+
+# analysis scripts output (contains personal postcard data)
+scripts/*_coding_results.json

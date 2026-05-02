@@ -23,13 +23,36 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
     const country = searchParams.get('country') || undefined;
+    const rarity = searchParams.get('rarity') || undefined;
 
-    const where: { userId: string; country?: string; postcardId?: { contains: string; mode: 'insensitive' }; isFavorite?: boolean } = { userId };
+    // 如果按稀有度过滤，先查 gacha_logs 拿到对应的 postcardId 列表
+    let rarityPostcardIds: string[] | undefined;
+    if (rarity) {
+      const gachaLogs = await prisma.userGachaLog.findMany({
+        where: { userId, rarity, aiScore: { not: null, gt: 0 } },
+        select: { postcardId: true },
+      });
+      rarityPostcardIds = gachaLogs.map(g => g.postcardId).filter(Boolean) as string[];
+      // 如果没有匹配的，直接返回空结果
+      if (rarityPostcardIds.length === 0) {
+        return NextResponse.json({
+          data: [],
+          pagination: { page, pageSize, total: 0, totalPages: 0 },
+          byCountry: [],
+          byRarity: {},
+        });
+      }
+    }
+
+    const where: { userId: string; country?: string; postcardId?: { in: string[] }; isFavorite?: boolean } = { userId };
     if (country) {
       where.country = country;
     }
+    if (rarityPostcardIds) {
+      where.postcardId = { in: rarityPostcardIds };
+    }
 
-    const [total, receivedCards, countryStats] = await Promise.all([
+    const [total, receivedCards, countryStats, rarityStats] = await Promise.all([
       prisma.receivedCard.count({ where }),
       prisma.receivedCard.findMany({
         where,
@@ -57,6 +80,12 @@ export async function GET(request: NextRequest) {
         where: { userId },
         _count: { country: true },
         orderBy: { _count: { country: 'desc' } },
+      }),
+      // 稀有度统计（全量，不受分页影响）
+      prisma.userGachaLog.groupBy({
+        by: ['rarity'],
+        where: { userId, aiScore: { not: null, gt: 0 } },
+        _count: { rarity: true },
       }),
     ]);
 
@@ -152,6 +181,9 @@ export async function GET(request: NextRequest) {
       byCountry: countryStats
         .filter(s => s.country && s.country !== 'UN')
         .map(s => ({ country: s.country, count: s._count.country })),
+      byRarity: Object.fromEntries(
+        rarityStats.map(r => [r.rarity, r._count.rarity])
+      ),
     });
   } catch (error: any) {
     console.error('[ReceivedCards API GET] Error:', error.message, error.code, error.meta);
@@ -333,10 +365,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // OCR 完成后，将临时文件移动到最终位置（以 postcardId 命名）
+    // OCR 完成后，校验结果
+    if (!ocrResult?.handwrittenText || ocrResult.handwrittenText.trim().length === 0) {
+      // 清理临时文件
+      fs.unlinkSync(backTemp.tmpPath);
+      if (frontTemp) fs.unlinkSync(frontTemp.tmpPath);
+      return NextResponse.json({
+        error: 'OCR_EMPTY_TEXT',
+        message: 'OCR 未能识别出手写内容，已跳过入库。请检查图片质量或更换 OCR 模型后重试。',
+        ocrError: ocrError,
+        ocrErrorMessage: ocrErrorMessage,
+      }, { status: 422 });
+    }
+
+    // 将临时文件移动到最终位置（以 postcardId 命名）
     let backImageUrl: string;
     let frontImageUrl: string | undefined;
-    
+
     try {
       backImageUrl = await moveToFinalPath(backTemp.tmpPath, ocrResult?.postcardId);
       if (frontTemp) {
@@ -359,6 +404,7 @@ export async function POST(request: NextRequest) {
         originalImageUrl: backImageUrl,
         imageProcessingStatus: 'pending',
         ocrText: ocrResult?.handwrittenText,
+        ocrModel: ocrResult?.model || null,
         metadata: ocrResult ? JSON.stringify({
           senderUsername: ocrResult?.senderUsername,
           detectedLang: ocrResult?.detectedLanguage,

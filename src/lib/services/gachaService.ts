@@ -1,5 +1,5 @@
 ﻿import { PrismaClient } from '@prisma/client';
-import { getAIConfigFromDB } from './ai-config';
+import { getAIConfigFromDB, getAIModel } from './ai-config';
 
 const prisma = new PrismaClient();
 
@@ -207,7 +207,7 @@ function calculateRarity(totalScore: number): 'SSR' | 'SR' | 'R' | 'N' {
 }
 
 // 使用 Qwen API 生成 AI 评价
-async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
+export async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
   try {
     // 从数据库动态获取 AI 配置
     const aiConfig = await getAIConfigFromDB();
@@ -231,18 +231,30 @@ async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
 **touchingScore（走心）：**
 - 5-20：只有感谢，无个人情感
 - 30-50：简单回应，有礼貌但不深入
-- 60-80：提及个人细节（骑行、宠物、天气、旅行经历）
-- 85+：有故事、情感脆弱（心理健康、家庭压力、人生感悟）、让人共鸣
+- 60-80：提及个人细节，但未展开（爱好、宠物、天气、年龄）
+- 85+：满足以下任一——
+  · 有完整故事或人生片段（职业经历、家庭故事、生活转折）
+  · 情感脆弱（坦承困境、疲惫、思念、遗憾）
+  · 有跨越距离的共鸣感（"让我想起…"、"我也有过…"）
+  · 给出基于亲身经历的建议或感悟
 
 **emotionalScore（情感温度）：**
-- 5-20：模板化万能祝福（"祝你幸福快乐健康"）
-- 30-60：普通祝福，有针对性但不算真诚
-- 70+：包含情感词（strength, comfort, warmth, hope you feel），有温度
+- 5-20：模板化万能祝福，换任何人都能用（"祝你幸福快乐健康"）
+- 30-60：有针对性，但仍是常见套路（"祝骑行顺利"、"Happy Postcrossing"）
+- 70+：满足以下任一——
+  · 祝福针对收信人的具体情况（孩子、爱好、处境）
+  · 用了非母语表达祝福（多语言切换的努力感）
+  · 结合自身文化给出特色祝福（节日传统、本地习俗）
+  · 包含真诚的情感词或祈愿（不只是"best wishes"）
 
 **culturalInsightScore（文化洞察）：**
 - 5-20：没有文化内容
-- 30-60：景点介绍（"The Eiffel Tower is in Paris"）
-- 70+：本地人视角（"What strikes me about my hometown is..."），文化对比，个人解读
+- 30-50：提及文化元素但停留在表面（景点名称、国家名、"I live in X"）
+- 60-75：有文化内容但属于百科式（介绍本地节日、历史年份、传统习俗——有信息量但无个人视角）
+- 85+：满足以下任一——
+  · 本地人视角的非显而易见知识
+  · 跨文化对比或个人解读
+  · 分享文化细节并解释"为什么"
 
 ## Few-shot 示例：
 
@@ -263,6 +275,12 @@ async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
 
 **明信片**: "我养了三只猫，它们每天早上轮流踩我脸叫我起床。养猫的人都懂这种甜蜜的折磨。希望你也有毛茸茸的幸福！"
 → touching=55, emotional=65, culturalInsight=5
+
+**明信片**: "I was a prison dental nurse for 20 years, then switched to transport logistics. Life takes funny turns!"
+→ touching=82, emotional=25, culturalInsight=10
+
+**明信片**: "In Finland we celebrate Christmas on the 24th, and we go to the sauna before dinner. It's our family tradition for 3 generations."
+→ touching=40, emotional=55, culturalInsight=75
 
 ## 待评价的明信片内容：
 
@@ -360,6 +378,136 @@ ${content}
   } catch (error) {
     console.error('[GachaService] AI evaluation failed, using fallback:', (error as Error).message);
     return generateDefaultEvaluation(content);
+  }
+}
+
+/**
+ * 批量 AI 评价（一次请求处理多条明信片）
+ */
+export async function generateAIEvaluationBatch(
+  items: Array<{ id: string; content: string }>,
+): Promise<Array<{ id: string; evaluation: AIEvaluation }>> {
+  if (items.length === 0) return [];
+
+  const aiConfig = await getAIConfigFromDB();
+  if (!aiConfig.apiKey) {
+    return items.map(({ id, content }) => ({ id, evaluation: generateDefaultEvaluation(content) }));
+  }
+
+  const batchContent = items.map((item, index) => {
+    return `${index + 1}. [${item.id}]\n"""${item.content}"""\n`;
+  }).join('\n');
+
+  const prompt = `你是一位专业的明信片内容评价师。请对以下 ${items.length} 张明信片的 3 个维度独立评分（每项 0-100），并给出正面评价。
+
+## 3 个维度（独立评分，可以同时高分）：
+
+| 维度 | 含义 | 低分特征 | 高分特征 |
+|------|------|----------|----------|
+| **touchingScore**（走心） | 真情实感、个人故事、深度共鸣 | 泛泛感谢、客套话 | 有个人故事、情感脆弱、让人共鸣 |
+| **emotionalScore**（情感温度） | 真诚祝愿、有温度的祝福 | 模板化万能祝福 | 针对收信人的真诚期盼，包含情感词 |
+| **culturalInsightScore**（文化洞察） | 本地视角、文化对比、个人解读 | 景点介绍、百科式陈述 | 本地人视角、非显而易见的事实 |
+
+## 评分锚点（严格对标）：
+
+**touchingScore（走心）：**
+- 5-20：只有感谢，无个人情感
+- 30-50：简单回应，有礼貌但不深入
+- 60-80：提及个人细节，但未展开（爱好、宠物、天气、年龄）
+- 85+：满足以下任一——
+  · 有完整故事或人生片段（职业经历、家庭故事、生活转折）
+  · 情感脆弱（坦承困境、疲惫、思念、遗憾）
+  · 有跨越距离的共鸣感（"让我想起…"、"我也有过…"）
+  · 给出基于亲身经历的建议或感悟
+
+**emotionalScore（情感温度）：**
+- 5-20：模板化万能祝福，换任何人都能用（"祝你幸福快乐健康"）
+- 30-60：有针对性，但仍是常见套路（"祝骑行顺利"、"Happy Postcrossing"）
+- 70+：满足以下任一——
+  · 祝福针对收信人的具体情况（孩子、爱好、处境）
+  · 用了非母语表达祝福（多语言切换的努力感）
+  · 结合自身文化给出特色祝福（节日传统、本地习俗）
+  · 包含真诚的情感词或祈愿（不只是"best wishes"）
+
+**culturalInsightScore（文化洞察）：**
+- 5-20：没有文化内容
+- 30-50：提及文化元素但停留在表面（景点名称、国家名、"I live in X"）
+- 60-75：有文化内容但属于百科式（介绍本地节日、历史年份、传统习俗——有信息量但无个人视角）
+- 85+：满足以下任一——
+  · 本地人视角的非显而易见知识
+  · 跨文化对比或个人解读
+  · 分享文化细节并解释"为什么"
+
+## 示例：
+"Thanks for the card!" → touching=15, emotional=35, culturalInsight=5
+"退休教师看到你也是老师，感到特别亲切" → touching=75, emotional=60, culturalInsight=10
+"柏林墙倒塌那晚，父亲骑自行车穿过检查站" → touching=65, emotional=30, culturalInsight=90
+
+## 待评价的明信片内容：
+
+${batchContent}
+
+请只输出 JSON 数组（不要解释，按输入顺序）：
+[{"touchingScore":<0-100>,"emotionalScore":<0-100>,"culturalInsightScore":<0-100>,"summary":"<1-2句正面评价>","primaryCategory":"<touching|emotional|culturalInsight>"}]
+
+## 重要规则
+- primaryCategory = 三个维度中得分最高的那个维度
+- summary：用欣赏的眼光，突出亮点，禁止否定性词语，1-2句话`;
+
+  try {
+    const response = await fetch(aiConfig.baseUrl + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${aiConfig.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: aiConfig.model,
+        messages: [
+          { role: 'system', content: '你是一个专业的明信片内容评价助手，只输出 JSON。' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.choices?.[0]?.message?.content || data.output?.choices?.[0]?.message?.content;
+    if (!aiResponse) throw new Error('Empty AI response');
+
+    const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Invalid AI response format');
+
+    const parsedArray = JSON.parse(jsonMatch[0]);
+
+    return items.map(({ id, content }, index) => {
+      const parsed = parsedArray[index];
+      if (!parsed) return { id, evaluation: generateDefaultEvaluation(content) };
+
+      const evaluation: AIEvaluation = {
+        touchingScore: Math.min(100, Math.max(0, Math.round(parsed.touchingScore || 0))),
+        emotionalScore: Math.min(100, Math.max(0, Math.round(parsed.emotionalScore || 0))),
+        culturalInsightScore: Math.min(100, Math.max(0, Math.round(parsed.culturalInsightScore || 0))),
+        summary: parsed.summary || '这是一张用心书写的明信片。',
+        primaryCategory: parsed.primaryCategory || 'emotional',
+      };
+
+      // 验证 primaryCategory
+      const validCategories = ['touching', 'culturalInsight', 'emotional'] as const;
+      if (!validCategories.includes(evaluation.primaryCategory as any)) {
+        const scores = { touching: evaluation.touchingScore, emotional: evaluation.emotionalScore, culturalInsight: evaluation.culturalInsightScore };
+        evaluation.primaryCategory = (Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0]) as typeof evaluation.primaryCategory;
+      }
+
+      return { id, evaluation };
+    });
+  } catch (error) {
+    console.error('[GachaService] Batch evaluation failed, using fallback:', (error as Error).message);
+    return items.map(({ id, content }) => ({ id, evaluation: generateDefaultEvaluation(content) }));
   }
 }
 
@@ -469,6 +617,7 @@ export class GachaService {
     const rarity = calculateRarity(totalScore);
 
     // 5. 持久化评估记录到 UserGachaLog
+    const modelName = await getAIModel();
     await prisma.userGachaLog.create({
       data: {
         userId,
@@ -482,6 +631,7 @@ export class GachaService {
         primaryCategory: aiEvaluation.primaryCategory,
         luckyLevel: luckyInfo.level === 'none' ? null : luckyInfo.level,
         luckyBonus: luckyInfo.bonus || null,
+        model: modelName,
         obtainedAt: new Date(),
       }
     });

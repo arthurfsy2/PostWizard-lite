@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -26,6 +27,10 @@ interface AIConfig {
   apiKey: string;
   baseUrl: string;
   model: string;
+  useFor?: 'all' | 'text' | 'ocr';
+  proxy?: string;
+  enabled?: boolean;
+  tier?: 'free' | 'paid';
   hasApiKey?: boolean;
 }
 
@@ -35,21 +40,31 @@ const PROVIDER_PRESETS = {
     name: '通义千问 (阿里云)',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model: 'qwen-turbo',
+    models: ['qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen3.6-plus', 'qwen-vl-plus', 'qwen-vl-max', 'qwen-vl-ocr-latest'],
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-v4-flash',
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
   },
   gemini: {
     name: 'Gemini (Google)',
     baseUrl: 'https://generativelanguage.googleapis.com',
     model: 'gemini-2.0-flash',
+    models: ['gemini-3.1-flash-lite-preview', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
   },
   openai: {
     name: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
+    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'],
   },
   custom: {
     name: '自定义',
     baseUrl: '',
     model: '',
+    models: [],
   },
 };
 
@@ -96,6 +111,9 @@ export default function SettingsPage() {
             apiKey: '',
             baseUrl: data.baseUrl || '',
             model: data.model || '',
+            useFor: data.useFor || 'all',
+            proxy: data.proxy || '',
+            tier: data.tier || 'free',
             hasApiKey: data.hasApiKey,
           });
         }
@@ -116,7 +134,7 @@ export default function SettingsPage() {
         provider,
         name: preset.name,
         baseUrl: preset.baseUrl,
-        model: preset.model,
+        model: preset.models[0] || preset.model,
       });
     } else {
       setCurrentConfig({ ...currentConfig, provider });
@@ -133,6 +151,7 @@ export default function SettingsPage() {
     setCurrentConfig({
       ...config,
       apiKey: '',
+      useFor: config.useFor || 'all',
       hasApiKey: config.hasApiKey,
     });
 
@@ -159,6 +178,7 @@ export default function SettingsPage() {
       apiKey: '',
       baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
       model: 'qwen-turbo',
+      useFor: 'all',
     });
     setTestResult(null);
   };
@@ -195,6 +215,9 @@ export default function SettingsPage() {
           apiKey: currentConfig.apiKey,
           baseUrl: currentConfig.baseUrl,
           model: currentConfig.model,
+          useFor: currentConfig.useFor || 'all',
+          proxy: currentConfig.proxy || '',
+          tier: currentConfig.tier || 'free',
         }),
       });
 
@@ -250,6 +273,44 @@ export default function SettingsPage() {
     }
   };
 
+  // 切换配置启用/禁用
+  const handleToggleEnabled = async (configId: string, enabled: boolean) => {
+    const config = configs.find(c => c.id === configId);
+    if (!config) return;
+
+    // 乐观更新
+    setConfigs(prev => prev.map(c => c.id === configId ? { ...c, enabled } : c));
+
+    try {
+      const response = await fetch('/api/settings/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: config.id,
+          provider: config.provider,
+          name: config.name,
+          apiKey: '', // 空值会保留原 key
+          baseUrl: config.baseUrl,
+          model: config.model,
+          useFor: config.useFor || 'all',
+          proxy: config.proxy || '',
+          enabled,
+          tier: config.tier || 'free',
+        }),
+      });
+
+      if (!response.ok) {
+        // 回滚
+        setConfigs(prev => prev.map(c => c.id === configId ? { ...c, enabled: !enabled } : c));
+      } else {
+        const result = await response.json();
+        setConfigs(result.configs);
+      }
+    } catch {
+      setConfigs(prev => prev.map(c => c.id === configId ? { ...c, enabled: !enabled } : c));
+    }
+  };
+
   const handleTest = async () => {
     setIsTesting(true);
     setTestResult(null);
@@ -260,8 +321,10 @@ export default function SettingsPage() {
         body: JSON.stringify({
           apiKey: currentConfig.apiKey,
           baseUrl: currentConfig.baseUrl,
-          model: currentConfig.model,
+          model: currentConfig.model?.trim(),
           provider: currentConfig.provider,
+          proxy: currentConfig.proxy || '',
+          useFor: currentConfig.useFor || 'all',
           configId: currentConfig.id || undefined,
         }),
       });
@@ -345,16 +408,29 @@ export default function SettingsPage() {
                   className={`
                     cursor-pointer group flex items-center gap-2 px-3 py-2 rounded-lg border
                     transition-all duration-200 hover:shadow-md
-                    ${activeId === config.id 
-                      ? 'bg-green-50 border-green-300 text-green-800' 
+                    ${config.enabled === false ? 'opacity-50' : ''}
+                    ${activeId === config.id
+                      ? 'bg-green-50 border-green-300 text-green-800'
                       : 'bg-white border-gray-200 hover:border-orange-300'
                     }
                   `}
                 >
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                      checked={config.enabled !== false}
+                      onCheckedChange={(checked) => handleToggleEnabled(config.id, checked)}
+                      className="scale-75"
+                    />
+                  </div>
                   <span className="text-sm font-medium">{config.name}</span>
                   <Badge variant="outline" className="text-xs">
                     {config.provider}
                   </Badge>
+                  {config.useFor && config.useFor !== 'all' && (
+                    <Badge variant="secondary" className="text-xs">
+                      {config.useFor === 'ocr' ? '图片' : '文字'}
+                    </Badge>
+                  )}
                   {activeId === config.id && (
                     <Check className="h-3.5 w-3.5 text-green-600" />
                   )}
@@ -377,6 +453,28 @@ export default function SettingsPage() {
                 新建配置
               </Button>
             </div>
+            {/* 当前生效配置摘要 */}
+            {(() => {
+              const enabledConfigs = configs.filter(c => c.enabled !== false);
+              const ocrConfig = enabledConfigs.find(c => c.useFor === 'ocr');
+              const textConfig = enabledConfigs.find(c => c.useFor === 'text');
+              const generalConfig = enabledConfigs.find(c => c.useFor === 'all' || !c.useFor);
+              const activeGeneral = enabledConfigs.find(c => c.id === activeId) || generalConfig;
+
+              return (
+                <div className="mt-3 pt-3 border-t text-xs text-muted-foreground space-y-1">
+                  <div className="font-medium text-foreground/70 mb-1">当前生效配置：</div>
+                  <div>
+                    图片识别：<span className="text-foreground">{ocrConfig ? `${ocrConfig.name}（${ocrConfig.model}）` : activeGeneral ? `${activeGeneral.name}（${activeGeneral.model}）` : '未配置'}</span>
+                    {ocrConfig && <span className="ml-1 text-green-600">专用</span>}
+                  </div>
+                  <div>
+                    文字分析：<span className="text-foreground">{textConfig ? `${textConfig.name}（${textConfig.model}）` : activeGeneral ? `${activeGeneral.name}（${activeGeneral.model}）` : '未配置'}</span>
+                    {textConfig && <span className="ml-1 text-green-600">专用</span>}
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
@@ -483,16 +581,147 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {/* Proxy */}
+            <div className="space-y-2">
+              <Label htmlFor="proxy" className="flex items-center gap-1">
+                代理（可选）
+              </Label>
+              <Input
+                id="proxy"
+                value={currentConfig.proxy || ''}
+                onChange={(e) => setCurrentConfig({ ...currentConfig, proxy: e.target.value })}
+                placeholder="127.0.0.1:7890 或 http://proxy:port"
+              />
+              <p className="text-xs text-muted-foreground">需要代理访问 API 时填写，如 Gemini 等境外服务。建议使用美国、日本、新加坡等地区节点，香港节点可能不被部分 API 支持</p>
+            </div>
+
+            {/* Tier */}
+            <div className="space-y-2">
+              <Label>额度类型</Label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'free', label: '免费额度', desc: '自动限流，避免触发频率限制' },
+                  { value: 'paid', label: '付费/订阅', desc: '拉满速率，批量上传更快' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setCurrentConfig({ ...currentConfig, tier: opt.value })}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-left transition-all ${
+                      (currentConfig.tier || 'free') === opt.value
+                        ? 'border-orange-400 bg-orange-50 text-orange-800'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-sm font-medium">{opt.label}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Model */}
             <div className="space-y-2">
               <Label htmlFor="model">模型</Label>
-              <Input
-                id="model"
-                value={currentConfig.model}
-                onChange={(e) => setCurrentConfig({ ...currentConfig, model: e.target.value })}
-                placeholder="例如：gpt-4o、qwen-plus、deepseek-chat"
-              />
-              <p className="text-xs text-muted-foreground">填写模型名称，需与你的 API 服务支持的模型一致</p>
+              {(() => {
+                const preset = PROVIDER_PRESETS[currentConfig.provider as keyof typeof PROVIDER_PRESETS];
+                const hasModels = preset && preset.models.length > 0;
+                const isCustomModel = hasModels && !preset.models.includes(currentConfig.model);
+
+                if (hasModels) {
+                  return (
+                    <>
+                      <Select
+                        value={isCustomModel ? '__custom__' : currentConfig.model}
+                        onValueChange={(val) => {
+                          if (val === '__custom__') {
+                            setCurrentConfig({ ...currentConfig, model: '' });
+                          } else {
+                            setCurrentConfig({ ...currentConfig, model: val });
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择模型" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border shadow-lg z-50">
+                          {preset.models.map((m) => (
+                            <SelectItem key={m} value={m} className="cursor-pointer hover:bg-gray-100">
+                              {m}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="__custom__" className="cursor-pointer hover:bg-gray-100 text-muted-foreground">
+                            自定义模型名称...
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {isCustomModel && (
+                        <Input
+                          id="model"
+                          value={currentConfig.model}
+                          onChange={(e) => setCurrentConfig({ ...currentConfig, model: e.target.value })}
+                          placeholder="输入模型名称"
+                          className="mt-2"
+                        />
+                      )}
+                    </>
+                  );
+                }
+
+                return (
+                  <Input
+                    id="model"
+                    value={currentConfig.model}
+                    onChange={(e) => setCurrentConfig({ ...currentConfig, model: e.target.value })}
+                    placeholder="例如：gpt-4o、qwen-plus、deepseek-chat"
+                  />
+                );
+              })()}
+              <p className="text-xs text-muted-foreground">选择或填写模型名称，需与你的 API 服务支持的模型一致</p>
+            </div>
+
+            {/* 用途选择 */}
+            <div className="space-y-3">
+              <Label>用途</Label>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: 'all' as const, label: '通用', desc: '文字分析 + 图片识别' },
+                  { value: 'text' as const, label: '仅文字', desc: '明信片评分、翻译' },
+                  { value: 'ocr' as const, label: '仅图片', desc: '手写文字识别（OCR）' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setCurrentConfig({ ...currentConfig, useFor: opt.value })}
+                    className={`
+                      flex-1 min-w-[120px] px-4 py-3 rounded-xl border-2 text-left transition-all
+                      ${currentConfig.useFor === opt.value
+                        ? 'border-orange-400 bg-orange-50 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        currentConfig.useFor === opt.value
+                          ? 'border-orange-500 bg-orange-500'
+                          : 'border-slate-300'
+                      }`}>
+                        {currentConfig.useFor === opt.value && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                      <span className="text-sm font-medium">{opt.label}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 ml-6">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
+              {currentConfig.useFor === 'ocr' && (
+                <p className="text-xs text-amber-600">
+                  需选择支持视觉/图片的模型（如 qwen-vl-plus、gemini-2.0-flash、gpt-4o），纯文本模型无法识别图片
+                </p>
+              )}
             </div>
 
             {/* 测试连接结果 */}

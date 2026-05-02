@@ -45,9 +45,7 @@ export function HighlightsContainer({
     isRefreshing,
     error,
     emptyState,
-    totalAnalyzed,
-    cached,
-    updatedAt,
+    totalCards,
     refresh,
   } = useHighlights({
     category: activeCategory,
@@ -58,24 +56,18 @@ export function HighlightsContainer({
 
   const {
     status,
-    isLoading: isStatusLoading,
     isAnalyzing,
     analysisProgress,
     fetchStatus,
     continueAnalysis,
-  } = useAnalysisStatus();
+  } = useAnalysisStatus(source);
 
-  const totalStatusCount = status ? status.analyzed + status.pending : 0;
   const pendingCount = status?.pending ?? 0;
-  const analyzedCount = status?.analyzed ?? totalAnalyzed;
   const shouldShowContinueButton = pendingCount > 0;
-  const shouldShowPendingHint = pendingCount > 0 && totalStatusCount > 0;
 
-  // 初始加载时获取分析状态（仅挂载时执行一次，仅 arrivals）
+  // 初始加载时获取分析状态（挂载时执行一次）
   useEffect(() => {
-    if (source === 'arrivals') {
-      fetchStatus();
-    }
+    fetchStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source]);
 
@@ -169,32 +161,20 @@ export function HighlightsContainer({
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900">{source === 'received' ? '收信精选' : '留言精选'}</h2>
-                {analyzedCount > 0 && (
-                  <p className="text-xs text-gray-500">
-                    已分析 {analyzedCount} 条{source === 'received' ? '收信' : '留言'}
-                    {totalStatusCount > 0 && <span className="ml-1">/ {totalStatusCount} 条</span>}
-                    {cached && <span className="ml-1 text-blue-500">(缓存)</span>}
-                  </p>
-                )}
-                {source === 'arrivals' && shouldShowPendingHint && (
-                  <p className="mt-1 text-xs text-orange-600">
-                    还有 {pendingCount} 条留言尚未完成分析，可继续补全。
-                  </p>
-                )}
               </div>
             </div>
             <div className="flex gap-2">
-              {source === 'arrivals' && shouldShowContinueButton && (
+              {shouldShowContinueButton && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleContinueAnalysis}
                   disabled={isAnalyzing}
                   className="text-purple-600 border-purple-300 hover:bg-purple-50"
-                  title={`继续补全剩余 ${pendingCount} 条留言的精选分析`}
+                  title={`继续补全剩余 ${pendingCount} 条${source === 'received' ? '收信' : '留言'}的精选分析`}
                 >
                   <TrendingUp className={`w-4 h-4 mr-1.5 ${isAnalyzing ? "animate-spin" : ""}`} />
-                  {isAnalyzing ? "补分析中..." : `继续分析剩余留言 (${pendingCount})`}
+                  {isAnalyzing ? "分析中..." : `继续分析 (${pendingCount})`}
                 </Button>
               )}
               {/* 刷新按钮 */}
@@ -211,8 +191,8 @@ export function HighlightsContainer({
             </div>
           </div>
 
-          {/* 分析状态面板（仅 arrivals） */}
-          {source === 'arrivals' && status && (
+          {/* 分析状态面板 */}
+          {status && (
             <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg p-4 border border-slate-200">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-700">📊 分析进度</h3>
@@ -225,13 +205,9 @@ export function HighlightsContainer({
                 </button>
               </div>
 
-              {analysisProgress ? (
+              {analysisProgress && (
                 <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
                   正在实时分析中，请勿关闭页面...
-                </div>
-              ) : shouldShowPendingHint && (
-                <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
-                  当前已完成 {status.analyzed}/{totalStatusCount} 条留言分析，剩余 {pendingCount} 条可继续补全。若刚刚搜索过邮件或中途网络波动，可点击右上角"继续分析剩余留言"。
                 </div>
               )}
 
@@ -241,20 +217,30 @@ export function HighlightsContainer({
                     <div className="flex justify-between text-xs mb-1">
                       <span className="text-gray-600">
                         <Loader2 className="w-3 h-3 inline animate-spin text-orange-500 mr-1" />
-                        分析中 {analysisProgress.analyzed}/{analysisProgress.total}
+                        {analysisProgress.phase === 'translating'
+                          ? `翻译中 ${analysisProgress.translated ?? 0}/${analysisProgress.total}`
+                          : `分析中 ${analysisProgress.analyzed}/${analysisProgress.total}`}
                         {analysisProgress.saved !== undefined && ` · 已保存 ${analysisProgress.saved}`}
                       </span>
                       <span className="text-gray-600">
-                        {analysisProgress.total > 0
-                          ? `${((analysisProgress.analyzed / analysisProgress.total) * 100).toFixed(0)}%`
-                          : '0%'}
+                        {analysisProgress.phase === 'translating'
+                          ? (analysisProgress.total > 0 ? `${(((analysisProgress.translated ?? 0) / analysisProgress.total) * 100).toFixed(0)}%` : '0%')
+                          : (analysisProgress.total > 0 ? `${((analysisProgress.analyzed / analysisProgress.total) * 100).toFixed(0)}%` : '0%')}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-orange-500 to-amber-500 h-full transition-all duration-300"
+                        className={`h-full transition-all duration-300 ${
+                          analysisProgress.phase === 'translating'
+                            ? 'bg-gradient-to-r from-blue-500 to-indigo-500'
+                            : 'bg-gradient-to-r from-orange-500 to-amber-500'
+                        }`}
                         style={{
-                          width: `${analysisProgress.total > 0 ? (analysisProgress.analyzed / analysisProgress.total) * 100 : 0}%`,
+                          width: `${
+                            analysisProgress.phase === 'translating'
+                              ? (analysisProgress.total > 0 ? ((analysisProgress.translated ?? 0) / analysisProgress.total) * 100 : 0)
+                              : (analysisProgress.total > 0 ? (analysisProgress.analyzed / analysisProgress.total) * 100 : 0)
+                          }%`,
                         }}
                       />
                     </div>
@@ -538,9 +524,18 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
 
             {/* AI 评分 */}
             {item.aiScore > 0 && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-xs font-semibold">
-                <Star className="w-3 h-3 fill-current" />
-                {(item.aiScore / 10).toFixed(1)}
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-xs font-semibold">
+                  <Star className="w-3 h-3 fill-current" />
+                  {item.aiScore}
+                </div>
+                {item.touchingScore != null && item.emotionalScore != null && item.culturalInsightScore != null && (
+                  <div className="flex gap-1">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-pink-50 text-pink-600">💝{item.touchingScore}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">💗{item.emotionalScore}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">🌍{item.culturalInsightScore}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

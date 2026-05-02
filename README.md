@@ -99,10 +99,10 @@ npm run db:push
 创建 `.env.local` 文件：
 
 ```bash
-# OpenAI 兼容 API（必需）
-OPENAI_API_KEY=your-api-key
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
+# OpenAI 兼容 API（必需，作为网页配置的 fallback）
+DASHSCOPE_API_KEY=your-api-key
+AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+AI_MODEL=qwen3.6-plus
 
 # 可选：启用管理员密码保护
 ADMIN_PASSWORD=your-strong-password
@@ -118,6 +118,11 @@ DISABLE_PRISMA_QUERY_LOGS=true
 启动后访问 `/settings` 页面，在网页中配置 API Key、Base URL 和模型。
 
 ![API SETTINGS](docs/screenshots/api-settings.png)
+
+**高级功能**：
+
+- **分用途配置**：可为 OCR 图片识别和文字分析分别配置不同的模型和服务商。例如用千问 VL 做图片识别，用 DeepSeek 做文字分析。在配置中选择"仅图片"或"仅文字"用途即可。
+- **代理设置**：如需访问 Gemini 等境外服务，可在配置中填写代理地址（如 `127.0.0.1:7890`）。建议使用美国、日本、新加坡等地区节点，香港节点可能不被部分 API 支持。
 
 ---
 
@@ -140,9 +145,9 @@ DISABLE_PRISMA_QUERY_LOGS=true
 qwen 配置
 
 # AI 服务商：通义千问 (阿里云)
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
-OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-OPENAI_MODEL=qwen3-vl-8b-thinking
+DASHSCOPE_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+AI_MODEL=qwen3-vl-8b-thinking
 ```
 
 > 💡 **提示**：
@@ -156,6 +161,7 @@ OPENAI_MODEL=qwen3-vl-8b-thinking
 你也可以使用其他 OpenAI 兼容的 API 服务：
 - **OpenAI 官方**：`https://api.openai.com/v1`
 - **DeepSeek**：`https://api.deepseek.com/v1`
+- **Google Gemini**：`https://generativelanguage.googleapis.com/v1beta/openai`（需代理）
 - **智谱 AI**：`https://open.bigmodel.cn/api/paas/v4`
 - **自定义服务**：本地部署的 Ollama、vLLM 等
 

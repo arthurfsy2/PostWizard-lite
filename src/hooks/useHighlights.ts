@@ -22,6 +22,7 @@ interface UseHighlightsReturn {
   error: string | null;
   emptyState: HighlightsEmptyState | null;
   totalAnalyzed: number;
+  totalCards: number;
   totalCount: number;
   hasMore: boolean;
   cached: boolean;
@@ -46,6 +47,7 @@ export function useHighlights(options: UseHighlightsOptions = {}): UseHighlights
   const [error, setError] = useState<string | null>(null);
   const [emptyState, setEmptyState] = useState<HighlightsEmptyState | null>(null);
   const [totalAnalyzed, setTotalAnalyzed] = useState(0);
+  const [totalCards, setTotalCards] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [cached, setCached] = useState(false);
@@ -114,6 +116,7 @@ export function useHighlights(options: UseHighlightsOptions = {}): UseHighlights
       }
       
       setTotalAnalyzed(result.totalAnalyzed || 0);
+      setTotalCards(result.totalCards || 0);
       setTotalCount(result.totalCount || 0);
       setHasMore(result.hasMore || false);
       setCached(result.cached || false);
@@ -164,6 +167,7 @@ export function useHighlights(options: UseHighlightsOptions = {}): UseHighlights
     error,
     emptyState,
     totalAnalyzed,
+    totalCards,
     totalCount,
     hasMore,
     cached,

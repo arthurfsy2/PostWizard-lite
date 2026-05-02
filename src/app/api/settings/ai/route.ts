@@ -12,6 +12,10 @@ interface AIConfig {
   apiKey: string;
   baseUrl: string;
   model: string;
+  useFor?: 'all' | 'text' | 'ocr';
+  proxy?: string;
+  enabled?: boolean;
+  tier?: 'free' | 'paid';
 }
 
 function maskApiKey(configs: AIConfig[]): (AIConfig & { hasApiKey: boolean })[] {
@@ -19,11 +23,15 @@ function maskApiKey(configs: AIConfig[]): (AIConfig & { hasApiKey: boolean })[] 
     ...c,
     apiKey: '',
     hasApiKey: !!c.apiKey,
+    useFor: c.useFor || 'all',
+    proxy: c.proxy || '',
+    enabled: c.enabled !== false,
+    tier: c.tier || 'free',
   }));
 }
 
 function validateConfig(body: any): string | null {
-  if (!body.provider || !['qwen', 'gemini', 'openai', 'custom'].includes(body.provider)) {
+  if (!body.provider || !['qwen', 'deepseek', 'gemini', 'openai', 'custom'].includes(body.provider)) {
     return '请选择有效的 AI 服务商';
   }
   if (!body.name || !body.name.trim()) {
@@ -62,6 +70,7 @@ export async function GET() {
         apiKey: encrypt(parsed.apiKey || ''),
         baseUrl: parsed.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
         model: parsed.model || 'qwen-plus',
+        useFor: 'all',
       };
       configs.push(migrated);
       await prisma.settings.upsert({
@@ -79,6 +88,7 @@ export async function GET() {
         apiKey: '',
         baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
         model: 'qwen-plus',
+        useFor: 'all',
       });
     }
 
@@ -92,6 +102,9 @@ export async function GET() {
       name: activeConfig.name,
       baseUrl: activeConfig.baseUrl,
       model: activeConfig.model,
+      useFor: activeConfig.useFor || 'all',
+      proxy: activeConfig.proxy || '',
+      tier: activeConfig.tier || 'free',
       hasApiKey: !!activeConfig.apiKey,
     });
   } catch (error) {
@@ -104,7 +117,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, provider, name, apiKey, baseUrl, model, action } = body;
+    const { id, provider, name, apiKey, baseUrl, model, useFor, proxy, enabled, tier, action } = body;
 
     if (action === 'delete') {
       if (!id) {
@@ -148,6 +161,10 @@ export async function POST(request: Request) {
       apiKey: encrypt(finalApiKey),
       baseUrl: baseUrl.trim(),
       model: model.trim(),
+      useFor: useFor || 'all',
+      proxy: proxy?.trim() || '',
+      enabled: enabled !== false,
+      tier: tier || 'free',
     };
 
     if (existingIndex >= 0) {

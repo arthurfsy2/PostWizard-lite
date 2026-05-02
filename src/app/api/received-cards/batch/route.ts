@@ -5,6 +5,7 @@ import { recognizePostcard } from '@/lib/services/ocrService';
 import { checkDuplicateReceivedCard } from '@/lib/helpers/duplicateChecker';
 import { autoEnhanceImage } from '@/lib/services/imageProcessingService';
 import { gachaService } from '@/lib/services/gachaService';
+import { isFreeTier } from '@/lib/services/ai-config';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
@@ -14,7 +15,24 @@ export const bodySizeLimit = '100mb';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/webp'];
 const MAX_SIZE = 10 * 1024 * 1024;
-const CONCURRENCY = 3;
+
+// 免费 tier 限流参数（15 RPM）
+const FREE_CONCURRENCY = 3;
+const FREE_OCR_INTERVAL_MS = 5000;
+// 付费 tier 参数（1000+ RPM）
+const PAID_CONCURRENCY = 10;
+
+// 请求间隔控制（免费 tier 使用）
+let lastOcrTime = 0;
+
+async function throttleOcr(intervalMs: number) {
+  const now = Date.now();
+  const elapsed = now - lastOcrTime;
+  if (elapsed < intervalMs) {
+    await new Promise(resolve => setTimeout(resolve, intervalMs - elapsed));
+  }
+  lastOcrTime = Date.now();
+}
 
 function extractPostcardId(filename: string): string | null {
   const name = path.basename(filename, path.extname(filename));
@@ -40,6 +58,7 @@ async function processOne(
   image: File,
   dataDir: string,
   tmpDir: string,
+  ocrIntervalMs: number = 0,
 ): Promise<{ index: number; status: string; card?: any; gacha?: any; duplicateInfo?: any; error?: string }> {
   // 验证格式
   if (!ALLOWED_TYPES.includes(image.type)) {
@@ -60,6 +79,7 @@ async function processOne(
   let ocrResult: any = null;
   let ocrQuotaExhausted = false;
   try {
+    if (ocrIntervalMs > 0) await throttleOcr(ocrIntervalMs);
     const base64 = buffer.toString('base64');
     ocrResult = await recognizePostcard(base64);
   } catch (ocrError: any) {
@@ -82,9 +102,15 @@ async function processOne(
   const filenameId = extractPostcardId(image.name);
   if (filenameId) {
     if (ocrResult) {
+      if (ocrResult.postcardId && ocrResult.postcardId !== filenameId) {
+        console.log(`[BatchUpload] 文件名 ID "${filenameId}" 覆盖 OCR 识别 "${ocrResult.postcardId}"`);
+      } else if (!ocrResult.postcardId) {
+        console.log(`[BatchUpload] 文件名 ID "${filenameId}" 补充了 OCR 未识别的 ID`);
+      }
       ocrResult.postcardId = filenameId;
     } else {
       ocrResult = { postcardId: filenameId };
+      console.log(`[BatchUpload] 文件名 ID "${filenameId}" 作为 fallback`);
     }
   }
 
@@ -103,6 +129,16 @@ async function processOne(
         },
       };
     }
+  }
+
+  // OCR 结果校验：手写内容为空则跳过入库
+  if (!ocrResult?.handwrittenText || ocrResult.handwrittenText.trim().length === 0) {
+    cleanupFile(tmpPath);
+    return {
+      index: 0,
+      status: 'error',
+      error: 'OCR 未能识别出手写内容，已跳过入库',
+    };
   }
 
   // 保存图片到最终位置
@@ -131,6 +167,7 @@ async function processOne(
       originalImageUrl: backImageUrl,
       imageProcessingStatus: 'pending',
       ocrText: ocrResult?.handwrittenText,
+      ocrModel: ocrResult?.model || null,
       metadata: ocrResult ? JSON.stringify({
         senderUsername: ocrResult?.senderUsername,
         detectedLang: ocrResult?.detectedLanguage,
@@ -254,6 +291,12 @@ export async function POST(request: NextRequest) {
       let duplicateCount = 0;
       let errorCount = 0;
 
+      // 根据 tier 决定并发和限流
+      const isFree = await isFreeTier('ocr');
+      const concurrency = isFree ? FREE_CONCURRENCY : PAID_CONCURRENCY;
+      const ocrIntervalMs = isFree ? FREE_OCR_INTERVAL_MS : 0;
+      console.log(`[BatchUpload] tier: ${isFree ? 'free' : 'paid'}, concurrency: ${concurrency}, ocrInterval: ${ocrIntervalMs}ms`);
+
       // 并发处理，带索引追踪
       let nextIndex = 0;
       const results = new Map<number, any>();
@@ -264,7 +307,7 @@ export async function POST(request: NextRequest) {
           const image = images[idx];
 
           try {
-            const result = await processOne(userId, image, dataDir, tmpDir);
+            const result = await processOne(userId, image, dataDir, tmpDir, ocrIntervalMs);
             result.index = indices[idx]; // 返回前端的原始队列 index
 
             if (result.status === 'success') successCount++;
@@ -282,7 +325,7 @@ export async function POST(request: NextRequest) {
 
       // 启动 N 个并发 worker
       const workers = Array.from(
-        { length: Math.min(CONCURRENCY, images.length) },
+        { length: Math.min(concurrency, images.length) },
         () => worker(),
       );
       await Promise.all(workers);

@@ -1,9 +1,6 @@
 import OpenAI from 'openai';
 import { prisma } from '../prisma';
-import { getAIConfigFromDB } from './ai-config';
-
-// OCR 模型配置（fallback 使用）
-const OCR_MODEL = process.env.OCR_MODEL || '';
+import { getConfigForPurpose, createOpenAIWithProxy } from './ai-config';
 
 export interface OcrResult {
   postcardId?: string;
@@ -15,6 +12,7 @@ export interface OcrResult {
   detectedLanguage: string;
   confidence: number;
   specialNotes?: string;
+  model?: string;
 }
 
 const ocrPrompt = `请仔细识别这张明信片背面的所有手写文字内容。
@@ -67,22 +65,23 @@ Postcrossing 明信片通常有唯一 ID，格式：2 个大写字母-数字（�
  */
 export async function recognizePostcard(imageBase64: string, multipleRounds: number = 2): Promise<OcrResult> {
   try {
-    const aiConfig = await getAIConfigFromDB();
-    const client = new OpenAI({
-      apiKey: aiConfig.apiKey,
-      baseURL: aiConfig.baseUrl,
-    });
+    const aiConfig = await getConfigForPurpose('ocr');
+    const client = await createOpenAIWithProxy(aiConfig);
 
     const allResults: OcrResult[] = [];
     let quotaExhausted = false;
+    let completedRounds = 0;
+    let retries429 = 0;
+    const maxRetries429 = 3;
+    let i = 0;
 
-    for (let i = 0; i < multipleRounds; i++) {
+    while (completedRounds < multipleRounds) {
       try {
-        if (i > 0) {
+        if (completedRounds > 0 || retries429 > 0) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
         const response = await client.chat.completions.create({
-          model: OCR_MODEL || aiConfig.model,
+          model: aiConfig.model,
           messages: [
             {
               role: 'user',
@@ -106,11 +105,30 @@ export async function recognizePostcard(imageBase64: string, multipleRounds: num
         const content = response.choices[0]?.message?.content || '';
         const result = parseOcrResponse(content);
         allResults.push(result);
+        completedRounds++;
+        i++;
       } catch (roundError: any) {
-        console.warn(`[OCR] Round ${i + 1} failed:`, roundError.message);
+        i++;
+        console.warn(`[OCR] Round ${i} failed:`, roundError.message);
         // 记录 403 错误，用于后续判断是否为配额耗尽
         if (roundError?.status === 403 || roundError?.message?.includes('403') || roundError?.message?.includes('free tier')) {
           quotaExhausted = true;
+        }
+        // 429 频率限制：等待 RPM 窗口重置后重试
+        if (roundError?.status === 429 || roundError?.message?.includes('429')) {
+          retries429++;
+          if (retries429 > maxRetries429) {
+            console.warn(`[OCR] 429 频率限制，已重试 ${maxRetries429} 次，放弃`);
+            break;
+          }
+          const waitMs = retries429 * 5000; // 5s, 10s, 15s（Tier 1 限额高，短暂等待即可）
+          console.warn(`[OCR] 429 频率限制，等待 ${waitMs / 1000}s 后重试 (${retries429}/${maxRetries429})`);
+          await new Promise(resolve => setTimeout(resolve, waitMs));
+          continue;
+        }
+        // 检测不支持图片的错误，直接终止（不需要重试）
+        if (roundError?.message?.includes('image_url') && roundError?.message?.includes('unknown variant')) {
+          throw new Error(`当前模型 "${aiConfig.model}" 不支持图片识别。请在设置中为"图片识别"配置一个支持视觉的模型（如 qwen-vl-plus、gemini-2.0-flash、gpt-4o 等）。`);
         }
       }
     }
@@ -123,7 +141,8 @@ export async function recognizePostcard(imageBase64: string, multipleRounds: num
     }
 
     const best = voteBestResult(allResults);
-    console.log(`[OCR] ${allResults.length} rounds completed, postcardId="${best.postcardId || ''}", confidence=${best.confidence}, handwrittenTextLen=${(best.handwrittenText || '').length}`);
+    best.model = aiConfig.model;
+    console.log(`[OCR] ${allResults.length} rounds completed, postcardId="${best.postcardId || ''}", confidence=${best.confidence}, model=${aiConfig.model}, handwrittenTextLen=${(best.handwrittenText || '').length}`);
     return best;
   } catch (error: any) {
     throw new Error(`OCR 识别失败：${error.message}`);

@@ -36,6 +36,7 @@ export interface HighlightItem {
 export interface HighlightsResponse {
   highlights: HighlightItem[];
   totalAnalyzed: number;
+  totalCards?: number;
   totalCount: number;
   hasMore: boolean;
   category: HighlightCategory;

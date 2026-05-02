@@ -21,6 +21,8 @@ export interface AnalysisProgress {
   analyzed: number;
   total: number;
   saved?: number;
+  phase?: 'scoring' | 'translating';
+  translated?: number;
 }
 
 interface UseAnalysisStatusReturn {
@@ -35,20 +37,23 @@ interface UseAnalysisStatusReturn {
 
 /**
  * 获取和管理 AI 分析状态的 Hook（SSE 实时进度）
+ * @param source - 数据源：'arrivals'（留言精选）或 'received'（收信精选）
  */
-export function useAnalysisStatus(): UseAnalysisStatusReturn {
+export function useAnalysisStatus(source: 'arrivals' | 'received' = 'arrivals'): UseAnalysisStatusReturn {
   const [status, setStatus] = useState<AnalysisStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const basePath = source === 'received' ? '/api/received-cards/analysis' : '/api/arrivals/analysis';
+
   const fetchStatus = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await apiFetch('/api/arrivals/analysis/status');
+      const response = await apiFetch(`${basePath}/status`);
       const result = await response.json();
 
       if (result.success) {
@@ -62,7 +67,7 @@ export function useAnalysisStatus(): UseAnalysisStatusReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [basePath]);
 
   const continueAnalysis = useCallback(async (onDone?: () => void) => {
     try {
@@ -70,7 +75,7 @@ export function useAnalysisStatus(): UseAnalysisStatusReturn {
       setAnalysisProgress(null);
       setError(null);
 
-      const response = await apiFetch('/api/arrivals/analysis/continue', {
+      const response = await apiFetch(`${basePath}/continue`, {
         method: 'POST',
       });
 
@@ -102,24 +107,27 @@ export function useAnalysisStatus(): UseAnalysisStatusReturn {
             const data = JSON.parse(line.slice(6));
 
             if (data.started) {
-              setAnalysisProgress({ analyzed: 0, total: data.total });
+              setAnalysisProgress({ analyzed: 0, total: data.total, phase: data.phase || 'scoring' });
               continue;
             }
 
-            if (data.analyzed !== undefined) {
+            if (data.phase && !data.done) {
               setAnalysisProgress(prev => ({
-                analyzed: data.analyzed,
+                analyzed: data.analyzed ?? prev?.analyzed ?? 0,
                 total: data.total || prev?.total || 0,
-                saved: prev?.saved,
+                saved: data.saved ?? prev?.saved,
+                phase: data.phase,
+                translated: data.translated ?? prev?.translated,
               }));
               continue;
             }
 
-            if (data.saved !== undefined && !data.done) {
+            if (data.analyzed !== undefined && !data.done && !data.phase) {
               setAnalysisProgress(prev => ({
-                analyzed: prev?.analyzed || 0,
-                total: prev?.total || 0,
-                saved: data.saved,
+                analyzed: data.analyzed,
+                total: data.total || prev?.total || 0,
+                saved: prev?.saved,
+                phase: prev?.phase,
               }));
               continue;
             }
@@ -129,7 +137,7 @@ export function useAnalysisStatus(): UseAnalysisStatusReturn {
                 success: !data.error,
                 message: data.error
                   ? `分析出错: ${data.error}`
-                  : `分析完成，已保存 ${data.saved} 条`,
+                  : `分析完成，已保存 ${data.saved} 条${data.translated != null ? `，翻译 ${data.translated} 条` : ''}`,
                 count: data.saved || 0,
               };
             }

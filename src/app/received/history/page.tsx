@@ -53,6 +53,7 @@ export default function ReceivedCardsPage() {
   const [rarityFilter, setRarityFilter] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [byCountry, setByCountry] = useState<{ country: string; count: number }[]>([]);
+  const [byRarity, setByRarity] = useState<Record<string, number>>({});
   const [selectedCard, setSelectedCard] = useState<ReceivedCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [pagination, setPagination] = useState({
@@ -63,7 +64,7 @@ export default function ReceivedCardsPage() {
   });
 
   // 加载收信列表（开源版：无需登录检查）
-  const loadCards = async (page = 1, country?: string | null) => {
+  const loadCards = async (page = 1, country?: string | null, rarity?: string | null) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -71,6 +72,7 @@ export default function ReceivedCardsPage() {
         pageSize: String(pagination.pageSize),
       });
       if (country) params.set('country', country);
+      if (rarity) params.set('rarity', rarity);
 
       const response = await fetch(`/api/received-cards?${params}`);
 
@@ -79,6 +81,7 @@ export default function ReceivedCardsPage() {
         setCards(data.data || []);
         setPagination(data.pagination || pagination);
         if (data.byCountry) setByCountry(data.byCountry);
+        if (data.byRarity) setByRarity(data.byRarity);
       }
     } catch (error) {
       console.error('Failed to load cards:', error);
@@ -88,8 +91,8 @@ export default function ReceivedCardsPage() {
   };
 
   useEffect(() => {
-    loadCards(1, selectedCountry);
-  }, [selectedCountry]);
+    loadCards(1, selectedCountry, rarityFilter);
+  }, [selectedCountry, rarityFilter]);
 
   // 处理卡片点击
   const handleCardClick = (card: ReceivedCard) => {
@@ -162,11 +165,7 @@ export default function ReceivedCardsPage() {
                     <MapPin className="w-4 h-4 text-purple-600" />
                     来自{" "}
                     <span className="font-bold text-gray-900">
-                      {
-                        new Set(
-                          cards.map((c) => c.senderCountry).filter(Boolean),
-                        ).size
-                      }
+                      {byCountry.length}
                     </span>{" "}
                     个国家/地区
                   </span>
@@ -284,7 +283,7 @@ export default function ReceivedCardsPage() {
                     >
                       全部
                       <span className={`ml-1 ${!selectedCountry ? "text-white/80" : "text-slate-400"}`}>
-                        ({byCountry.reduce((s, c) => s + c.count, 0)})
+                        ({pagination.total})
                       </span>
                     </button>
                     {byCountry.map((c) => (
@@ -314,8 +313,8 @@ export default function ReceivedCardsPage() {
                   const isActive = rarityFilter === r;
                   const label = r || "全部";
                   const count = r
-                    ? cards.filter((c) => c.rarity === r).length
-                    : cards.length;
+                    ? (byRarity[r] || 0)
+                    : pagination.total;
                   return (
                     <button
                       key={label}
@@ -344,7 +343,6 @@ export default function ReceivedCardsPage() {
                 }
               >
                 {cards
-                  .filter((card) => !rarityFilter || card.rarity === rarityFilter)
                   .map((card) => (
                     <ReceivedCardItem
                       key={card.id}
@@ -359,7 +357,7 @@ export default function ReceivedCardsPage() {
               {pagination.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-8">
                   <button
-                    onClick={() => loadCards(pagination.page - 1, selectedCountry)}
+                    onClick={() => loadCards(pagination.page - 1, selectedCountry, rarityFilter)}
                     disabled={pagination.page <= 1}
                     className="px-4 py-2 bg-white rounded-xl shadow-md border border-slate-200 text-gray-700 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -369,7 +367,7 @@ export default function ReceivedCardsPage() {
                     {pagination.page} / {pagination.totalPages}
                   </span>
                   <button
-                    onClick={() => loadCards(pagination.page + 1, selectedCountry)}
+                    onClick={() => loadCards(pagination.page + 1, selectedCountry, rarityFilter)}
                     disabled={pagination.page >= pagination.totalPages}
                     className="px-4 py-2 bg-white rounded-xl shadow-md border border-slate-200 text-gray-700 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >

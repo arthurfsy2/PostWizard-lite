@@ -75,6 +75,7 @@ model ReceivedCard {
 
   ocrText    String?
   metadata   String?
+  ocrModel   String?
   isFavorite Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -254,6 +255,7 @@ model UserGachaLog {
   primaryCategory String?
   luckyLevel      String?
   luckyBonus      Int?
+  model           String?
 
   @@index([userId])
   @@index([userId, obtainedAt])

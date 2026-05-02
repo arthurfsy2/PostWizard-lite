@@ -49,18 +49,30 @@ function buildAnalysisPrompt(message: string): string {
 **touching（走心）：**
 - 5-20：只有感谢，无个人情感
 - 30-50：简单回应，有礼貌但不深入
-- 60-80：提及个人细节（骑行、宠物、天气）
-- 85+：有故事、情感脆弱、让人共鸣
+- 60-80：提及个人细节，但未展开（爱好、宠物、天气、年龄）
+- 85+：满足以下任一——
+  · 有完整故事或人生片段（职业经历、家庭故事、生活转折）
+  · 情感脆弱（坦承困境、疲惫、思念、遗憾）
+  · 有跨越距离的共鸣感（"让我想起…"、"我也有过…"）
+  · 给出基于亲身经历的建议或感悟
 
 **emotional（情感温度）：**
-- 5-20：模板化万能祝福（"wishing you health, happiness, love and joy"）
-- 30-60：普通祝福，有针对性但不算真诚
-- 70+：包含情感词（strength, comfort, warmth, hope you feel），有温度
+- 5-20：模板化万能祝福，换任何人都能用（"wishing you health, happiness, love and joy"）
+- 30-60：有针对性，但仍是常见套路（"祝骑行顺利"、"Happy Postcrossing"）
+- 70+：满足以下任一——
+  · 祝福针对收信人的具体情况（孩子、爱好、处境）
+  · 用了非母语表达祝福（多语言切换的努力感）
+  · 结合自身文化给出特色祝福（节日传统、本地习俗）
+  · 包含真诚的情感词或祈愿（不只是"best wishes"）
 
 **culturalInsight（文化洞察）：**
 - 5-20：没有文化内容
-- 30-60：景点介绍（"The Eiffel Tower is in Paris"）
-- 70+：本地人视角（"What strikes me about my hometown is..."），文化对比，个人解读
+- 30-50：提及文化元素但停留在表面（景点名称、国家名、"I live in X"）
+- 60-75：有文化内容但属于百科式（介绍本地节日、历史年份、传统习俗——有信息量但无个人视角）
+- 85+：满足以下任一——
+  · 本地人视角的非显而易见知识
+  · 跨文化对比或个人解读
+  · 分享文化细节并解释"为什么"
 
 ## Few-shot 示例：
 
@@ -78,6 +90,12 @@ function buildAnalysisPrompt(message: string): string {
 
 **留言**: "谢谢你的卡片和邮票！祝骑行顺利，注意安全！"
 → touching=30, emotional=60, culturalInsight=5
+
+**留言**: "I was a prison dental nurse for 20 years, then switched to transport logistics. Life takes funny turns!"
+→ touching=82, emotional=25, culturalInsight=10
+
+**留言**: "In Finland we celebrate Christmas on the 24th, and we go to the sauna before dinner. It's our family tradition for 3 generations."
+→ touching=40, emotional=55, culturalInsight=75
 
 ## 待分析的留言：
 
@@ -537,22 +555,36 @@ async function analyzeBatchWithAI<T extends { id: string; message: string }>(
 **touching（走心）：**
 - 5-20：只有感谢，无个人情感
 - 30-50：简单回应，有礼貌但不深入
-- 60-80：提及个人细节（骑行、宠物、天气）
-- 85+：有故事、情感脆弱（心理健康、家庭压力）、让人共鸣
+- 60-80：提及个人细节，但未展开（爱好、宠物、天气、年龄）
+- 85+：满足以下任一——
+  · 有完整故事或人生片段（职业经历、家庭故事、生活转折）
+  · 情感脆弱（坦承困境、疲惫、思念、遗憾）
+  · 有跨越距离的共鸣感（"让我想起…"、"我也有过…"）
+  · 给出基于亲身经历的建议或感悟
 
 **emotional（情感温度）：**
-- 5-20：模板化万能祝福（"wishing you health, happiness, love and joy"）
-- 30-60：普通祝福，有针对性但不算真诚
-- 70+：包含情感词（strength, comfort, warmth, hope you feel），有温度
+- 5-20：模板化万能祝福，换任何人都能用（"wishing you health, happiness, love and joy"）
+- 30-60：有针对性，但仍是常见套路（"祝骑行顺利"、"Happy Postcrossing"）
+- 70+：满足以下任一——
+  · 祝福针对收信人的具体情况（孩子、爱好、处境）
+  · 用了非母语表达祝福（多语言切换的努力感）
+  · 结合自身文化给出特色祝福（节日传统、本地习俗）
+  · 包含真诚的情感词或祈愿（不只是"best wishes"）
 
 **culturalInsight（文化洞察）：**
 - 5-20：没有文化内容
-- 30-60：景点介绍（"The Eiffel Tower is in Paris"）
-- 70+：本地人视角（"What strikes me about my hometown is..."），文化对比，个人解读
+- 30-50：提及文化元素但停留在表面（景点名称、国家名、"I live in X"）
+- 60-75：有文化内容但属于百科式（介绍本地节日、历史年份、传统习俗——有信息量但无个人视角）
+- 85+：满足以下任一——
+  · 本地人视角的非显而易见知识
+  · 跨文化对比或个人解读
+  · 分享文化细节并解释"为什么"
 
 ## 示例：
 "Hi, thanks for the card!" → touching=20, emotional=40, culturalInsight=5
 "恭喜宝宝！趁他们还小好好享受吧" → touching=80, emotional=50, culturalInsight=5
+"I was a prison dental nurse for 20 years, then switched to transport logistics. Life takes funny turns!" → touching=82, emotional=25, culturalInsight=10
+"In Finland we celebrate Christmas on the 24th, and we go to the sauna before dinner. It's our family tradition for 3 generations." → touching=40, emotional=55, culturalInsight=75
 
 ## 待分析的留言：
 

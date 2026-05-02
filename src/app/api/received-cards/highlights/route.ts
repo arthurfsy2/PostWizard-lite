@@ -47,12 +47,16 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // 查询收信总数（作为进度分母）
+    const totalCards = await prisma.receivedCard.count({ where: { userId } });
+
     if (gachaLogs.length === 0) {
       return NextResponse.json({
         success: true,
         highlights: [],
         totalCount: 0,
         totalAnalyzed: 0,
+        totalCards,
         category,
       });
     }
@@ -140,6 +144,9 @@ export async function GET(request: NextRequest) {
         imageUrl: card?.imageUrl || '',
         rarity: log.rarity,
         aiScore: log.aiScore ?? 0,
+        touchingScore: log.touchingScore ?? 0,
+        emotionalScore: log.emotionalScore ?? 0,
+        culturalInsightScore: log.culturalInsightScore ?? 0,
         summary: log.summary || '',
         luckyLevel: log.luckyLevel,
         luckyBonus: log.luckyBonus,
@@ -153,6 +160,7 @@ export async function GET(request: NextRequest) {
       highlights,
       totalCount: deduplicated.length,
       totalAnalyzed: gachaLogs.length,
+      totalCards,
       category,
     });
   } catch (error) {
