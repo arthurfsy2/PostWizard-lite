@@ -161,7 +161,7 @@ AI_MODEL=qwen3-vl-8b-thinking
 你也可以使用其他 OpenAI 兼容的 API 服务：
 - **OpenAI 官方**：`https://api.openai.com/v1`
 - **DeepSeek**：`https://api.deepseek.com/v1`
-- **Google Gemini**：`https://generativelanguage.googleapis.com/v1beta/openai`（需代理）
+- **Google Gemini**：`https://generativelanguage.googleapis.com/v1beta/openai`（需代理）⭐ 推荐 — 英文手写体识别准确，付费 Tier 响应速度快
 - **智谱 AI**：`https://open.bigmodel.cn/api/paas/v4`
 - **自定义服务**：本地部署的 Ollama、vLLM 等
 
