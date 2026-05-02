@@ -4,7 +4,7 @@ import { getLocalUserId } from '@/lib/local-user';
 import { fetchEmailFullContent, searchEmailUids } from '@/lib/services/imapService';
 import { getCountryCode, getCountryName } from '@/lib/country-codes';
 import { analyzeMessagesBatchOptimized } from '@/lib/services/sentimentAnalysis';
-import { getAIModel } from '@/lib/services/ai-config';
+import { getConfigForPurpose } from '@/lib/services/ai-config';
 import { invalidateHighlightsCache } from '@/lib/services/cache';
 import { Semaphore } from '@/lib/utils/semaphore';
 import { sanitizeEmail, sanitizeEmailSubject, generateEmailSummary } from '@/lib/helpers/emailSanitizer';
@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
             progress: 96
           });
           
-          const modelVersion = await getAIModel();
+          const modelVersion = (await getConfigForPurpose('text')).model;
           const cacheTTL = 24 * 60 * 60 * 1000;
           const cacheValidUntil = new Date(Date.now() + cacheTTL);
           

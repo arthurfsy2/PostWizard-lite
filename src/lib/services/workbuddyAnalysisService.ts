@@ -20,7 +20,7 @@ export interface WorkBuddyDecision {
   };
 }
 
-import { getAIConfigFromDB, createOpenAIClient } from "./ai-config";
+import { getConfigForPurpose, createOpenAIWithProxy } from "./ai-config";
 
 /**
  * 分析 GitHub Issue 内容，给出决策
@@ -94,10 +94,8 @@ export async function analyzeIssue(
 
   try {
     // 从数据库动态获取 AI 配置并创建客户端
-    const [aiConfig, openai] = await Promise.all([
-      getAIConfigFromDB(),
-      createOpenAIClient(),
-    ]);
+    const aiConfig = await getConfigForPurpose('text');
+    const openai = await createOpenAIWithProxy(aiConfig);
 
     const completion = await openai.chat.completions.create({
       model: aiConfig.model,

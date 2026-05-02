@@ -167,20 +167,21 @@ export async function saveOrUpdatePostcard(
   const duplicate = await checkDuplicatePostcard(postcardId, userId);
 
   if (duplicate.exists && duplicate.postcard) {
-    // 已存在，更新记录
+    // 已存在，始终以 AI 识别结果为准，仅当 AI 返回空值时保留旧数据
+    const existing = duplicate.postcard as any;
     const updated = await prisma.postcard.update({
-      where: { id: duplicate.postcard.id },
+      where: { id: existing.id },
       data: {
-        recipientName: parsedInfo.name,
-        recipientCountry: parsedInfo.country,
-        recipientCity: parsedInfo.city,
-        recipientAddress: sanitizedAddress,
-        recipientAge: parsedInfo.age,
-        recipientGender: parsedInfo.gender,
-        recipientInterests: parsedInfo.interests?.join(', ') || '',
-        coreInterests: parsedInfo.coreInterests?.join(', ') || '',
-        recipientBio: parsedInfo.messageToSender || '',
-        distance: parsedInfo.distance || 0,
+        recipientName: parsedInfo.name || existing.recipientName,
+        recipientCountry: parsedInfo.country || existing.recipientCountry,
+        recipientCity: parsedInfo.city || existing.recipientCity,
+        recipientAddress: sanitizedAddress || existing.recipientAddress,
+        recipientAge: parsedInfo.age ?? existing.recipientAge,
+        recipientGender: parsedInfo.gender || existing.recipientGender,
+        recipientInterests: parsedInfo.interests?.length ? parsedInfo.interests.join(', ') : (existing.recipientInterests || ''),
+        coreInterests: parsedInfo.coreInterests?.length ? parsedInfo.coreInterests.join(', ') : (existing.coreInterests || ''),
+        recipientBio: parsedInfo.messageToSender || existing.recipientBio || '',
+        distance: parsedInfo.distance || existing.distance || 0,
         status: 'pending',
       },
     });
@@ -244,16 +245,16 @@ export function buildResponseData(
     success: true,
     data: {
       id: postcard.id,
-      name: postcard.recipientName || parsedInfo.name,
-      country: postcard.recipientCountry || parsedInfo.country,
-      city: postcard.recipientCity || parsedInfo.city,
-      address: sanitizedAddress ?? (postcard.recipientAddress || parsedInfo.address || ''),
+      name: parsedInfo.name || postcard.recipientName || 'Unknown',
+      country: parsedInfo.country || postcard.recipientCountry || '',
+      city: parsedInfo.city || postcard.recipientCity || '',
+      address: sanitizedAddress || parsedInfo.address || postcard.recipientAddress || '',
       postcardId: postcard.postcardId,
-      distance: postcard.distance || parsedInfo.distance,
-      interests: parsedInfo.interests || [],
-      coreInterests: parsedInfo.coreInterests || [],
+      distance: parsedInfo.distance || postcard.distance || 0,
+      interests: parsedInfo.interests?.length ? parsedInfo.interests : (postcard.recipientInterests ? postcard.recipientInterests.split(', ') : []),
+      coreInterests: parsedInfo.coreInterests?.length ? parsedInfo.coreInterests : (postcard.coreInterests ? postcard.coreInterests.split(', ') : []),
       dislikes: parsedInfo.dislikes || [],
-      messageToSender: parsedInfo.messageToSender || '',
+      messageToSender: parsedInfo.messageToSender || postcard.recipientBio || '',
       cardPreference: parsedInfo.cardPreference || 'any',
       contentPreference: parsedInfo.contentPreference || '',
       languagePreference: parsedInfo.languagePreference || '',

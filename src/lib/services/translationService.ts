@@ -5,7 +5,7 @@
  * 统一处理 OpenAI 客户端、配置读取、错误处理和 Token 统计。
  */
 
-import { createOpenAIClient, getAIConfigFromDB } from './ai-config';
+import { getConfigForPurpose, createOpenAIWithProxy } from './ai-config';
 
 export interface TranslateOptions {
   /** 源语言，默认为 'zh' */
@@ -73,10 +73,8 @@ export async function translateText(
   }
 
   // 获取 AI 配置和客户端
-  const [aiConfig, openai] = await Promise.all([
-    getAIConfigFromDB(),
-    createOpenAIClient(),
-  ]);
+  const aiConfig = await getConfigForPurpose('text');
+  const openai = await createOpenAIWithProxy(aiConfig);
 
   // 构建用户提示词
   let userPrompt = `Translate the following text from ${from} to ${to}:`;

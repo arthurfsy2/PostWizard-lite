@@ -237,12 +237,24 @@ function PastePageContent() {
     setIsGenerating(true);
     try {
       const tones = ['precise', 'warm', 'cultural'];
+      const postcardData = {
+        id: parsedData.id,
+        postcardId: parsedData.postcardId,
+        recipientName: parsedData.name,
+        recipientCountry: parsedData.country,
+        recipientCity: parsedData.city,
+        recipientAge: parsedData.age,
+        recipientGender: parsedData.gender,
+        recipientInterests: Array.isArray(parsedData.interests) ? parsedData.interests.join(', ') : parsedData.interests || '',
+        coreInterests: Array.isArray(parsedData.coreInterests) ? parsedData.coreInterests.join(', ') : parsedData.coreInterests || '',
+        recipientBio: parsedData.messageToSender || '',
+      };
       const results = await Promise.all(
         tones.map(t =>
           fetch('/api/content/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ recipientId: parsedData.id, tone: t }),
+            body: JSON.stringify({ recipientId: parsedData.id, tone: t, postcardData }),
           }).then(r => r.json())
         )
       );

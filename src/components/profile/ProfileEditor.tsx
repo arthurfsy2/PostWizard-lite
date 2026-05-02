@@ -169,10 +169,16 @@ export function ProfileEditor() {
     setCanSave(false);
 
     try {
+      // 按日期降序排序（最新在前），过滤空内容
+      const sorted = [...journalEntries]
+        .filter(e => e.content.trim())
+        .sort((a, b) => b.date.localeCompare(a.date));
+      setJournalEntries(sorted);
+
       const result = await saveMutation.mutateAsync({
         aboutMe,
         aboutMeEn,
-        casualNotes: serializeJournal(journalEntries),
+        casualNotes: serializeJournal(sorted),
         tags,
       });
 

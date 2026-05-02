@@ -9,7 +9,7 @@
 
 import OpenAI from 'openai';
 
-import { getAIConfigFromDB, createOpenAIClient } from './ai-config';
+import { getConfigForPurpose, createOpenAIWithProxy } from './ai-config';
 
 /**
  * 内容来源类型
@@ -218,27 +218,32 @@ export async function parseWithAI(
     return getDefaultResult(config.source);
   }
   
-  // 从数据库动态获取 AI 配置并创建客户端
-  const [aiConfig, openai] = await Promise.all([
-    getAIConfigFromDB(),
-    createOpenAIClient(),
-  ]);
+  // 从数据库动态获取 AI 配置并创建客户端（走 text 专用配置）
+  const aiConfig = await getConfigForPurpose('text');
+  const openai = await createOpenAIWithProxy(aiConfig);
   
   const systemPrompt = buildSystemPrompt(config.source);
   const userPrompt = buildUserPrompt(content, config);
   
-  // 打印必要配置用于调试，避免输出完整原文与提示词
+  // 调试日志
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('[AI Request] 配置信息:');
   console.log(`  → baseUrl: ${aiConfig.baseUrl}`);
   console.log(`  → model: ${aiConfig.model}`);
   console.log(`  → temperature: 0.5`);
-  console.log(`  → max_tokens: 2000`);
+  console.log(`  → max_tokens: 4000`);
   console.log(`  → source: ${config.source}`);
   console.log(`  → contentLength: ${content.length}`);
+  console.log('\n[AI Request] System Prompt:');
+  console.log(systemPrompt);
+  console.log('\n[AI Request] User Prompt:');
+  console.log(userPrompt);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
   try {
+    console.log('[parseWithAI] 发送 AI 请求...');
+
+    // 超时保护：DeepSeek 内容审核可能静默丢弃请求
     const completion = await openai.chat.completions.create({
       model: aiConfig.model,
       messages: [
@@ -246,16 +251,61 @@ export async function parseWithAI(
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.5,
-      max_tokens: 2000,
+      max_tokens: 4000,
+    }, {
+      maxRetries: 0,
+      timeout: 45000, // 45秒超时
     });
 
     const responseText = completion.choices[0]?.message?.content || '';
-    console.log(`[parseWithAI] AI 响应：${responseText.substring(0, 500)}...`);
-    
-    // 提取 JSON
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    const finishReason = completion.choices[0]?.finish_reason;
+    console.log(`[parseWithAI] AI 响应（完整，finish_reason: ${finishReason}）：\n${responseText}`);
+
+    // 提取 JSON — 支持截断恢复
+    let jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch && finishReason === 'length') {
+      // 响应被截断，尝试修复不完整的 JSON
+      console.log('[parseWithAI] 响应被截断，尝试修复 JSON...');
+      jsonMatch = responseText.match(/\{[\s\S]*/);
+      if (jsonMatch) {
+        let fixed = jsonMatch[0];
+        // 闭合未关闭的字符串
+        const quoteCount = (fixed.match(/(?<!\\)"/g) || []).length;
+        if (quoteCount % 2 !== 0) fixed += '"';
+        // 闭合未关闭的数组
+        const openBrackets = (fixed.match(/\[/g) || []).length;
+        const closeBrackets = (fixed.match(/\]/g) || []).length;
+        for (let i = closeBrackets; i < openBrackets; i++) fixed += ']';
+        // 闭合未关闭的对象
+        const openBraces = (fixed.match(/\{/g) || []).length;
+        const closeBraces = (fixed.match(/\}/g) || []).length;
+        for (let i = closeBraces; i < openBraces; i++) fixed += '}';
+        jsonMatch = [fixed];
+      }
+    }
     if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (e) {
+        console.error('[parseWithAI] JSON 解析失败，尝试修复后重试:', e);
+        // 最后尝试：去掉可能截断的最后一个不完整元素
+        const lastComma = jsonMatch[0].lastIndexOf(',');
+        if (lastComma > 0) {
+          const trimmed = jsonMatch[0].substring(0, lastComma);
+          // 重新闭合
+          const openBrackets = (trimmed.match(/\[/g) || []).length;
+          const closeBrackets = (trimmed.match(/\]/g) || []).length;
+          let fixed = trimmed;
+          for (let i = closeBrackets; i < openBrackets; i++) fixed += ']';
+          const openBraces = (fixed.match(/\{/g) || []).length;
+          const closeBraces = (fixed.match(/\}/g) || []).length;
+          for (let i = closeBraces; i < openBraces; i++) fixed += '}';
+          parsed = JSON.parse(fixed);
+        } else {
+          throw e;
+        }
+      }
       console.log('[parseWithAI] JSON 解析成功:', parsed);
       
       return {
@@ -289,8 +339,20 @@ export async function parseWithAI(
     } else {
       console.log('[parseWithAI] 未找到 JSON 格式');
     }
-  } catch (error) {
-    console.error('[parseWithAI] AI 解析错误:', error);
+  } catch (error: any) {
+    const msg = error?.message || String(error);
+    const status = error?.status || error?.response?.status;
+    const isTimeout = error?.name === 'TimeoutError' || error?.name === 'AbortError' || msg.includes('timeout');
+    console.error(`[parseWithAI] AI 解析错误 (status: ${status}, timeout: ${isTimeout}):`, msg);
+    if (error?.response?.data) {
+      console.error('[parseWithAI] 错误详情:', JSON.stringify(error.response.data));
+    }
+    if (status === 400 || msg.includes('high risk') || msg.includes('sensitive')) {
+      console.error('[parseWithAI] ⚠️ 内容安全过滤被触发，建议切换模型');
+    }
+    if (isTimeout) {
+      console.error('[parseWithAI] ⚠️ 请求超时，DeepSeek API 可能被内容审核拦截或服务不可用');
+    }
   }
 
   // AI 解析失败，返回默认值

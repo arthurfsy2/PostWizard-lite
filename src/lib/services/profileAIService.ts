@@ -6,7 +6,7 @@
  */
 
 import { translateText, TranslateResult } from './translationService';
-import { createOpenAIClient, getAIConfigFromDB } from './ai-config';
+import { getConfigForPurpose, createOpenAIWithProxy } from './ai-config';
 
 /**
  * AI Prompt - 标签提取专用
@@ -45,10 +45,8 @@ export interface AnalyzeProfileResult {
  * @returns 标签数组和 Token 使用情况
  */
 async function extractTags(content: string): Promise<{ tags: string[]; usage: TranslateResult['usage'] }> {
-  const [aiConfig, openai] = await Promise.all([
-    getAIConfigFromDB(),
-    createOpenAIClient(),
-  ]);
+  const aiConfig = await getConfigForPurpose('text');
+  const openai = await createOpenAIWithProxy(aiConfig);
 
   const userPrompt = `从以下内容中提取标签：\n\n---\n${content}\n---`;
 

@@ -62,8 +62,8 @@ export async function recognizeAddressWithAI(
     // console.log(`[Address OCR] 图片下载成功，大小: ${imageBuffer.byteLength} bytes`);
 
     // 2. 从数据库动态获取 AI 配置（与 aiParserService 统一）
-    const { getAIConfigFromDB } = await import('./ai-config');
-    const aiConfig = await getAIConfigFromDB();
+    const { getConfigForPurpose } = await import('./ai-config');
+    const aiConfig = await getConfigForPurpose('ocr');
     
     if (!aiConfig.apiKey) {
       return {

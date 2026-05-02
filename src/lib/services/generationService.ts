@@ -1,5 +1,5 @@
 import { prisma } from "../prisma";
-import { getAIConfigFromDB } from "./ai-config";
+import { getConfigForPurpose, createOpenAIWithProxy } from "./ai-config";
 
 export interface GenerationOptions {
   language?: string;
@@ -19,6 +19,19 @@ export interface GenerationOptions {
     pronouns?: string;
     birthday?: string;
     aboutText?: string;
+  };
+  /** 前端传入的解析数据，优先使用，不读数据库 */
+  postcardData?: {
+    id?: string;
+    postcardId?: string;
+    recipientName?: string;
+    recipientCountry?: string;
+    recipientCity?: string;
+    recipientAge?: number | null;
+    recipientGender?: string | null;
+    recipientInterests?: string;
+    coreInterests?: string;
+    recipientBio?: string;
   };
 }
 
@@ -244,7 +257,7 @@ export class GenerationService {
    * 从数据库获取 AI 配置（使用统一工具）
    */
   private async getAIConfig() {
-    return getAIConfigFromDB();
+    return getConfigForPurpose('text');
   }
 
   private async generateContentWithClaude(
@@ -252,12 +265,17 @@ export class GenerationService {
     currentUserId: string,
     options: GenerationOptions = {},
   ): Promise<GenerationResult> {
-    const postcard = await prisma.postcard.findUnique({
-      where: { id: postcardId },
-    });
-
-    if (!postcard) {
-      throw new Error("明信片不存在");
+    // 优先使用前端传入的解析数据，不读数据库
+    let postcard: any;
+    if (options.postcardData?.recipientName) {
+      postcard = options.postcardData;
+    } else {
+      postcard = await prisma.postcard.findUnique({
+        where: { id: postcardId },
+      });
+      if (!postcard) {
+        throw new Error("明信片不存在");
+      }
     }
 
     // 查询用户个人要素（使用当前登录用户的 ID，而不是明信片创建者的 ID）
@@ -311,51 +329,40 @@ export class GenerationService {
       throw new Error("AI API Key 未配置，请在后台设置");
     }
 
-    // ========== 开发环境调试日志 ==========
-    const isDev = process.env.NODE_ENV === "development";
-    if (isDev) {
-      console.log("\n========== AI 生成请求调试信息 ==========");
-      console.log("API URL:", aiConfig.baseUrl + "/chat/completions");
-      console.log("Model:", aiConfig.model);
-      console.log(
-        "API Key (前10位):",
-        aiConfig.apiKey.substring(0, 10) + "...",
-      );
-      console.log("\n---------- Prompt (提示词) ----------");
-      console.log(prompt);
-      console.log("---------- Prompt End ----------\n");
-      console.log("个人要素数量:", allMaterials.length);
-      console.log("匹配到收件人兴趣的素材:", matchedMaterials.length);
-      if (allMaterials.length > 0) {
-        console.log("要素详情:");
-        allMaterials.forEach((m, i) => {
-          console.log(
-            `  ${i + 1}. [${m.category}] 来源:${m.source || "unknown"} | ${m.content.substring(0, 60)}...`,
-          );
-        });
-      }
-      // console.log('==========================================\n');
-    }
-    // =====================================
+    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[Generation] AI 生成请求调试信息:");
+    console.log("  → Model:", aiConfig.model);
+    console.log("  → Tone:", options.tone || 'friendly');
+    console.log("  → Prompt 长度:", prompt.length);
+    console.log("  → 个人要素数量:", allMaterials.length);
+    console.log("  → 匹配素材数量:", matchedMaterials.length);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    // 使用 OpenAI SDK（走代理 + URL 归一化）
+    const openai = await createOpenAIWithProxy(aiConfig);
 
     let contentEn: string;
     let contentZh: string;
     let usedTokens: number;
 
+    // DeepSeek 偶尔返回空内容，加重试机制
+    const MAX_RETRIES = 2;
+    let generatedText = '';
+    let finishReason = '';
+
     try {
-      const response = await fetch(aiConfig.baseUrl + "/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${aiConfig.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (attempt > 0) {
+          console.log(`[Generation] 第 ${attempt} 次重试...`);
+        }
+
+        const completion = await openai.chat.completions.create({
           model: aiConfig.model,
           messages: [
             {
               role: "system",
               content:
-                "你是一位专业的 Postcrossing 明信片收、寄信助手。你的任务是生成友好、真诚、个性化的英文明信片内容。内容要自然流畅，避免模板化。",
+                "你是一位专业的 Postcrossing 明信片收、寄信助手。你的任务是生成友好、真诚、个性化的英文明信片内容。内容要自然流畅，避免模板化。请严格按照用户要求的 JSON 格式输出。",
             },
             {
               role: "user",
@@ -363,26 +370,49 @@ export class GenerationService {
             },
           ],
           max_tokens: options.wordCount
-            ? Math.min(options.wordCount * 2, 1500)
-            : 800,
+            ? Math.min(options.wordCount * 3, 3000)
+            : 2000,
           temperature: 0.8,
-        }),
-      });
+        }, {
+          maxRetries: 0,
+          timeout: 45000,
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          `百炼 API 错误: ${errorData.error?.message || response.statusText}`,
-        );
+        generatedText = completion.choices[0]?.message?.content || "";
+        finishReason = completion.choices[0]?.finish_reason || '';
+
+        console.log(`[Generation] AI 响应 (attempt ${attempt + 1}, finish_reason: ${finishReason}, 长度: ${generatedText.length}):`);
+        console.log(generatedText);
+
+        // 成功拿到内容就跳出重试循环
+        if (generatedText.trim()) break;
+
+        console.warn(`[Generation] AI 返回空内容，${attempt < MAX_RETRIES ? '准备重试' : '已用完重试次数'}`);
       }
 
-      const data = await response.json();
-      const generatedText = data.choices?.[0]?.message?.content || "";
+      if (!generatedText.trim()) {
+        throw new Error("AI 多次返回空内容");
+      }
 
-      // 解析 JSON 格式输出
+      // 解析 JSON 格式输出（支持截断恢复）
       try {
-        // 尝试提取 JSON 部分
-        const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+        let jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch && finishReason === 'length') {
+          // 响应被截断，尝试修复不完整的 JSON
+          console.log('[Generation] 响应被截断，尝试修复 JSON...');
+          jsonMatch = generatedText.match(/\{[\s\S]*/);
+          if (jsonMatch) {
+            let fixed = jsonMatch[0];
+            // 闭合未关闭的字符串
+            const quoteCount = (fixed.match(/(?<!\\)"/g) || []).length;
+            if (quoteCount % 2 !== 0) fixed += '"';
+            // 闭合未关闭的对象
+            const openBraces = (fixed.match(/\{/g) || []).length;
+            const closeBraces = (fixed.match(/\}/g) || []).length;
+            for (let i = closeBraces; i < openBraces; i++) fixed += '}';
+            jsonMatch = [fixed];
+          }
+        }
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           contentEn = parsed.en || generatedText;
@@ -392,33 +422,24 @@ export class GenerationService {
           contentZh = "";
         }
       } catch (e) {
+        console.warn("[Generation] JSON 解析失败，使用原始文本:", e);
         contentEn = generatedText;
         contentZh = "";
       }
 
       // 如果 AI 没有返回中文翻译，自动调用翻译接口
       if (!contentZh || contentZh.trim() === "") {
-        // console.log('[中文翻译] AI 未返回中文，自动调用翻译接口...');
+        console.log('[Generation] AI 未返回中文，调用翻译接口...');
         contentZh = await this.translateToChinese(contentEn);
       }
 
-      usedTokens = data.usage?.total_tokens || Math.ceil(contentEn.length / 4);
+      usedTokens = Math.ceil(contentEn.length / 4);
 
-      // 开发环境：打印 AI 响应
-      if (isDev) {
-        // console.log('\n========== AI 响应调试信息 ==========');
-        // console.log('Used Tokens:', usedTokens);
-        // console.log('\n---------- AI 原始返回 ----------');
-        // console.log(generatedText);
-        // console.log('\n---------- 生成的英文内容 ----------');
-        // console.log(contentEn);
-        // console.log('\n---------- 生成的中文内容 ----------');
-        // console.log(contentZh || '(无中文翻译)');
-        // console.log('======================================\n');
-      }
     } catch (error: any) {
-      // console.error('调用百炼 API 失败:', error);
-      // 降级到模拟内容
+      const errMsg = error?.name === 'TimeoutError' || error?.name === 'AbortError'
+        ? '请求超时（45秒），DeepSeek API 可能被内容审核拦截'
+        : error?.message || String(error);
+      console.error('[Generation] 生成失败，降级到模拟内容:', errMsg);
       const mockResult = this.generateMockContent(
         postcard,
         options,
@@ -493,39 +514,35 @@ export class GenerationService {
   private async translateToChinese(englishText: string): Promise<string> {
     try {
       const aiConfig = await this.getAIConfig();
+      const openai = await createOpenAIWithProxy(aiConfig);
 
-      const response = await fetch(aiConfig.baseUrl + "/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${aiConfig.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: aiConfig.model,
-          messages: [
-            {
-              role: "system",
-              content:
-                "你是一位翻译专家。请将英文明信片内容翻译成自然流畅的中文，保留原文的语气和情感。",
-            },
-            {
-              role: "user",
-              content: `请将以下英文明信片内容翻译成中文：\n\n${englishText}`,
-            },
-          ],
-          max_tokens: 1000,
-          temperature: 0.7,
-        }),
+      console.log(`[翻译] 开始翻译，英文长度: ${englishText.length}`);
+
+      const completion = await openai.chat.completions.create({
+        model: aiConfig.model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "你是一位翻译专家。请将英文明信片内容翻译成自然流畅的中文，保留原文的语气和情感。只返回翻译结果，不要添加任何额外说明。",
+          },
+          {
+            role: "user",
+            content: `请将以下英文明信片内容翻译成中文：\n\n${englishText}`,
+          },
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+      }, {
+        maxRetries: 0,
+        timeout: 30000,
       });
 
-      if (!response.ok) {
-        return "（翻译失败，请参考英文原文）";
-      }
-
-      const data = await response.json();
-      return data.choices?.[0]?.message?.content?.trim() || "（翻译失败）";
-    } catch (error) {
-      // console.error('翻译失败:', error);
+      const translated = completion.choices[0]?.message?.content?.trim() || "";
+      console.log(`[翻译] 翻译结果长度: ${translated.length}`);
+      return translated || "（翻译失败）";
+    } catch (error: any) {
+      console.error('[翻译] 翻译失败:', error.message);
       return "（翻译服务暂时不可用，请参考英文原文）";
     }
   }
@@ -559,9 +576,13 @@ export class GenerationService {
     if (aboutMeContent) {
       const source =
         profile.aboutMeEn && profile.aboutMeEn.trim() ? "aboutMeEn" : "aboutMe";
+      // 截断过长的个人简介，避免 AI 直接照搬
+      const truncated = aboutMeContent.length > 800
+        ? aboutMeContent.substring(0, 800) + '...(已截断)'
+        : aboutMeContent;
       materials.push({
         category: "个人简介",
-        content: aboutMeContent,
+        content: truncated,
         source,
         description: "个人简介（英文）",
       });
@@ -845,7 +866,7 @@ ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraIn
     parts.push(`
 
 ## 语气风格
-${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? "- 轻松、随意" : "- 友好、温暖、真诚"}
+${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? "- 轻松、随意" : options.tone === "precise" ? "- 准确、简洁、信息密度高，只陈述事实不加修饰" : options.tone === "warm" ? "- 温暖、走心、有情感共鸣，像亲密朋友写信" : options.tone === "cultural" ? "- 文化交流视角，侧重介绍本地生活细节和文化差异" : "- 友好、温暖、真诚"}
 - 简洁自然，像真实朋友写的
 - 避免模板化套话（如 "I noticed from your profile...", "That's wonderful!"）
 
@@ -1008,6 +1029,8 @@ ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraIn
 
       parts.push(
         "\n\n⚠️ **素材使用约束**：\n" +
+          "- 🚫 **严禁照抄素材原文！** 素材是你的「记忆库」，不是「复制源」。你必须用自己的话重新组织，只提取 2-4 个关键事实\n" +
+          "- 🚫 **严禁把整段素材塞进明信片！** 明信片只有 90-120 词，素材只是参考，不是正文\n" +
           "- 只能从上述要素中提取事实写入明信片\n" +
           "- 不能编造素材中没有的经历、职业或观点\n" +
           "- **可以做**：在素材事实后面添加自己的感受（如\"骑车是我最放松的时刻\"）、表达好奇（如\"我一直想试试射箭\"）、用更生动的语言转述原文\n" +
@@ -1015,24 +1038,87 @@ ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraIn
           "- **鼓励使用多处素材细节**：用你自己的话自然转述，充实自我介绍和兴趣分享\n" +
           "- 匹配的故事素材（✅ 标记）可用于回应收件人兴趣\n" +
           "- **没有匹配素材时**：直接引用随心记内容分享，不要编造与收件人兴趣的关联\n" +
-          "- 个人简介用于开场自我介绍\n" +
+          "- 个人简介用于开场自我介绍（2-3 句话即可，不要超过 50 词）\n" +
           "- 不要大段复制粘贴素材原文，用自己的话转述",
       );
     } else {
       parts.push("\n📝 暂无个人要素，请只写简短问候和祝愿，不要编造个人信息。");
     }
 
-    parts.push(`
+    // 根据 tone 构建完全不同的风格指引（结构、用词、侧重点都不同）
+    const toneGuide = (() => {
+      switch (options.tone) {
+        case 'precise':
+          return `## 🎯 语气风格：事实版 (precise)
 
-## 语气风格
-${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? "- 轻松、随意" : options.tone === "precise" ? `- 语气：准确、简洁
-- 只使用素材中的原始事实，不添加感受或联想
-- 如果素材与收件人兴趣无关联，直接提问即可，不要编造连接` : options.tone === "warm" ? `- 语气：温暖、真诚
-- 基于素材事实，可以添加个人感受和好奇
-- 用朋友聊天的口吻，表达对收件人兴趣的真诚好奇` : options.tone === "cultural" ? `- 语气：开放、文化交流
-- 侧重分享你所在城市/国家的生活细节
-- 用本地人的视角介绍有趣的文化差异` : "- 友好、温暖、真诚"}
+**核心理念**：简洁、准确、信息密度高。像一位严谨但友善的笔友。
+
+**结构特点**：
+- 自我介绍：直接陈述事实（职业、城市），不加修饰语
+- 兴趣回应：用陈述句而非感叹句，如 "Photography requires patience." 而非 "Photography is so cool!"
+- 可以提 1 个问题，但问题要具体而非泛泛
+- 结尾简短，不啰嗦
+
+**用词偏好**：
+- 偏好动词和名词，少用形容词和副词
+- 句子简短有力，平均 12-15 词/句
+- 避免：wonderful, amazing, fascinating, incredible
+- 偏好：interesting, notable, solid, clear
+
+**素材使用**：只使用原始事实，不添加个人感受或联想
+**兴趣关联**：如无关联，直接提问即可，不编造连接`;
+
+        case 'warm':
+          return `## 💛 语气风格：温情版 (warm)
+
+**核心理念**：温暖、走心、有情感共鸣。像一位亲密的朋友在写信。
+
+**结构特点**：
+- 自我介绍：加入个人感受（如 "每天骑车是我最放松的时刻"）
+- 兴趣回应：表达真诚好奇，分享自己类似的情感体验
+- 必须包含至少 1 个开放式问题，问题要有温度
+- 结尾祝愿要针对收件人具体情况
+
+**用词偏好**：
+- 多用表达情感的词汇：love, cherish, grateful, heartwarming
+- 句式柔和，多用复合句表达细腻感受
+- 可以用比喻和联想（但基于素材事实）
+- 语气词：honestly, truly, I must say
+
+**素材使用**：在事实基础上添加个人感受和好奇
+**兴趣回应**：即使没有关联，也要真诚表达 "I'd love to hear more about..."`;
+
+        case 'cultural':
+          return `## 🌏 语气风格：文化版 (cultural)
+
+**核心理念**：文化交流视角。像一位热情的本地人，向远方朋友介绍自己的城市和文化。
+
+**结构特点**：
+- 自我介绍：侧重你所在城市/国家的生活细节（天气、食物、节日、日常习惯）
+- 兴趣回应：尝试从文化差异的角度切入（如 "在中国，我们也流行..."）
+- 分享一个本地趣事或文化小知识（必须基于素材事实）
+- 结尾可以邀请对方分享他们国家的类似体验
+
+**用词偏好**：
+- 描述性词汇丰富：vibrant, bustling, serene, traditional
+- 文化相关词汇：local, regional, tradition, custom, cuisine
+- 句式可以稍长，因为要描述场景
+- 强调 "不同" 和 "相似" 的对比
+
+**素材使用**：重点使用与城市/生活相关的素材，弱化纯个人兴趣
+**文化切入**：从收件人的国家/兴趣中找文化连接点`;
+
+        default:
+          return `## 语气风格
+- 友好、温暖、真诚
 - 像真实朋友写的信，有温度、有个性
+- 禁止使用模板化套话`;
+      }
+    })();
+
+    parts.push(`\n${toneGuide}
+
+⚠️ 你正在生成「${options.tone === 'precise' ? '事实版' : options.tone === 'warm' ? '温情版' : '文化版'}」，请严格遵循上述风格指引，不要偏离。
 - 禁止使用模板化套话
 
 ## ❌ 禁止使用的套话

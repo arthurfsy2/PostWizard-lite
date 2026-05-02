@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 import { analyzeMessage, analyzeMessagesBatch } from '@/lib/services/sentimentAnalysis';
-import { getAIModel } from '@/lib/services/ai-config';
+import { getConfigForPurpose } from '@/lib/services/ai-config';
 import { invalidateHighlightsCache } from '@/lib/services/cache';
 
 /**
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const { postcardId, message, force = false } = body;
 
     // 3. 获取 AI 模型版本
-    const modelVersion = await getAIModel();
+    const modelVersion = (await getConfigForPurpose('text')).model;
     const cacheTTL = 24 * 60 * 60 * 1000; // 24 小时
     const cacheValidUntil = new Date(Date.now() + cacheTTL);
 

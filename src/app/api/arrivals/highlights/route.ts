@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
-import { getAIModel } from '@/lib/services/ai-config';
+import { getConfigForPurpose } from '@/lib/services/ai-config';
 import { getCachedHighlights, cacheHighlights } from '@/lib/services/cache';
 import { normalizeCategory } from '@/lib/utils/categoryNormalize';
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     const force = searchParams.get('force') === '1';
 
     // 4. 获取模型版本用于缓存
-    const modelVersion = await getAIModel();
+    const modelVersion = (await getConfigForPurpose('text')).model;
 
     // 5. 尝试从缓存获取（非强制刷新）
     if (!force) {

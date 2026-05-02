@@ -9,7 +9,7 @@
  * 5. 中文翻译（非英文留言时）
  */
 
-import { createOpenAIClient, getAIModel } from './ai-config';
+import { getConfigForPurpose, createOpenAIWithProxy } from './ai-config';
 
 export interface SentimentAnalysisResult {
   score: number;                     // 综合情感评分 (0-100) = max(categories)
@@ -194,8 +194,9 @@ export async function analyzeMessage(message: string): Promise<SentimentAnalysis
   }
 
   try {
-    const client = await createOpenAIClient();
-    const model = await getAIModel();
+    const aiConfig = await getConfigForPurpose('text');
+    const client = await createOpenAIWithProxy(aiConfig);
+    const model = aiConfig.model;
 
     const analysisPrompt = buildAnalysisPrompt(message);
 
@@ -252,8 +253,9 @@ export async function translateMessage(message: string): Promise<string | null> 
   if (nonAsciiRatio > 0.5) return null;
 
   try {
-    const client = await createOpenAIClient();
-    const model = await getAIModel();
+    const aiConfig = await getConfigForPurpose('text');
+    const client = await createOpenAIWithProxy(aiConfig);
+    const model = aiConfig.model;
 
     const response = await client.chat.completions.create({
       model,
@@ -532,8 +534,9 @@ export async function analyzeMessagesBatchOptimized<T extends { id: string; mess
 async function analyzeBatchWithAI<T extends { id: string; message: string }>(
   batch: T[]
 ): Promise<Array<T & { analysis: SentimentAnalysisResult }>> {
-  const client = await createOpenAIClient();
-  const model = await getAIModel();
+  const aiConfig = await getConfigForPurpose('text');
+  const client = await createOpenAIWithProxy(aiConfig);
+  const model = aiConfig.model;
 
   // 构建批量 Prompt
   const batchContent = batch.map((item, index) => {

@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
       isHandwritten = false,
       // 额外的用户信息（来自 Postcrossing 直连）
       extraInfo,
+      // 前端传入的解析数据（优先使用，不读数据库）
+      postcardData,
     } = body;
 
     // 统一使用 recipientId 作为查询 ID（数据库 UUID）
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest) {
       wordCount,
       isHandwritten,
       extraInfo, // 传递额外的用户信息
+      postcardData, // 前端传入的解析数据，优先使用
     });
 
     return NextResponse.json(

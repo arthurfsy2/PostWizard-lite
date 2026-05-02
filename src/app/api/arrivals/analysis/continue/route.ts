@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 import { analyzeMessagesBatchOptimized, type SentimentAnalysisResult } from '@/lib/services/sentimentAnalysis';
-import { getAIModel } from '@/lib/services/ai-config';
+import { getConfigForPurpose } from '@/lib/services/ai-config';
 import { invalidateHighlightsCache } from '@/lib/services/cache';
 
 /**
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   // 构建 postcardId → reply 映射，供回调快速查找
   const replyMap = new Map(toAnalyze.map(r => [r.postcardId, r]));
 
-  const modelVersion = await getAIModel();
+  const modelVersion = (await getConfigForPurpose('text')).model;
   const cacheTTL = 24 * 60 * 60 * 1000;
   const cacheValidUntil = new Date(Date.now() + cacheTTL);
 

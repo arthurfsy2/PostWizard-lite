@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { prisma } from "../prisma";
-import { getAIConfigFromDB, createOpenAIClient } from "./ai-config";
+import { getConfigForPurpose, createOpenAIWithProxy } from "./ai-config";
 import { sanitizeEmailContent, sanitizeEmailAddressField, sanitizeEmailSubject } from "../helpers/emailSanitizer";
 import fs from 'fs';
 import path from 'path';
@@ -145,10 +145,8 @@ ${subject ? `主题：${subject}\n` : ''}正文：${content}
 
   try {
     // 从数据库动态获取 AI 配置并创建客户端
-    const [aiConfig, openai] = await Promise.all([
-      getAIConfigFromDB(),
-      createOpenAIClient(),
-    ]);
+    const aiConfig = await getConfigForPurpose('text');
+    const openai = await createOpenAIWithProxy(aiConfig);
 
     console.log(`[Feedback Analysis #${logId}] Calling AI API (model: ${aiConfig.model})...`);
 
