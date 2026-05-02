@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
-import { getAIModel } from '@/lib/services/ai-config';
+import { getConfigForPurpose } from '@/lib/services/ai-config';
 import { generateAIEvaluationBatch, type AIEvaluation } from '@/lib/services/gachaService';
 import { translateMessage } from '@/lib/services/sentimentAnalysis';
 
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const modelVersion = await getAIModel();
+  const modelVersion = (await getConfigForPurpose('text')).model;
 
   // 分批
   const batches: typeof toAnalyze[] = [];

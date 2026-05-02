@@ -1,5 +1,5 @@
 ﻿import { PrismaClient } from '@prisma/client';
-import { getAIConfigFromDB, getAIModel } from './ai-config';
+import { getConfigForPurpose } from './ai-config';
 
 const prisma = new PrismaClient();
 
@@ -210,7 +210,7 @@ function calculateRarity(totalScore: number): 'SSR' | 'SR' | 'R' | 'N' {
 export async function generateAIEvaluation(content: string): Promise<AIEvaluation> {
   try {
     // 从数据库动态获取 AI 配置
-    const aiConfig = await getAIConfigFromDB();
+    const aiConfig = await getConfigForPurpose('text');
     
     if (!aiConfig.apiKey) {
       throw new Error('AI API key not configured');
@@ -389,7 +389,7 @@ export async function generateAIEvaluationBatch(
 ): Promise<Array<{ id: string; evaluation: AIEvaluation }>> {
   if (items.length === 0) return [];
 
-  const aiConfig = await getAIConfigFromDB();
+  const aiConfig = await getConfigForPurpose('text');
   if (!aiConfig.apiKey) {
     return items.map(({ id, content }) => ({ id, evaluation: generateDefaultEvaluation(content) }));
   }
@@ -617,7 +617,7 @@ export class GachaService {
     const rarity = calculateRarity(totalScore);
 
     // 5. 持久化评估记录到 UserGachaLog
-    const modelName = await getAIModel();
+    const modelName = (await getConfigForPurpose('text')).model;
     await prisma.userGachaLog.create({
       data: {
         userId,
