@@ -194,16 +194,7 @@ export function HighlightsContainer({
           {/* 分析状态面板 */}
           {status && (
             <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg p-4 border border-slate-200">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-700">📊 分析进度</h3>
-                <button
-                  onClick={() => fetchStatus()}
-                  className="text-xs text-gray-500 hover:text-gray-700"
-                >
-                  <RefreshCw className="w-3 h-3 inline mr-1" />
-                  刷新
-                </button>
-              </div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">📊 分析进度</h3>
 
               {analysisProgress && (
                 <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
