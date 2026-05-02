@@ -11,22 +11,22 @@ import { createOpenAIClient, getAIConfigFromDB } from './ai-config';
 /**
  * AI Prompt - 标签提取专用
  */
-const TAG_EXTRACTION_SYSTEM_PROMPT = `You are a content analyst for Postcrossing (a global postcard exchange platform).
+const TAG_EXTRACTION_SYSTEM_PROMPT = `你是一位内容分析专家，服务于 Postcrossing（全球明信片交换平台）。
 
-Your task:
-Extract relevant tags/keywords from the user's content.
+任务：
+从用户内容中提取相关标签/关键词。
 
-Rules:
-- Tags should describe hobbies, interests, personality traits, or topics the user enjoys discussing
-- Tags should be concise (1-3 words each) and in English
-- Extract as many relevant tags as the content naturally supports - no strict minimum or maximum
-- Quality matters: only include tags that accurately represent the user's interests
-- Avoid generic tags like "postcard", "travel", "stamp" unless they are specifically emphasized
-- Focus on what makes the user unique and what they want to share with postcard partners
+规则：
+- 标签应描述用户的兴趣爱好、性格特征或喜欢讨论的话题
+- 标签使用中文，简洁明了（2-4 个字）
+- 根据内容自然提取，不限制数量
+- 只包含准确反映用户兴趣的标签
+- 避免泛泛的标签如"明信片"、"旅行"、"邮票"，除非用户特别强调
+- 关注用户的独特之处和想与片友分享的内容
 
-Output format (JSON only):
+输出格式（仅 JSON）：
 {
-  "tags": ["tag1", "tag2", "tag3", ...]
+  "tags": ["标签1", "标签2", "标签3", ...]
 }`;
 
 export interface AnalyzeProfileResult {
@@ -50,7 +50,7 @@ async function extractTags(content: string): Promise<{ tags: string[]; usage: Tr
     createOpenAIClient(),
   ]);
 
-  const userPrompt = `Extract tags from the following content:\n\n---\n${content}\n---`;
+  const userPrompt = `从以下内容中提取标签：\n\n---\n${content}\n---`;
 
   const completion = await openai.chat.completions.create({
     model: aiConfig.model,
@@ -119,8 +119,15 @@ export async function analyzeProfileContent(
 
   console.log('[Profile AI] Translation completed:', translateResult.text.substring(0, 50) + '...');
 
-  // Step 2: 提取标签（合并 aboutMe 和 casualNotes）
-  const combinedContent = `${aboutMe}\n${casualNotes || ''}`.trim();
+  // Step 2: 提取标签（合并 aboutMe 和 casualNotes，支持 JSON 数组格式）
+  let notesText = casualNotes || '';
+  try {
+    const parsed = JSON.parse(notesText);
+    if (Array.isArray(parsed)) {
+      notesText = parsed.map((e: any) => (e.content || '').trim()).filter(Boolean).join('\n');
+    }
+  } catch {}
+  const combinedContent = `${aboutMe}\n${notesText}`.trim();
   const tagResult = await extractTags(combinedContent);
 
   console.log('[Profile AI] Tags extracted:', tagResult.tags);

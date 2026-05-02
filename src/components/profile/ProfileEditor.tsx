@@ -2,15 +2,18 @@
 
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  Save, 
-  Loader2, 
-  ChevronDown, 
-  Trophy, 
+import {
+  Save,
+  Loader2,
+  ChevronDown,
+  Trophy,
   Sprout,
   Tag,
   Globe,
-  Check
+  Check,
+  Plus,
+  Trash2,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -26,6 +29,30 @@ import type {
 } from '@/types/profile';
 import { NEWBIE_TEMPLATES, containsChinese } from '@/types/profile';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// 日记条目类型
+interface JournalEntry {
+  date: string;   // YYYY-MM-DD
+  content: string;
+}
+
+// 解析随心记（兼容旧格式纯文本和新格式 JSON 数组）
+function parseCasualNotes(raw: string): JournalEntry[] {
+  if (!raw || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].date) {
+      return parsed;
+    }
+  } catch {}
+  // 旧格式：纯文本，包装为单条
+  return [{ date: new Date().toISOString().slice(0, 10), content: raw }];
+}
+
+// 序列化为 JSON 字符串
+function serializeJournal(entries: JournalEntry[]): string {
+  return JSON.stringify(entries.filter(e => e.content.trim()));
+}
 
 // 动画配置
 const fadeInUp = {
@@ -47,7 +74,7 @@ export function ProfileEditor() {
   const [userType, setUserType] = useState<UserType>('expert');
   const [aboutMe, setAboutMe] = useState('');
   const [aboutMeEn, setAboutMeEn] = useState('');
-  const [casualNotes, setCasualNotes] = useState('');
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [showTranslate, setShowTranslate] = useState(false);
   const [showTranslationResult, setShowTranslationResult] = useState(false);
@@ -68,7 +95,7 @@ export function ProfileEditor() {
       setUserType(profileData.userType || 'expert');
       setAboutMe(profileData.aboutMe || '');
       setAboutMeEn(profileData.aboutMeEn || '');
-      setCasualNotes(profileData.casualNotes || '');
+      setJournalEntries(parseCasualNotes(profileData.casualNotes || ''));
       setTags(profileData.tags || []);
       if (profileData.aboutMeEn) {
         setShowTranslationResult(true);
@@ -111,9 +138,9 @@ export function ProfileEditor() {
     
     try {
       // 传入 aboutMe 和 casualNotes 让 AI 翻译 aboutMe 并提取标签
-      const result = await translateMutation.mutateAsync({ 
-        aboutMe, 
-        casualNotes 
+      const result = await translateMutation.mutateAsync({
+        aboutMe,
+        casualNotes: serializeJournal(journalEntries),
       });
       setAboutMeEn(result.translation);
       setTags(result.tags);
@@ -123,7 +150,7 @@ export function ProfileEditor() {
       console.error('翻译失败:', error);
       alert('翻译失败，请稍后重试');
     }
-  }, [aboutMe, casualNotes, translateMutation]);
+  }, [aboutMe, journalEntries, translateMutation]);
 
   // 保存功能 - 带防抖
   const handleSave = useCallback(async () => {
@@ -145,7 +172,7 @@ export function ProfileEditor() {
       const result = await saveMutation.mutateAsync({
         aboutMe,
         aboutMeEn,
-        casualNotes,
+        casualNotes: serializeJournal(journalEntries),
         tags,
       });
 
@@ -171,7 +198,26 @@ export function ProfileEditor() {
         setCanSave(true);
       }, 3000);
     }
-  }, [aboutMe, aboutMeEn, casualNotes, tags, saveMutation, canSave]);
+  }, [aboutMe, aboutMeEn, journalEntries, tags, saveMutation, canSave]);
+
+  // 日记操作
+  const today = new Date().toISOString().slice(0, 10);
+
+  const addEntry = useCallback(() => {
+    setJournalEntries(prev => [{ date: today, content: '' }, ...prev]);
+  }, [today]);
+
+  const updateEntryContent = useCallback((index: number, content: string) => {
+    setJournalEntries(prev => prev.map((e, i) => i === index ? { ...e, content } : e));
+  }, []);
+
+  const updateEntryDate = useCallback((index: number, date: string) => {
+    setJournalEntries(prev => prev.map((e, i) => i === index ? { ...e, date } : e));
+  }, []);
+
+  const deleteEntry = useCallback((index: number) => {
+    setJournalEntries(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
   // 使用模板提示
   const handleUseTemplate = useCallback((hint: string) => {
@@ -432,7 +478,7 @@ export function ProfileEditor() {
       </motion.div>
 
       {/* ② 随心记卡片 */}
-      <motion.div 
+      <motion.div
         className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-stone-100"
         variants={fadeInUp}
       >
@@ -443,26 +489,67 @@ export function ProfileEditor() {
             </span>
             <span className="font-semibold text-stone-800">随心记</span>
           </div>
-          <span className="text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full">
-            选填
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full">
+              选填
+            </span>
+            <button
+              onClick={addEntry}
+              className="flex items-center gap-1 text-xs px-2.5 py-1 bg-orange-50 text-orange-600 rounded-full hover:bg-orange-100 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              新增
+            </button>
+          </div>
         </div>
-        
+
         <p className="text-sm text-stone-500 mb-4">
-          补充一些最近发生的事情，帮助生成更贴心的内容
+          按日期记录心情和故事，帮助生成更贴心的内容
         </p>
-        
-        <textarea
-          value={casualNotes}
-          onChange={(e) => setCasualNotes(e.target.value)}
-          placeholder="我最近..."
-          className={cn(
-            "w-full min-h-[120px] p-4 rounded-xl border-2 font-sans text-[15px] leading-relaxed",
-            "bg-yellow-50/50 border-stone-200 resize-y transition-all duration-300",
-            "focus:outline-none focus:border-orange-400 focus:bg-white focus:shadow-[0_0_0_4px_rgba(249,115,22,0.1)]",
-            "placeholder:text-stone-400"
+
+        <div className="space-y-3">
+          {journalEntries.map((entry, index) => (
+            <div key={index} className="flex gap-3 items-start group">
+              <div className="flex items-center gap-1.5 pt-2 min-w-[130px]">
+                <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                <input
+                  type="date"
+                  value={entry.date}
+                  max={today}
+                  onChange={(e) => updateEntryDate(index, e.target.value)}
+                  className="text-xs text-stone-600 bg-transparent border-none outline-none cursor-pointer"
+                />
+              </div>
+              <div className="flex-1 relative">
+                <textarea
+                  value={entry.content}
+                  onChange={(e) => updateEntryContent(index, e.target.value)}
+                  placeholder={entry.date === today ? '今天发生了什么...' : '记录...'}
+                  rows={entry.content.length > 60 ? 3 : 1}
+                  className={cn(
+                    "w-full p-3 pr-8 rounded-lg border text-sm leading-relaxed",
+                    "bg-yellow-50/50 border-stone-200 resize-none transition-all duration-200",
+                    "focus:outline-none focus:border-orange-400 focus:bg-white",
+                    "placeholder:text-stone-400"
+                  )}
+                />
+                <button
+                  onClick={() => deleteEntry(index)}
+                  className="absolute top-2 right-2 p-1 text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                  title="删除"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {journalEntries.length === 0 && (
+            <p className="text-center text-stone-400 text-sm py-4">
+              点击「新增」开始记录...
+            </p>
           )}
-        />
+        </div>
       </motion.div>
 
       {/* 标签预览 - 与留言精选风格一致 */}

@@ -285,7 +285,9 @@ export class GenerationService {
     // 强制校验：用户必须填写至少一个个人要素字段
     const hasAboutMe =
       userProfile && (userProfile.aboutMe || userProfile.aboutMeEn);
-    const hasCasualNotes = userProfile && userProfile.casualNotes;
+    const hasCasualNotes = userProfile && userProfile.casualNotes && (() => {
+      try { const arr = JSON.parse(userProfile.casualNotes); return Array.isArray(arr) ? arr.some((e: any) => e.content?.trim()) : !!userProfile.casualNotes.trim(); } catch { return !!userProfile.casualNotes.trim(); }
+    })();
     const hasTags = userProfile && userProfile.tags;
 
     if (!hasAboutMe && !hasCasualNotes && !hasTags) {
@@ -565,17 +567,28 @@ export class GenerationService {
       });
     }
 
-    // 2. 随心记 - 中文原文（用户输入）
+    // 2. 随心记 - 中文原文（用户输入，支持 JSON 数组和旧格式纯文本）
     if (profile.casualNotes && profile.casualNotes.trim()) {
-      const notes = profile.casualNotes
-        .split(/\n\n+/)
-        .map((n: string) => n.trim())
-        .filter((n: string) => n.length > 5);
+      let allNotes: string[] = [];
+      try {
+        const parsed = JSON.parse(profile.casualNotes);
+        if (Array.isArray(parsed)) {
+          allNotes = parsed
+            .map((e: any) => (e.content || '').trim())
+            .filter((n: string) => n.length > 5);
+        }
+      } catch {
+        // 旧格式：纯文本
+        allNotes = profile.casualNotes
+          .split(/\n\n+/)
+          .map((n: string) => n.trim())
+          .filter((n: string) => n.length > 5);
+      }
 
-      if (notes.length > 0) {
+      if (allNotes.length > 0) {
         materials.push({
           category: "故事素材",
-          content: notes.join("\n\n---\n\n"),
+          content: allNotes.join("\n\n---\n\n"),
           source: "casualNotes",
           description: "随心记（中文原文）",
         });
