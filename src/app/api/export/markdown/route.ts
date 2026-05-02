@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     if (contentId) {
       // 单条导出 - 从数据库获取内容
       const { prisma } = await import('@/lib/prisma');
-      const generatedContent = await prisma.generatedContent.findUnique({
+      const generatedContent = await prisma.sentCardContent.findUnique({
         where: { id: contentId },
       });
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
       // 批量获取内容
       const { prisma } = await import('@/lib/prisma');
-      const generatedContents = await prisma.generatedContent.findMany({
+      const generatedContents = await prisma.sentCardContent.findMany({
         where: { id: { in: contentIds } },
       });
 

@@ -13,13 +13,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 取消同 postcardId 下所有已选中记录
-    await prisma.generatedContent.updateMany({
+    await prisma.sentCardContent.updateMany({
       where: { postcardId, selected: true },
       data: { selected: false },
     });
 
     // 标记当前版本为选中
-    await prisma.generatedContent.update({
+    await prisma.sentCardContent.update({
       where: { id: contentId },
       data: { selected: true },
     });

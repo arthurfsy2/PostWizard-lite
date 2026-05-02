@@ -6,7 +6,7 @@ import { getLocalUserId } from '@/lib/local-user';
  * GET /api/received-cards/highlights
  *
  * 收信精选：按抽卡评分排序展示 TOP N
- * 数据源：ReceivedCard + UserGachaLog
+ * 数据源：ReceivedCard + CardEvaluation
  *
  * 分类逻辑（与 arrivals 统一）：
  * - lucky: luckyLevel !== null（扑克牌型）
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category') || 'touching';
 
     // 查询有抽卡记录的收信
-    const gachaLogs = await prisma.userGachaLog.findMany({
+    const gachaLogs = await prisma.cardEvaluation.findMany({
       where: {
         userId,
         postcardId: { not: null },

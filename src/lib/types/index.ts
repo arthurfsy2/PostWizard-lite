@@ -37,7 +37,7 @@ export interface MatchedMaterial {
   matchedKeyword: string;
 }
 
-export interface GeneratedContent {
+export interface SentCardContent {
   id: string;
   emailId?: string;
   postcardId?: string;

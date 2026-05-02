@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const userId = getLocalUserId();
 
     // 获取所有有 OCR 文本的 gacha 记录
-    const gachaLogs = await prisma.userGachaLog.findMany({
+    const gachaLogs = await prisma.cardEvaluation.findMany({
       where: { userId },
       select: {
         postcardId: true,

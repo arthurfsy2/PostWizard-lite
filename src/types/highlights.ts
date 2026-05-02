@@ -24,7 +24,7 @@ export interface HighlightItem {
   translation?: string;        // 中文翻译（可选）
   aiScore: number;
   primaryCategory: HighlightCategory;
-  categories: HighlightCategoryScore[];
+  categories: HighlightCategoryScore[] | Record<string, number>;
   emotion: 'positive' | 'neutral' | 'negative';
   tags: string[];
   sender: string;

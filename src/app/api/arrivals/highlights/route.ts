@@ -136,6 +136,13 @@ export async function GET(request: NextRequest) {
       filteredResults.push(analysis);
     }
 
+    // 8.5 按子项总分重新排序（aiScore 是单维最大值，展示用总分）
+    filteredResults.sort((a, b) => {
+      const sumA = (() => { try { const c = JSON.parse(a.categories); return (c.touching||0)+(c.emotional||0)+(c.culturalInsight||0); } catch { return a.aiScore; } })();
+      const sumB = (() => { try { const c = JSON.parse(b.categories); return (c.touching||0)+(c.emotional||0)+(c.culturalInsight||0); } catch { return b.aiScore; } })();
+      return sumB - sumA || (b.arrivedAt?.getTime() ?? 0) - (a.arrivedAt?.getTime() ?? 0);
+    });
+
     // 9. 第二阶段：纯分页（不再做去重过滤）
     const totalCount = filteredResults.length;
     const hasMore = totalCount > offset + limit;
@@ -160,15 +167,17 @@ export async function GET(request: NextRequest) {
     // 11. 构建响应数据
     const highlights = pagedResults.map(analysis => {
       const reply = replyMap.get(analysis.postcardId);
-      
+      const cats = JSON.parse(analysis.categories);
+      const totalScore = (cats.touching||0) + (cats.emotional||0) + (cats.culturalInsight||0);
+
       return {
         id: analysis.id,
         postcardId: analysis.postcardId,
         message: analysis.message,
         translation: analysis.translation || undefined,
-        aiScore: analysis.aiScore,
+        aiScore: totalScore,
         primaryCategory: analysis.primaryCategory,
-        categories: JSON.parse(analysis.categories),
+        categories: cats,
         emotion: analysis.emotion,
         tags: JSON.parse(analysis.tags),
         sender: analysis.sender,

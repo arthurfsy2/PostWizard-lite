@@ -49,7 +49,7 @@ model Postcard {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   distance           Int?
-  GeneratedContent   GeneratedContent[]
+  SentCardContent    SentCardContent[]
   PastedEmail        PastedEmail[]
 
   @@map("postcards")
@@ -83,7 +83,7 @@ model ReceivedCard {
   @@map("received_cards")
 }
 
-model GeneratedContent {
+model SentCardContent {
   id            String    @id @default(cuid())
   userId        String    @default("local")
   type          String
@@ -103,7 +103,7 @@ model GeneratedContent {
   updatedAt     DateTime? @updatedAt
   postcard      Postcard  @relation(fields: [postcardId], references: [id], onDelete: Cascade)
 
-  @@map("generated_contents")
+  @@map("sent_card_contents")
 }
 
 model PastedEmail {
@@ -240,7 +240,7 @@ model Email {
 
 // ===== 抽卡系统（娱乐彩蛋，免费） =====
 
-model UserGachaLog {
+model CardEvaluation {
   id            String   @id @default(uuid())
   userId        String   @default("local")
   cardId        String?
@@ -260,5 +260,5 @@ model UserGachaLog {
   @@index([userId])
   @@index([userId, obtainedAt])
   @@index([postcardId])
-  @@map("user_gacha_logs")
+  @@map("card_evaluations")
 }

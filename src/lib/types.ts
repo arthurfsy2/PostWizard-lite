@@ -16,7 +16,7 @@ export interface EmailConfig {
   updatedAt?: Date;
 }
 
-export interface GeneratedContent {
+export interface SentCardContent {
   id: string;
   userId: string;
   content: string;

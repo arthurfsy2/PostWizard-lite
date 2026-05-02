@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     // 批量获取内容
     const { prisma } = await import('@/lib/prisma');
-    const generatedContents = await prisma.generatedContent.findMany({
+    const generatedContents = await prisma.sentCardContent.findMany({
       where: { id: { in: contentIds } },
     });
 

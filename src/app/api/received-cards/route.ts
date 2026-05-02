@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // 如果按稀有度过滤，先查 gacha_logs 拿到对应的 postcardId 列表
     let rarityPostcardIds: string[] | undefined;
     if (rarity) {
-      const gachaLogs = await prisma.userGachaLog.findMany({
+      const gachaLogs = await prisma.cardEvaluation.findMany({
         where: { userId, rarity, aiScore: { not: null, gt: 0 } },
         select: { postcardId: true },
       });
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         orderBy: { _count: { country: 'desc' } },
       }),
       // 稀有度统计（全量，不受分页影响）
-      prisma.userGachaLog.groupBy({
+      prisma.cardEvaluation.groupBy({
         by: ['rarity'],
         where: { userId, aiScore: { not: null, gt: 0 } },
         _count: { rarity: true },
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     const gachaLogsMap = new Map<string, { rarity: string; luckyLevel: string | null; aiScore: number | null; touchingScore: number | null; emotionalScore: number | null; culturalInsightScore: number | null; summary: string | null }>();
 
     if (postcardIds.length > 0) {
-      const gachaLogs = await prisma.userGachaLog.findMany({
+      const gachaLogs = await prisma.cardEvaluation.findMany({
         where: {
           postcardId: { in: postcardIds },
         },

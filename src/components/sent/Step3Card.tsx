@@ -6,7 +6,7 @@ import { Check, Copy, Download, FileDown, Plus, FileText, Sparkles } from 'lucid
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-interface GeneratedContent {
+interface SentCardContent {
   id: string;
   contentEn: string;
   contentZh?: string;
@@ -16,14 +16,14 @@ interface GeneratedContent {
 }
 
 interface Step3CardProps {
-  generatedContents?: GeneratedContent[];  // 3 versions
-  generatedContent?: GeneratedContent;     // single version (backward compat)
-  onCopy: (content: GeneratedContent) => void;
+  generatedContents?: SentCardContent[];  // 3 versions
+  generatedContent?: SentCardContent;     // single version (backward compat)
+  onCopy: (content: SentCardContent) => void;
   onExportMarkdown: (contentId: string) => void;
   onExportPdf: (contentId: string) => void;
   onBack: () => void;
   onCreateNew: () => void;
-  onConfirm?: (content: GeneratedContent) => void;
+  onConfirm?: (content: SentCardContent) => void;
   copied: boolean;
 }
 
@@ -51,7 +51,7 @@ export function Step3Card({
   const isMultiMode = !!(generatedContents && generatedContents.length > 0);
 
   // Resolve the active content
-  const activeContent: GeneratedContent | undefined = isMultiMode
+  const activeContent: SentCardContent | undefined = isMultiMode
     ? generatedContents!.find((c) => c.tone === TAB_DEFS[activeTab].tone)
       || generatedContents![activeTab]
       || generatedContents![0]

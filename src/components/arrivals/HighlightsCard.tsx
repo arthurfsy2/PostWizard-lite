@@ -41,6 +41,10 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
     }
   };
 
+  const categoryScores = highlight.categories && typeof highlight.categories === 'object' && !Array.isArray(highlight.categories)
+    ? highlight.categories as Record<string, number>
+    : null;
+
   const flagEmoji = getFlagEmoji(highlight.country);
   
   const formatDate = (dateStr: string) => {
@@ -132,9 +136,20 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
             </div>
 
             {/* AI 评分 */}
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-xs font-semibold">
-              <Star className="w-3 h-3 fill-current" />
-              {highlight.aiScore}
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-xs font-semibold">
+                <Star className="w-3 h-3 fill-current" />
+                {highlight.aiScore}
+              </div>
+              {highlight.categories && Object.keys(highlight.categories).length > 0 && (
+                <div className="flex gap-1">
+                  {Object.entries(highlight.categories).map(([name, score]) => (
+                    <span key={name} className="text-[10px] px-1.5 py-0.5 rounded bg-pink-50 text-pink-600">
+                      {name === 'touching' ? '💝' : name === 'emotional' ? '💗' : '🌍'}{score}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -213,7 +228,7 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
           {/* 详情内容 */}
           <div className="space-y-4">
             {/* 评分和分类 */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-sm font-semibold">
                 <Star className="w-4 h-4 fill-current" />
                 评分: {highlight.aiScore}
@@ -225,6 +240,15 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
                 {getCategoryIcon(highlight.primaryCategory)}
                 {getCategoryLabel(highlight.primaryCategory)}
               </Badge>
+              {categoryScores && Object.keys(categoryScores).length > 0 && (
+                <div className="flex gap-1">
+                  {Object.entries(categoryScores).map(([name, score]) => (
+                    <span key={name} className="text-xs px-2 py-0.5 rounded bg-pink-50 text-pink-600">
+                      {name === 'touching' ? '💝' : name === 'emotional' ? '💗' : '🌍'}{score}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 完整留言 */}

@@ -37,7 +37,7 @@ interface ReceivedCard {
   isPublic: boolean;
   receivedAt: string | null;
   createdAt: string;
-  // 稀有度字段（来自 UserGachaLog）
+  // 稀有度字段（来自 CardEvaluation）
   rarity?: "SSR" | "SR" | "R" | "N" | null;
   luckyLevel?: "none" | "lucky" | "special" | "superLucky" | null;
 }

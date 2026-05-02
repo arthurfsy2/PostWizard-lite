@@ -3,13 +3,13 @@
  */
 
 import { create } from 'zustand';
-import { Recipient, GeneratedContent } from '@/lib/api';
+import { Recipient, SentCardContent } from '@/lib/api';
 
 interface PostcardState {
   // State
   recipients: Recipient[];
   selectedRecipient: Recipient | null;
-  generatedContent: GeneratedContent | null;
+  generatedContent: SentCardContent | null;
   userContent: Array<{
     id: string;
     title: string;
@@ -27,7 +27,7 @@ interface PostcardState {
   // Actions
   setRecipients: (recipients: Recipient[]) => void;
   setSelectedRecipient: (recipient: Recipient | null) => void;
-  setGeneratedContent: (content: GeneratedContent | null) => void;
+  setSentCardContent: (content: SentCardContent | null) => void;
   setUserContent: (content: Array<{ id: string; title: string; content: string; type: 'blog' | 'note' | 'template' }>) => void;
   setGenerationOptions: (options: Partial<PostcardState['generationOptions']>) => void;
   setLoading: (loading: boolean) => void;
@@ -51,7 +51,7 @@ export const usePostcardStore = create<PostcardState>((set) => ({
   // Actions
   setRecipients: (recipients) => set({ recipients }),
   setSelectedRecipient: (recipient) => set({ selectedRecipient: recipient }),
-  setGeneratedContent: (content) => set({ generatedContent: content }),
+  setSentCardContent: (content) => set({ generatedContent: content }),
   setUserContent: (content) => set({ userContent: content }),
   setGenerationOptions: (options) =>
     set((state) => ({

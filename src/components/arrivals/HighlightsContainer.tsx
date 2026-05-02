@@ -585,7 +585,7 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
               {item.aiScore > 0 && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-sm font-semibold">
                   <Star className="w-4 h-4 fill-current" />
-                  评分: {(item.aiScore / 10).toFixed(1)}
+                  评分: {item.aiScore}
                 </div>
               )}
               <span

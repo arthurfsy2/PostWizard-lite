@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const allRecords = await prisma.generatedContent.findMany({
+    const allRecords = await prisma.sentCardContent.findMany({
       where,
       include: {
         postcard: {
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
           : null,
       };
 
-      validateFields('GeneratedContent', formatted, {
+      validateFields('SentCardContent', formatted, {
         context: 'GET /api/history',
         allowExtraFields: true,
       });

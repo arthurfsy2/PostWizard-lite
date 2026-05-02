@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 import { translateMessage } from '@/lib/services/sentimentAnalysis';
-import { getAIModel } from '@/lib/services/ai-config';
+import { getConfigForPurpose } from '@/lib/services/ai-config';
 
 /**
  * POST /api/arrivals/translate
@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const modelVersion = await getAIModel();
+      const modelVersion = (await getConfigForPurpose('text')).model;
+      const CONCURRENCY = 5;
 
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
@@ -53,18 +54,29 @@ export async function POST(request: NextRequest) {
           send({ started: true, total: missing.length });
 
           let translated = 0;
+          let completed = 0;
 
-          for (let i = 0; i < missing.length; i++) {
-            const record = missing[i];
-            const translation = await translateMessage(record.message!);
-            if (translation) {
-              await prisma.messageAnalysis.update({
-                where: { id: record.id },
-                data: { translation, translationModel: modelVersion },
-              });
-              translated++;
+          // 并发处理，每批 CONCURRENCY 条
+          for (let i = 0; i < missing.length; i += CONCURRENCY) {
+            const batch = missing.slice(i, i + CONCURRENCY);
+            const results = await Promise.allSettled(
+              batch.map(async (record) => {
+                const translation = await translateMessage(record.message!);
+                if (translation) {
+                  await prisma.messageAnalysis.update({
+                    where: { id: record.id },
+                    data: { translation, translationModel: modelVersion },
+                  });
+                }
+                return !!translation;
+              })
+            );
+
+            for (const r of results) {
+              completed++;
+              if (r.status === 'fulfilled' && r.value) translated++;
             }
-            send({ progress: i + 1, total: missing.length, translated });
+            send({ progress: completed, total: missing.length, translated });
           }
 
           clearInterval(keepalive);
@@ -96,7 +108,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '翻译失败或无需翻译（中文留言）' }, { status: 400 });
     }
 
-    const modelVersion = await getAIModel();
+    const modelVersion = (await getConfigForPurpose('text')).model;
     await prisma.messageAnalysis.update({
       where: { id: record.id },
       data: { translation, translationModel: modelVersion },

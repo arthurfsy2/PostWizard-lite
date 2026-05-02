@@ -7,7 +7,7 @@
 
 // 定义所有模型的 Schema 字段
 const SCHEMA_FIELDS: Record<string, string[]> = {
-  GeneratedContent: [
+  SentCardContent: [
     'id',
     'postcardId',
     'userId',
@@ -51,7 +51,7 @@ const SCHEMA_FIELDS: Record<string, string[]> = {
     // 关系字段
     'Session',
     'Referral',
-    'GeneratedContent',
+    'SentCardContent',
     'Payment',
   ],
   Postcard: [
@@ -74,7 +74,7 @@ const SCHEMA_FIELDS: Record<string, string[]> = {
     'createdAt',
     'updatedAt',
     // 关系字段
-    'GeneratedContent',
+    'SentCardContent',
   ],
   Session: [
     'id',
@@ -257,7 +257,7 @@ export interface ValidationOptions {
  *     wordCount: item.contentBody.length,
  *   };
  *   
- *   validateFields('GeneratedContent', result, {
+ *   validateFields('SentCardContent', result, {
  *     context: 'GET /api/history',
  *     allowExtraFields: true, // 允许计算字段
  *   });

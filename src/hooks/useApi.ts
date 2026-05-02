@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, EmailConfig, Email, Recipient, GeneratedContent } from '@/lib/api';
+import { api, EmailConfig, Email, Recipient, SentCardContent } from '@/lib/api';
 import { apiFetch } from '@/lib/fetch';
 
 // Email Config Hooks
@@ -182,12 +182,12 @@ export function useGenerateContent() {
   });
 }
 
-export function useGeneratedContent(id?: string) {
+export function useSentCardContent(id?: string) {
   return useQuery({
     queryKey: ['generatedContent', id],
     queryFn: async () => {
       if (!id) return null;
-      const result = await api.getGeneratedContent(id);
+      const result = await api.getSentCardContent(id);
       if (!result.success) throw new Error(result.error);
       return result.data || null;
     },
@@ -195,12 +195,12 @@ export function useGeneratedContent(id?: string) {
   });
 }
 
-export function useUpdateGeneratedContent() {
+export function useUpdateSentCardContent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: { id: string; content: Partial<GeneratedContent> }) =>
-      api.updateGeneratedContent(params.id, params.content),
+    mutationFn: (params: { id: string; content: Partial<SentCardContent> }) =>
+      api.updateSentCardContent(params.id, params.content),
     onSuccess: (_, params) => {
       queryClient.invalidateQueries({ queryKey: ['generatedContent', params.id] });
     },

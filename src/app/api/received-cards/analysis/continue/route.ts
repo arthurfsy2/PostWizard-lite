@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 import { getConfigForPurpose } from '@/lib/services/ai-config';
-import { generateAIEvaluationBatch, type AIEvaluation } from '@/lib/services/gachaService';
+import { generateAIEvaluationBatch } from '@/lib/services/gachaService';
 import { translateMessage } from '@/lib/services/sentimentAnalysis';
 
 /**
@@ -20,14 +20,14 @@ function calculateRarity(totalScore: number): 'SSR' | 'SR' | 'R' | 'N' {
   return 'N';
 }
 
-const BATCH_SIZE = 5;
-const CONCURRENCY = 3;
+const BATCH_SIZE = 10;
+const CONCURRENCY = 5;
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   const userId = getLocalUserId();
 
   // 1. 查找已有但未评分的 gacha log
-  const unscoredLogs = await prisma.userGachaLog.findMany({
+  const unscoredLogs = await prisma.cardEvaluation.findMany({
     where: {
       userId,
       OR: [
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   });
 
   // 也排除已有评分的 gacha log 对应的 postcardId
-  const allGachaPostcardIds = await prisma.userGachaLog.findMany({
+  const allGachaPostcardIds = await prisma.cardEvaluation.findMany({
     where: { userId, postcardId: { not: null } },
     select: { postcardId: true },
   });
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
   const newLogs: { id: string; postcardId: string }[] = [];
   for (const card of cardsNeedingLogs) {
     try {
-      const log = await prisma.userGachaLog.create({
+      const log = await prisma.cardEvaluation.create({
         data: {
           userId,
           postcardId: card.postcardId!,
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
               const rarity = calculateRarity(totalScore);
 
               try {
-                await prisma.userGachaLog.update({
+                await prisma.cardEvaluation.update({
                   where: { id: item.id },
                   data: {
                     aiScore: totalScore,

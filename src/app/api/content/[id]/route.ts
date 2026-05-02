@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getLocalUserId } from '@/lib/local-user';
 /**
  * GET /api/content/[id]
- * 历史详情兼容接口：同时支持 GeneratedContent.id、Postcard.id、Postcard.postcardId
+ * 历史详情兼容接口：同时支持 SentCardContent.id、Postcard.id、Postcard.postcardId
  */
 export async function GET(
   request: NextRequest,
@@ -22,7 +22,7 @@ export async function GET(
       );
     }
 
-    let generatedContent = await prisma.generatedContent.findFirst({
+    let generatedContent = await prisma.sentCardContent.findFirst({
       where: {
         id: trimmedId,
         userId: userId,
@@ -34,7 +34,7 @@ export async function GET(
 
     // 如果找到的记录未选中，检查同 postcardId 下是否有已选中的版本
     if (generatedContent && !generatedContent.selected) {
-      const selectedVersion = await prisma.generatedContent.findFirst({
+      const selectedVersion = await prisma.sentCardContent.findFirst({
         where: {
           postcardId: generatedContent.postcardId,
           userId: userId,
@@ -61,7 +61,7 @@ export async function GET(
       });
 
       if (!postcard) {
-        const contentByPostcardCode = await prisma.generatedContent.findFirst({
+        const contentByPostcardCode = await prisma.sentCardContent.findFirst({
           where: {
             userId: userId,
             postcard: {
@@ -79,7 +79,7 @@ export async function GET(
 
         generatedContent = contentByPostcardCode;
       } else {
-        generatedContent = await prisma.generatedContent.findFirst({
+        generatedContent = await prisma.sentCardContent.findFirst({
           where: {
             userId: userId,
             postcardId: postcard.id,

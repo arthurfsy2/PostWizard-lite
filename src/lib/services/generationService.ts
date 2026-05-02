@@ -428,7 +428,7 @@ export class GenerationService {
     }
 
     // 检查是否已存在相同的 postcardId、tone 和当前用户 ID 的记录
-    const existingContent = await prisma.generatedContent.findFirst({
+    const existingContent = await prisma.sentCardContent.findFirst({
       where: {
         postcardId,
         userId: currentUserId,
@@ -439,7 +439,7 @@ export class GenerationService {
     let generatedContent;
     if (existingContent) {
       // 更新现有记录
-      generatedContent = await prisma.generatedContent.update({
+      generatedContent = await prisma.sentCardContent.update({
         where: { id: existingContent.id },
         data: {
           content: contentEn,
@@ -453,7 +453,7 @@ export class GenerationService {
       });
     } else {
       // 创建新记录
-      generatedContent = await prisma.generatedContent.create({
+      generatedContent = await prisma.sentCardContent.create({
         data: {
           postcardId,
           userId: currentUserId, // 使用当前用户 ID
@@ -1134,7 +1134,7 @@ ${matchedMaterials.length > 0 ? `我也喜欢${matchedMaterials.map((m) => m.con
    * 获取已生成的内容
    */
   async getGeneratedContent(contentId: string) {
-    return prisma.generatedContent.findUnique({
+    return prisma.sentCardContent.findUnique({
       where: { id: contentId },
       include: {
         postcard: {
@@ -1161,7 +1161,7 @@ ${matchedMaterials.length > 0 ? `我也喜欢${matchedMaterials.map((m) => m.con
    * @param contentIds 内容 ID 数组
    */
   async getGeneratedContents(contentIds: string[]) {
-    return prisma.generatedContent.findMany({
+    return prisma.sentCardContent.findMany({
       where: {
         id: { in: contentIds },
       },
@@ -1183,7 +1183,7 @@ ${matchedMaterials.length > 0 ? `我也喜欢${matchedMaterials.map((m) => m.con
    * @param limit 数量限制
    */
   async getRecentGeneratedContents(limit: number = 10) {
-    return prisma.generatedContent.findMany({
+    return prisma.sentCardContent.findMany({
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
@@ -1211,7 +1211,7 @@ ${matchedMaterials.length > 0 ? `我也喜欢${matchedMaterials.map((m) => m.con
       notes?: string;
     },
   ) {
-    return prisma.generatedContent.update({
+    return prisma.sentCardContent.update({
       where: { id: contentId },
       data: updates,
     });

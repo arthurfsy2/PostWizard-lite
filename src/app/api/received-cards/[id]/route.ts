@@ -44,7 +44,7 @@ export async function GET(
 
     // 查询关联的抽卡记录获取稀有度信息
     const gachaLog = receivedCard.postcardId
-      ? await prisma.userGachaLog.findUnique({
+      ? await prisma.cardEvaluation.findUnique({
           where: { postcardId: receivedCard.postcardId },
           select: {
             rarity: true,

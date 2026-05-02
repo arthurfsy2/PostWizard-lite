@@ -241,7 +241,7 @@ export class StatsService {
     }
 
     // 总 Token 消耗
-    const totalResult = await prisma.generatedContent.aggregate({
+    const totalResult = await prisma.sentCardContent.aggregate({
       _sum: {
         usedTokens: true,
       },
@@ -254,7 +254,7 @@ export class StatsService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const byDateRaw = await prisma.generatedContent.groupBy({
+    const byDateRaw = await prisma.sentCardContent.groupBy({
       by: ['createdAt'],
       where: {
         createdAt: {
@@ -290,7 +290,7 @@ export class StatsService {
       .sort((a, b) => a.date.localeCompare(b.date));
 
     // 按用户分组统计（Top 20）
-    const byUserRaw = await prisma.generatedContent.groupBy({
+    const byUserRaw = await prisma.sentCardContent.groupBy({
       by: ['emailId'],
       _sum: {
         usedTokens: true,
@@ -448,7 +448,7 @@ export class StatsService {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const activeUsers7d = await prisma.generatedContent.findMany({
+    const activeUsers7d = await prisma.sentCardContent.findMany({
       where: {
         createdAt: {
           gte: sevenDaysAgo,
@@ -478,7 +478,7 @@ export class StatsService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const activeUsers30d = await prisma.generatedContent.findMany({
+    const activeUsers30d = await prisma.sentCardContent.findMany({
       where: {
         createdAt: {
           gte: thirtyDaysAgo,
@@ -580,7 +580,7 @@ export class StatsService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const generationRaw = await prisma.generatedContent.groupBy({
+    const generationRaw = await prisma.sentCardContent.groupBy({
       by: ['createdAt'],
       where: {
         createdAt: {

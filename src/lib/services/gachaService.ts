@@ -579,7 +579,7 @@ export class GachaService {
   // 执行抽卡（简化版：直接用 AI 评价，不再抽取模板卡片）
   async draw(userId: string, postcardId: string, content: string): Promise<GachaResult> {
     // 1. 检查 postcardId 是否已存在（重复检测）
-    const existing = await prisma.userGachaLog.findUnique({
+    const existing = await prisma.cardEvaluation.findUnique({
       where: { postcardId }
     });
     
@@ -616,9 +616,9 @@ export class GachaService {
     const totalScore = aiEvaluation.touchingScore + aiEvaluation.emotionalScore + aiEvaluation.culturalInsightScore;
     const rarity = calculateRarity(totalScore);
 
-    // 5. 持久化评估记录到 UserGachaLog
+    // 5. 持久化评估记录到 CardEvaluation
     const modelName = (await getConfigForPurpose('text')).model;
-    await prisma.userGachaLog.create({
+    await prisma.cardEvaluation.create({
       data: {
         userId,
         postcardId,
@@ -651,7 +651,7 @@ export class GachaService {
   
   // 获取用户抽卡历史（简化版，不再包含卡片信息）
   async getUserGachaHistory(userId: string, limit: number = 20) {
-    return prisma.userGachaLog.findMany({
+    return prisma.cardEvaluation.findMany({
       where: { userId },
       select: {
         id: true,
@@ -666,7 +666,7 @@ export class GachaService {
   
   // 获取用户稀有度统计
   async getUserRarityStats(userId: string) {
-    const stats = await prisma.userGachaLog.groupBy({
+    const stats = await prisma.cardEvaluation.groupBy({
       by: ['rarity'],
       where: { userId },
       _count: { rarity: true },

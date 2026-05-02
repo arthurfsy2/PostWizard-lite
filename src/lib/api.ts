@@ -3,7 +3,7 @@
  * 统一的 API 请求处理
  */
 
-import { EmailConfig, GeneratedContent } from './types';
+import { EmailConfig, SentCardContent } from './types';
 
 // 类型定义
 export interface Email {
@@ -248,7 +248,7 @@ export const api = {
     tone?: string;
     topics?: string[];
     userContent?: string[];
-  }): Promise<ApiResponse<GeneratedContent>> {
+  }): Promise<ApiResponse<SentCardContent>> {
     const response = await apiFetch('/content/generate', {
       method: 'POST',
       body: JSON.stringify({
@@ -287,13 +287,13 @@ export const api = {
   },
 
   // 获取生成的内容
-  async getGeneratedContent(contentId: string): Promise<ApiResponse<GeneratedContent>> {
+  async getSentCardContent(contentId: string): Promise<ApiResponse<SentCardContent>> {
     const response = await apiFetch(`/content/${encodeURIComponent(contentId)}`);
     return response.json();
   },
 
   // 更新生成的内容
-  async updateGeneratedContent(contentId: string, content: Partial<GeneratedContent>): Promise<ApiResponse<GeneratedContent>> {
+  async updateSentCardContent(contentId: string, content: Partial<SentCardContent>): Promise<ApiResponse<SentCardContent>> {
     const response = await apiFetch(`/content/${encodeURIComponent(contentId)}`, {
       method: 'PUT',
       body: JSON.stringify(content),
