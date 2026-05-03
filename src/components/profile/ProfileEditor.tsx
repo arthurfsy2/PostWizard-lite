@@ -75,6 +75,7 @@ export function ProfileEditor() {
   const [aboutMe, setAboutMe] = useState('');
   const [aboutMeEn, setAboutMeEn] = useState('');
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [inspirationEntries, setInspirationEntries] = useState<JournalEntry[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [showTranslate, setShowTranslate] = useState(false);
   const [showTranslationResult, setShowTranslationResult] = useState(false);
@@ -96,6 +97,7 @@ export function ProfileEditor() {
       setAboutMe(profileData.aboutMe || '');
       setAboutMeEn(profileData.aboutMeEn || '');
       setJournalEntries(parseCasualNotes(profileData.casualNotes || ''));
+      setInspirationEntries(parseCasualNotes(profileData.inspirationNotes || ''));
       setTags(profileData.tags || []);
       if (profileData.aboutMeEn) {
         setShowTranslationResult(true);
@@ -141,6 +143,7 @@ export function ProfileEditor() {
       const result = await translateMutation.mutateAsync({
         aboutMe,
         casualNotes: serializeJournal(journalEntries),
+        inspirationNotes: serializeJournal(inspirationEntries),
       });
       setAboutMeEn(result.translation);
       setTags(result.tags);
@@ -150,7 +153,7 @@ export function ProfileEditor() {
       console.error('翻译失败:', error);
       alert('翻译失败，请稍后重试');
     }
-  }, [aboutMe, journalEntries, translateMutation]);
+  }, [aboutMe, journalEntries, inspirationEntries, translateMutation]);
 
   // 保存功能 - 带防抖
   const handleSave = useCallback(async () => {
@@ -179,6 +182,7 @@ export function ProfileEditor() {
         aboutMe,
         aboutMeEn,
         casualNotes: serializeJournal(sorted),
+        inspirationNotes: serializeJournal([...inspirationEntries].filter(e => e.content.trim()).sort((a, b) => b.date.localeCompare(a.date))),
         tags,
       });
 
@@ -204,7 +208,7 @@ export function ProfileEditor() {
         setCanSave(true);
       }, 3000);
     }
-  }, [aboutMe, aboutMeEn, journalEntries, tags, saveMutation, canSave]);
+  }, [aboutMe, aboutMeEn, journalEntries, inspirationEntries, tags, saveMutation, canSave]);
 
   // 日记操作
   const today = new Date().toISOString().slice(0, 10);
@@ -223,6 +227,23 @@ export function ProfileEditor() {
 
   const deleteEntry = useCallback((index: number) => {
     setJournalEntries(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // 灵感速记操作
+  const addInspirationEntry = useCallback(() => {
+    setInspirationEntries(prev => [{ date: today, content: '' }, ...prev]);
+  }, [today]);
+
+  const updateInspirationEntryContent = useCallback((index: number, content: string) => {
+    setInspirationEntries(prev => prev.map((e, i) => i === index ? { ...e, content } : e));
+  }, []);
+
+  const updateInspirationEntryDate = useCallback((index: number, date: string) => {
+    setInspirationEntries(prev => prev.map((e, i) => i === index ? { ...e, date } : e));
+  }, []);
+
+  const deleteInspirationEntry = useCallback((index: number) => {
+    setInspirationEntries(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   // 使用模板提示
@@ -558,6 +579,81 @@ export function ProfileEditor() {
         </div>
       </motion.div>
 
+      {/* ③ 灵感速记卡片 */}
+      <motion.div
+        className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-stone-100"
+        variants={fadeInUp}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-full text-sm font-semibold">
+              ③
+            </span>
+            <span className="font-semibold text-stone-800">灵感速记</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full">
+              选填
+            </span>
+            <button
+              onClick={addInspirationEntry}
+              className="flex items-center gap-1 text-xs px-2.5 py-1 bg-orange-50 text-orange-600 rounded-full hover:bg-orange-100 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              新增
+            </button>
+          </div>
+        </div>
+
+        <p className="text-sm text-stone-500 mb-4">
+          记录针对收件人的灵感和共鸣，生成时自动作为素材使用
+        </p>
+
+        <div className="space-y-3">
+          {inspirationEntries.map((entry, index) => (
+            <div key={index} className="flex gap-3 items-start group">
+              <div className="flex items-center gap-1.5 pt-2 min-w-[130px]">
+                <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                <input
+                  type="date"
+                  value={entry.date}
+                  max={today}
+                  onChange={(e) => updateInspirationEntryDate(index, e.target.value)}
+                  className="text-xs text-stone-600 bg-transparent border-none outline-none cursor-pointer"
+                />
+              </div>
+              <div className="flex-1 relative">
+                <textarea
+                  value={entry.content}
+                  onChange={(e) => updateInspirationEntryContent(index, e.target.value)}
+                  placeholder={entry.date === today ? '今天有什么灵感...' : '记录...'}
+                  rows={entry.content.length > 60 ? 3 : 1}
+                  className={cn(
+                    "w-full p-3 pr-8 rounded-lg border text-sm leading-relaxed",
+                    "bg-yellow-50/50 border-stone-200 resize-none transition-all duration-200",
+                    "focus:outline-none focus:border-orange-400 focus:bg-white",
+                    "placeholder:text-stone-400"
+                  )}
+                />
+                <button
+                  onClick={() => deleteInspirationEntry(index)}
+                  className="absolute top-2 right-2 p-1 text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                  title="删除"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {inspirationEntries.length === 0 && (
+            <p className="text-center text-stone-400 text-sm py-4">
+              点击「新增」开始记录灵感...
+            </p>
+          )}
+        </div>
+      </motion.div>
+
       {/* 标签预览 - 与留言精选风格一致 */}
       <motion.div 
         className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-stone-100"
@@ -640,7 +736,7 @@ export function ProfileEditor() {
           )}
         </button>
         <p className="mt-3 text-sm text-stone-400">
-          系统将综合分析你的个人简介和随心记，生成个性化标签
+          系统将综合分析你的个人简介、随心记和灵感速记，生成个性化标签
         </p>
       </motion.div>
     </motion.div>

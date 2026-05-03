@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
           aboutMe: '',
           aboutMeEn: '',
           casualNotes: '',
+          inspirationNotes: '',
           tags: [],
           createdAt: null,
           updatedAt: null,
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
         aboutMe: profile.aboutMe,
         aboutMeEn: profile.aboutMeEn,
         casualNotes: profile.casualNotes,
+        inspirationNotes: (profile as any).inspirationNotes || '',
         tags: JSON.parse(profile.tags || '[]'),
         createdAt: profile.createdAt.toISOString(),
         updatedAt: profile.updatedAt.toISOString(),
@@ -58,28 +60,36 @@ export async function POST(request: NextRequest) {
     const userId = getLocalUserId();
 
     const body = await request.json();
-    let { aboutMe, aboutMeEn, casualNotes, tags } = body;
+    let { aboutMe, aboutMeEn, casualNotes, inspirationNotes, tags } = body;
 
     // 查询现有数据
     const existingProfile = await prisma.userProfile.findUnique({
       where: { userId: userId },
     });
 
-    const newAboutMe = (aboutMe || '').trim();
-    const newCasualNotes = (casualNotes || '').trim();
+    // 判断哪些字段被明确提供了（只更新提供的字段，避免清空其他字段）
+    const hasAboutMe = 'aboutMe' in body;
+    const hasCasualNotes = 'casualNotes' in body;
+    const hasInspirationNotes = 'inspirationNotes' in body;
+    const hasAboutMeEn = 'aboutMeEn' in body;
+    const hasTags = 'tags' in body;
 
-    // 调用 AI 分析内容并生成标签
+    const newAboutMe = hasAboutMe ? (aboutMe || '').trim() : (existingProfile?.aboutMe || '');
+    const newCasualNotes = hasCasualNotes ? (casualNotes || '').trim() : (existingProfile?.casualNotes || '');
+    const newInspirationNotes = hasInspirationNotes ? (inspirationNotes || '').trim() : ((existingProfile as any)?.inspirationNotes || '');
+
+    // 调用 AI 分析内容并生成标签（仅当提供了 aboutMe 或 casualNotes 时）
     let aiAnalysisUsed = false;
-    if (newAboutMe || newCasualNotes) {
+    if (hasAboutMe || hasCasualNotes) {
       try {
         console.log('[Profile POST] 调用 AI 分析内容...');
         const result = await analyzeProfileContent(newAboutMe, newCasualNotes);
-        
+
         // 如果 aboutMe 是中文，使用 AI 翻译结果保存到 aboutMeEn
         if (containsChinese(newAboutMe) && result.translation) {
           aboutMeEn = result.translation;
         }
-        
+
         tags = result.tags;
         aiAnalysisUsed = true;
         console.log('[Profile POST] AI 分析完成，生成标签:', tags);
@@ -94,20 +104,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 构建 update 数据（只包含明确提供的字段）
+    const updateData: any = {};
+    if (hasAboutMe) updateData.aboutMe = newAboutMe;
+    if (hasCasualNotes) updateData.casualNotes = newCasualNotes;
+    if (hasInspirationNotes) updateData.inspirationNotes = newInspirationNotes;
+    if (hasAboutMeEn && aboutMeEn !== undefined) updateData.aboutMeEn = aboutMeEn;
+    if (aiAnalysisUsed) updateData.tags = JSON.stringify(tags);
+
     // Upsert 操作 - 存在则更新，不存在则创建
     const profile = await prisma.userProfile.upsert({
       where: { userId: userId },
-      update: {
-        aboutMe: newAboutMe,
-        casualNotes: newCasualNotes,
-        ...(aboutMeEn !== undefined && { aboutMeEn }),
-        ...(aiAnalysisUsed && { tags: JSON.stringify(tags) }),
-      },
+      update: updateData,
       create: {
         userId: userId,
         aboutMe: newAboutMe,
         aboutMeEn: aboutMeEn || '',
         casualNotes: newCasualNotes,
+        inspirationNotes: newInspirationNotes || '',
         tags: JSON.stringify(tags || []),
       },
     });
@@ -120,6 +134,7 @@ export async function POST(request: NextRequest) {
         aboutMe: profile.aboutMe,
         aboutMeEn: profile.aboutMeEn,
         casualNotes: profile.casualNotes,
+        inspirationNotes: (profile as any).inspirationNotes || '',
         tags: JSON.parse(profile.tags || '[]'),
         createdAt: profile.createdAt.toISOString(),
         updatedAt: profile.updatedAt.toISOString(),

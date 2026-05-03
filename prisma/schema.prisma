@@ -41,6 +41,12 @@ model Postcard {
   recipientInterests String?
   coreInterests      String?
   recipientBio       String?
+  dislikes           String?
+  cardPreference     String?
+  contentPreference  String?
+  languagePreference String?
+  specialRequests    String?
+  languages          String?
   status             String             @default("draft")
   sentDate           DateTime?
   receivedDate       DateTime?
@@ -181,10 +187,11 @@ model MessageAnalysis {
 model UserProfile {
   id          String   @id @default(cuid())
   userId      String   @unique @default("local")
-  aboutMe     String   @default("")
-  aboutMeEn   String   @default("")
-  casualNotes String   @default("")
-  tags        String   @default("[]")
+  aboutMe           String   @default("")
+  aboutMeEn         String   @default("")
+  casualNotes       String   @default("")
+  inspirationNotes  String   @default("")
+  tags              String   @default("[]")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

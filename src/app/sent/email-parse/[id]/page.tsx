@@ -63,6 +63,9 @@ export default function EmailDetailPage() {
   // 素材状态
   const [hasMaterials, setHasMaterials] = useState<boolean | null>(null);
 
+  // 灵感速记状态
+  const [inspirationNotes, setInspirationNotes] = useState('');
+
   // 判断是否已登录
   const isAuthenticated = !!token && !!user;
 
@@ -169,7 +172,7 @@ export default function EmailDetailPage() {
 
     setIsGenerating(true);
     try {
-      const tones = ['precise', 'warm', 'cultural'];
+      const tones = ['strict', 'expand', 'creative'];
       const results = await Promise.all(
         tones.map(t =>
           fetch('/api/content/generate', {
@@ -255,6 +258,25 @@ export default function EmailDetailPage() {
     router.push('/sent/email-parse');
   };
 
+  // 保存灵感速记
+  const handleSaveInspiration = async (notes: string) => {
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ inspirationNotes: notes }),
+      });
+      if (response.ok) {
+        setInspirationNotes(notes);
+      }
+    } catch {
+      // silent fail
+    }
+  };
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-orange-50/30 flex items-center justify-center">
@@ -313,6 +335,8 @@ export default function EmailDetailPage() {
               isGenerating={isGenerating}
               hasMaterials={hasMaterials}
               onGoToMaterials={() => router.push('/profile')}
+              inspirationNotes={inspirationNotes}
+              onSaveInspiration={handleSaveInspiration}
             />
           </div>
         )}

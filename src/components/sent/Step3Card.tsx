@@ -28,9 +28,9 @@ interface Step3CardProps {
 }
 
 const TAB_DEFS = [
-  { tone: 'precise', label: '事实版', versionLabel: '版本 A', description: '保守、事实导向' },
-  { tone: 'warm', label: '温情版', versionLabel: '版本 B', description: '温暖、走心' },
-  { tone: 'cultural', label: '文化版', versionLabel: '版本 C', description: '文化交流视角' },
+  { tone: 'strict', label: '严谨版', versionLabel: '版本 A', description: '只陈述事实，措辞微调' },
+  { tone: 'expand', label: '扩展版', versionLabel: '版本 B', description: '基于事实合理推断' },
+  { tone: 'creative', label: '脑洞版', versionLabel: '版本 C', description: '联想丰富，添加细节' },
 ] as const;
 
 export function Step3Card({
@@ -44,7 +44,7 @@ export function Step3Card({
   onConfirm,
   copied,
 }: Step3CardProps) {
-  const [activeTab, setActiveTab] = useState(1); // default: warm/温情版
+  const [activeTab, setActiveTab] = useState(1); // default: expand/扩展版
   const [confirmed, setConfirmed] = useState(false);
 
   // Determine if we're in multi-version mode

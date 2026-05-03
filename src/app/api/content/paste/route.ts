@@ -114,11 +114,31 @@ export async function POST(request: NextRequest) {
 
 
     // 构建统一的返回结果
+    // 如果因质量差跳过了覆盖，用数据库中的好数据代替 AI 差数据
+    const effectiveParsedInfo = (saveResult as any).skippedDueToPoorQuality
+      ? {
+          name: saveResult.postcard.recipientName,
+          country: saveResult.postcard.recipientCountry,
+          city: saveResult.postcard.recipientCity,
+          address: saveResult.postcard.recipientAddress,
+          interests: saveResult.postcard.recipientInterests?.split(', ').filter(Boolean) || [],
+          coreInterests: saveResult.postcard.coreInterests?.split(', ').filter(Boolean) || [],
+          dislikes: saveResult.postcard.dislikes?.split(', ').filter(Boolean) || [],
+          messageToSender: saveResult.postcard.recipientBio || '',
+          cardPreference: saveResult.postcard.cardPreference || '',
+          contentPreference: saveResult.postcard.contentPreference || '',
+          languagePreference: saveResult.postcard.languagePreference || '',
+          specialRequests: saveResult.postcard.specialRequests || '',
+          languages: saveResult.postcard.languages?.split(', ').filter(Boolean) || [],
+          distance: saveResult.postcard.distance || 0,
+        }
+      : finalInfo;
+
     const responseData = buildResponseData(
       saveResult.postcard,
       saveResult.isDuplicate,
       saveResult.duplicateInfo,
-      finalInfo,
+      effectiveParsedInfo,
       saveResult.sanitizedAddress
     );
 

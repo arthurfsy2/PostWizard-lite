@@ -13,6 +13,7 @@ export interface ProfileData {
   aboutMe: string;           // 个人简介（英文）
   casualNotes: string;       // 随心记（中文）
   casualNotesEn?: string;    // AI翻译的英文版本
+  inspirationNotes?: string; // 灵感速记（针对收件人的即时反应）
   tags: string[];            // AI 识别标签
   createdAt?: string;
   updatedAt?: string;

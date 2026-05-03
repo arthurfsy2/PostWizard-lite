@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, ArrowLeft, Copy, Check, FileDown, Printer, Mail, MapPin, Globe, Heart, Ban, Search, Calendar, User, Lightbulb, Target } from 'lucide-react';
+import { Loader2, ArrowLeft, Copy, Check, FileDown, Printer, Mail, MapPin, Globe, Heart, Ban, Search, User, Lightbulb, Target } from 'lucide-react';
 
   interface HistoryDetail {
   id: string;
@@ -33,17 +33,21 @@ import { Loader2, ArrowLeft, Copy, Check, FileDown, Printer, Mail, MapPin, Globe
     id: string;
     recipientName: string;
     recipientCountry: string;
-    recipientCity: string;
+    recipientCity?: string;
     recipientAddress?: string;
+    recipientAge?: number;
+    recipientGender?: string;
     postcardId: string;
     distance?: number;
     recipientInterests?: string;
-    recipientDislikes?: string;
+    coreInterests?: string;
+    recipientBio?: string;
+    dislikes?: string;
     contentPreference?: string;
     cardPreference?: string;
     languagePreference?: string;
     specialRequests?: string;
-    messageToSender?: string;
+    languages?: string;
   } | null;
 }
 
@@ -165,6 +169,9 @@ function HistoryDetailPage() {
       formal: '正式礼貌',
       humorous: '幽默风趣',
       poetic: '文艺诗意',
+      strict: '严谨版',
+      expand: '扩展版',
+      creative: '脑洞版',
     };
     return toneMap[tone || ''] || tone || '友好热情';
   };
@@ -214,7 +221,7 @@ function HistoryDetailPage() {
 
   const postcard = data.postcard;
   const interests = parseInterests(postcard?.recipientInterests);
-  const dislikes = parseInterests(postcard?.recipientDislikes);
+  const dislikes = parseInterests(postcard?.dislikes);
   const wordCount = getWordCount(data.contentEn || data.contentBody);
 
   return (
@@ -306,7 +313,7 @@ function HistoryDetailPage() {
                     <User className="h-4 w-4 text-emerald-600" />
                     <span className="text-sm font-semibold text-emerald-600">基本信息</span>
                   </div>
-                  
+
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label className="text-slate-500 text-xs">收件人</Label>
@@ -321,6 +328,32 @@ function HistoryDetailPage() {
                       <p className="font-medium text-slate-900">{postcard?.recipientCity || '-'}</p>
                     </div>
                   </div>
+
+                  {/* 年龄和性别 */}
+                  {(postcard?.recipientAge || postcard?.recipientGender) && (
+                    <div className="grid grid-cols-3 gap-4 mt-3">
+                      {postcard?.recipientAge && (
+                        <div>
+                          <Label className="text-slate-500 text-xs">年龄</Label>
+                          <p className="font-medium text-slate-900">{postcard.recipientAge} 岁</p>
+                        </div>
+                      )}
+                      {postcard?.recipientGender && (
+                        <div>
+                          <Label className="text-slate-500 text-xs">性别</Label>
+                          <p className="font-medium text-slate-900">{postcard.recipientGender}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 地址 */}
+                  {postcard?.recipientAddress && (
+                    <div className="mt-3">
+                      <Label className="text-slate-500 text-xs">地址</Label>
+                      <p className="text-sm text-slate-700">{postcard.recipientAddress}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* ID 和距离 */}
@@ -356,6 +389,17 @@ function HistoryDetailPage() {
                   </div>
                 )}
 
+                {/* 个人简介 */}
+                {postcard?.recipientBio && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
+                      <User className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm font-semibold text-emerald-600">个人简介</span>
+                    </div>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{postcard.recipientBio}</p>
+                  </div>
+                )}
+
                 {/* 兴趣爱好 */}
                 {interests.length > 0 && (
                   <div>
@@ -368,6 +412,26 @@ function HistoryDetailPage() {
                         <Badge
                           key={index}
                           className="bg-emerald-50 text-emerald-700 border-emerald-200"
+                        >
+                          {interest}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 核心兴趣 */}
+                {postcard?.coreInterests && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
+                      <Target className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm font-semibold text-emerald-600">核心兴趣</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {parseInterests(postcard.coreInterests).map((interest, index) => (
+                        <Badge
+                          key={index}
+                          className="bg-blue-50 text-blue-700 border-blue-200"
                         >
                           {interest}
                         </Badge>
@@ -407,15 +471,37 @@ function HistoryDetailPage() {
                   </div>
                 )}
 
-                {/* 想你写的内容 */}
-                {postcard?.messageToSender && (
+                {/* 卡片偏好 */}
+                {postcard?.cardPreference && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
+                      <Target className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm font-semibold text-emerald-600">卡片偏好</span>
+                    </div>
+                    <p className="text-sm text-slate-700">{postcard.cardPreference}</p>
+                  </div>
+                )}
+
+                {/* 语言能力 */}
+                {postcard?.languages && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
+                      <Globe className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm font-semibold text-emerald-600">语言能力</span>
+                    </div>
+                    <p className="text-sm text-slate-700">{postcard.languages}</p>
+                  </div>
+                )}
+
+                {/* 特殊请求 */}
+                {postcard?.specialRequests && (
                   <div>
                     <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
                       <Mail className="h-4 w-4 text-emerald-600" />
-                      <span className="text-sm font-semibold text-emerald-600">想收到的内容</span>
+                      <span className="text-sm font-semibold text-emerald-600">特殊请求</span>
                     </div>
-                    <p className="text-sm font-medium text-slate-700 bg-emerald-50 p-3 rounded-lg">
-                      {postcard.messageToSender}
+                    <p className="text-sm font-medium text-slate-700 bg-amber-50 p-3 rounded-lg">
+                      {postcard.specialRequests}
                     </p>
                   </div>
                 )}

@@ -32,6 +32,12 @@ export interface GenerationOptions {
     recipientInterests?: string;
     coreInterests?: string;
     recipientBio?: string;
+    dislikes?: string;
+    cardPreference?: string;
+    contentPreference?: string;
+    languagePreference?: string;
+    specialRequests?: string;
+    languages?: string;
   };
 }
 
@@ -39,6 +45,7 @@ export interface MatchedMaterial {
   category: string; // 分类：兴趣爱好、旅行故事等
   content: string; // 素材内容摘要
   matchedKeyword: string; // 匹配的关键词
+  matchType?: 'interest' | 'dislike'; // 匹配类型：兴趣或厌恶
 }
 
 export interface GenerationResult {
@@ -292,10 +299,11 @@ export class GenerationService {
       // 从个人要素构建素材列表
       if (userProfile) {
         allMaterials = this.buildMaterialsFromProfile(userProfile);
-        // 匹配素材（用于标记哪些与收件人兴趣相关）
+        // 匹配素材（用于标记哪些与收件人兴趣/厌恶相关）
         matchedMaterials = this.matchMaterials(
           allMaterials,
           postcard.coreInterests || postcard.recipientInterests,
+          postcard.dislikes,
         );
       }
     }
@@ -336,6 +344,7 @@ export class GenerationService {
     console.log("  → Prompt 长度:", prompt.length);
     console.log("  → 个人要素数量:", allMaterials.length);
     console.log("  → 匹配素材数量:", matchedMaterials.length);
+    console.log("  → 素材详情:", JSON.stringify(allMaterials.map(m => ({ category: m.category, source: m.source, contentPreview: m.content?.substring(0, 50) })), null, 2));
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     // 使用 OpenAI SDK（走代理 + URL 归一化）
@@ -555,6 +564,7 @@ export class GenerationService {
    * - aboutMe: 个人简介（用户原始输入，可能是中文或英文）
    * - aboutMeEn: 个人简介英文翻译（仅当用户输入中文时存在）
    * - casualNotes: 随心记（用户输入的中文）
+   * - inspirationNotes: 灵感速记（针对收件人的即时反应）
    * - tags: AI识别的标签列表
    *
    * Prompt 使用逻辑：
@@ -595,7 +605,7 @@ export class GenerationService {
         const parsed = JSON.parse(profile.casualNotes);
         if (Array.isArray(parsed)) {
           allNotes = parsed
-            .map((e: any) => (e.content || '').trim())
+            .map((e: any) => e.date ? `[${e.date}] ${(e.content || '').trim()}` : (e.content || '').trim())
             .filter((n: string) => n.length > 5);
         }
       } catch {
@@ -612,6 +622,34 @@ export class GenerationService {
           content: allNotes.join("\n\n---\n\n"),
           source: "casualNotes",
           description: "随心记（中文原文）",
+        });
+      }
+    }
+
+    // 灵感速记 - 与随心记格式相同（JSON 数组 [{date, content}]）
+    if (profile.inspirationNotes && profile.inspirationNotes.trim()) {
+      let allNotes: string[] = [];
+      try {
+        const parsed = JSON.parse(profile.inspirationNotes);
+        if (Array.isArray(parsed)) {
+          allNotes = parsed
+            .map((e: any) => e.date ? `[${e.date}] ${(e.content || '').trim()}` : (e.content || '').trim())
+            .filter((n: string) => n.length > 5);
+        }
+      } catch {
+        // 旧格式：纯文本
+        allNotes = profile.inspirationNotes
+          .split(/\n\n+/)
+          .map((n: string) => n.trim())
+          .filter((n: string) => n.length > 5);
+      }
+
+      if (allNotes.length > 0) {
+        materials.push({
+          category: "故事素材",
+          content: allNotes.join("\n\n---\n\n"),
+          source: "inspirationNotes",
+          description: "灵感速记（针对收件人的即时反应）",
         });
       }
     }
@@ -644,18 +682,28 @@ export class GenerationService {
   private matchMaterials(
     userMaterials: any[],
     recipientInterests?: string | null,
+    recipientDislikes?: string | null,
   ): MatchedMaterial[] {
     const matched: MatchedMaterial[] = [];
 
-    if (!recipientInterests || !userMaterials.length) {
+    if ((!recipientInterests && !recipientDislikes) || !userMaterials.length) {
       return matched;
     }
 
     // 将收件人兴趣转换为关键词数组
-    const interestKeywords = recipientInterests
+    const interestKeywords = (recipientInterests || '')
       .toLowerCase()
-      .split(/[,，、\s]+/)
+      .split(/[,，、\s|]+/)
       .filter(Boolean);
+
+    // 将收件人厌恶转换为关键词数组
+    const dislikeKeywords = (recipientDislikes || '')
+      .toLowerCase()
+      .split(/[,，、\s|]+/)
+      .filter(Boolean);
+
+    // 合并所有关键词（兴趣 + 厌恶）
+    const allKeywords = [...interestKeywords, ...dislikeKeywords];
 
     // 分类映射（适配新的 Profile 结构）
     const categoryMap: Record<string, string> = {
@@ -676,13 +724,16 @@ export class GenerationService {
       const content = material.content?.toLowerCase() || "";
       const categoryZh = categoryMap[material.category] || material.category;
 
-      // 检查素材内容是否匹配任何兴趣关键词
-      for (const keyword of interestKeywords) {
+      // 检查素材内容是否匹配任何关键词（兴趣或厌恶）
+      for (const keyword of allKeywords) {
         if (content.includes(keyword)) {
+          // 判断是匹配兴趣还是厌恶
+          const isDislike = dislikeKeywords.includes(keyword);
           matched.push({
             category: categoryZh,
             content: material.content, // 使用完整内容，不截断
             matchedKeyword: keyword,
+            matchType: isDislike ? 'dislike' : 'interest',
           });
           break; // 每个素材只匹配一次
         }
@@ -866,7 +917,7 @@ ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraIn
     parts.push(`
 
 ## 语气风格
-${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? "- 轻松、随意" : options.tone === "precise" ? "- 准确、简洁、信息密度高，只陈述事实不加修饰" : options.tone === "warm" ? "- 温暖、走心、有情感共鸣，像亲密朋友写信" : options.tone === "cultural" ? "- 文化交流视角，侧重介绍本地生活细节和文化差异" : "- 友好、温暖、真诚"}
+${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? "- 轻松、随意" : options.tone === "strict" ? "- 严谨：只使用素材原始事实，措辞微调，不扩展不联想" : options.tone === "expand" ? "- 适度扩展：基于素材事实做合理推断和泛化" : options.tone === "creative" ? "- 适度脑洞：基于素材事实进行联想，添加合理细节" : "- 友好、温暖、真诚"}
 - 简洁自然，像真实朋友写的
 - 避免模板化套话（如 "I noticed from your profile...", "That's wonderful!"）
 
@@ -957,20 +1008,28 @@ ${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? 
 1. **日期行**：${month} ${day}, ${year} {temp}°C {weather_emoji}
    - temp 和 weather_emoji 请根据合理天气填写（如 25°C ☀️）
 2. **问候**（1-2 句）：用收件人的名字打招呼
+   - **优先使用昵称**：如果收件人简介中提到昵称/偏好称呼（如 "everyone calls me Jess"），必须用昵称而非全名
+   - 问候示例："Hi Jess," 而非 "Hi Jessica Sollhart,"——全名太正式，像填表
 3. **自我介绍**（2-3 句）：来自哪里、做什么的、一个有趣的细节（只能用素材事实）
 4. **兴趣回应 + 个人分享**（3-5 句，全文最重要的部分）：
+   - **必须从收件人兴趣列表中挑选 1-2 个具体兴趣进行回应**，不要泛泛而谈
    - **情况 A：素材与收件人兴趣有真实关联** → 自然地建立连接，分享相关经历
-   - **情况 B：素材与收件人兴趣没有关联** → **不要编造连接！** 如实分享随心记中的内容，然后真诚地对收件人的兴趣表示好奇
+   - **情况 B：素材与收件人兴趣没有关联** → **不要编造连接！** 如实分享随心记中的内容，然后真诚地对收件人的**具体兴趣**表示好奇
    - 两种情况都必须包含：**至少 1 个开放式问题**
    - 🚫 **严禁编造**：不能说"我对 X 也很感兴趣"或"作为一个 Y，我觉得 Z 很有趣"——除非素材中明确提到
+   - 🚫 **禁止泛泛回应**：不能只说 "Your hobbies sound interesting!"——必须提到具体的兴趣名称（如 "I'm curious about your pin collection"）
    - ✅ **正确做法**：如果没有关联，就大方地说 "I'd love to hear more about your interest in..." 或 "What got you into...?"
-   - 禁止：泛泛的 "That's interesting!" / "I noticed from your profile..." / "That's wonderful!"
 5. **祝愿**（1 句）：针对收件人具体情况的真诚祝愿
 6. **签名**
 
 ### 4. 对话感要求（必须遵守）
 - **必须包含至少 1 个开放式问题**（让收件人有话可回，而不是 yes/no 问题）
 - 如果收件人 bio 中有情感表达（如热爱某事物、家庭信息），**必须回应这种情感**
+- **如果收件人有"特殊要求"（specialRequests），必须在信中自然回应**：
+  - 例如收件人说 "interested in direct swaps" → 在信中表示你也愿意交换
+  - 例如收件人说 "write in Finnish if you are Finnish" → 如果你会芬兰语就用芬兰语写一句
+  - 例如收件人说 "tell me about your day" → 在信中分享你今天的一件事
+  - 只回应你**确实能做到的**要求，不要承诺做不到的事
 - 语气要像朋友间的闲聊，不是百科全书式的陈述
 - 语言${options.extraInfo?.languages ? `（收件人懂 ${options.extraInfo.languages}，如果收件人的语言包含中文，可以适当加入一两句中文问候）` : '用英文'}
 
@@ -981,10 +1040,15 @@ ${options.tone === "formal" ? "- 正式、礼貌" : options.tone === "casual" ? 
 ${postcard.recipientAge ? `- **年龄**: ${postcard.recipientAge}` : ""}
 ${(postcard.coreInterests || postcard.recipientInterests) ? `- **兴趣爱好**: ${postcard.coreInterests || postcard.recipientInterests}` : ""}
 ${postcard.recipientBio ? `- **个人介绍**: ${postcard.recipientBio}` : ""}
-${options.extraInfo?.languages ? `- **语言能力**: ${options.extraInfo.languages}` : ""}
+${postcard.languages ? `- **会说的语言**: ${postcard.languages}` : ""}
 ${options.extraInfo?.pronouns ? `- **代词**: ${options.extraInfo.pronouns}` : ""}
 ${options.extraInfo?.birthday ? `- **生日**: ${options.extraInfo.birthday}` : ""}
 ${options.extraInfo?.sentDate ? `- **发送日期**: ${options.extraInfo.sentDate}` : ""}
+${postcard.dislikes ? `- **不喜欢的内容**: ${postcard.dislikes}` : ""}
+${postcard.cardPreference ? `- **明信片偏好**: ${postcard.cardPreference}` : ""}
+${postcard.contentPreference ? `- **内容偏好**: ${postcard.contentPreference}` : ""}
+${postcard.languagePreference ? `- **语言偏好**: ${postcard.languagePreference}` : ""}
+${postcard.specialRequests && postcard.specialRequests !== 'none' ? `- **特殊要求**: ${postcard.specialRequests}` : ""}
 ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraInfo.aboutText.substring(0, 500)}${options.extraInfo.aboutText.length > 500 ? "...(已截断)" : ""}` : ""}
 
 ## 我的个人要素（只能使用以下事实，严禁编造）
@@ -1003,7 +1067,18 @@ ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraIn
         .filter(Boolean),
     );
 
+    // 预计算需要在 prompt 中使用的变量
+    const hasDislikeMatch = matchedMaterials.some(m => m.matchType === 'dislike');
+    const specialRequestKeywords = ['交换', '笔友', 'swap', 'pen-pal', 'exchange', 'direct'];
+    const hasSpecialRequestInspiration = allMaterials.some(
+      m => m.source === 'inspirationNotes' &&
+           m.content?.trim().length > 5 &&
+           specialRequestKeywords.some(kw => m.content?.toLowerCase().includes(kw))
+    );
+
     if (allMaterials.length > 0) {
+      const materialParts: string[] = [];
+
       allMaterials.forEach((material, index) => {
         const categoryZh = material.category || "素材";
         const contentLower = material.content?.toLowerCase() || "";
@@ -1012,19 +1087,52 @@ ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraIn
           Array.from(matchedKeywords).some((kw) => contentLower.includes(kw));
 
         if (categoryZh === "兴趣标签") {
-          parts.push(`\n【${categoryZh}】关键词：${material.content}`);
+          const part = `\n【${categoryZh}】关键词：${material.content}`;
+          parts.push(part);
+          materialParts.push(part);
         } else {
-          const matchMarker = isMatched ? " ✅ 匹配收件人兴趣" : "";
-          parts.push(
-            `\n========== ${index + 1}. 【${categoryZh}】${matchMarker} ==========\n${material.content}\n`,
+          // 检查是否匹配了收件人的厌恶
+          const matchedDislike = matchedMaterials.find(
+            m => m.content === material.content && m.matchType === 'dislike'
           );
+          const matchedInterest = matchedMaterials.find(
+            m => m.content === material.content && m.matchType !== 'dislike'
+          );
+
+          let matchMarker = '';
+          if (matchedDislike) {
+            matchMarker = " ⚠️ 匹配收件人厌恶";
+          } else if (matchedInterest) {
+            matchMarker = " ✅ 匹配收件人兴趣";
+          }
+
+          const part =
+            `\n========== ${index + 1}. 【${categoryZh}】${matchMarker} ==========\n${material.content}\n`;
+          parts.push(part);
+          materialParts.push(part);
         }
       });
 
+      // 输出素材部分到日志，方便调试
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('[Generation] Prompt 素材部分:');
+      console.log(materialParts.join(''));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
       if (matchedMaterials.length > 0) {
-        parts.push(
-          `\n💡 **匹配提示**：以上标记 ✅ 的素材与收件人兴趣相关，请优先使用这些素材来建立真实连接。`,
-        );
+        const interestMatches = matchedMaterials.filter(m => m.matchType !== 'dislike');
+        const dislikeMatches = matchedMaterials.filter(m => m.matchType === 'dislike');
+
+        if (interestMatches.length > 0) {
+          parts.push(
+            `\n💡 **匹配提示**：以上标记 ✅ 的素材与收件人兴趣相关，请优先使用这些素材来建立真实连接。`,
+          );
+        }
+        if (dislikeMatches.length > 0) {
+          parts.push(
+            `\n⚠️ **厌恶匹配提示**：以上标记 ⚠️ 的素材与收件人厌恶相关（如蜘蛛、蛇等）。你可以表达共鸣（如"我也害怕蜘蛛"），这能拉近距离。`,
+          );
+        }
       }
 
       parts.push(
@@ -1039,74 +1147,78 @@ ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraIn
           "- 匹配的故事素材（✅ 标记）可用于回应收件人兴趣\n" +
           "- **没有匹配素材时**：直接引用随心记内容分享，不要编造与收件人兴趣的关联\n" +
           "- 个人简介用于开场自我介绍（2-3 句话即可，不要超过 50 词）\n" +
-          "- 不要大段复制粘贴素材原文，用自己的话转述",
+          "- 不要大段复制粘贴素材原文，用自己的话转述" +
+          (hasDislikeMatch
+            ? "\n- 🔴 **重要：厌恶共鸣必须使用！** 你有一条标记为 ⚠️ 的素材，它匹配了收件人的厌恶（如蜘蛛、蛇等）。**你必须在明信片中表达共鸣**（如\"我也害怕蜘蛛\"、\"我和你一样不喜欢...\"），这是拉近距离的最佳方式！不要忽略这条素材！"
+            : "") +
+          (hasSpecialRequestInspiration
+            ? ""
+            : "\n- 🚫 **关于特殊请求**：你的灵感速记中没有关于收件人特殊请求的回应，因此严禁发散！不要写\"如果你想交换\"、\"我很乐意建立长期联系\"、\"欢迎直接交换\"、\"Since you are open to direct swaps\"等内容，除非灵感速记中明确表达了你的意愿"),
       );
     } else {
       parts.push("\n📝 暂无个人要素，请只写简短问候和祝愿，不要编造个人信息。");
     }
 
-    // 根据 tone 构建完全不同的风格指引（结构、用词、侧重点都不同）
+    // 根据 tone 构建不同的发散程度指引
     const toneGuide = (() => {
       switch (options.tone) {
-        case 'precise':
-          return `## 🎯 语气风格：事实版 (precise)
+        case 'strict':
+          return `## 🎯 发散程度：严谨版 (strict)
 
-**核心理念**：简洁、准确、信息密度高。像一位严谨但友善的笔友。
+**核心理念**：只使用素材中的原始事实，仅做措辞微调。像一位严谨的记录者。
 
-**结构特点**：
-- 自我介绍：直接陈述事实（职业、城市），不加修饰语
-- 兴趣回应：用陈述句而非感叹句，如 "Photography requires patience." 而非 "Photography is so cool!"
-- 可以提 1 个问题，但问题要具体而非泛泛
-- 结尾简短，不啰嗦
+**素材使用规则**：
+- ✅ 可以：调整语序、替换同义词、改变句式
+- ✅ 可以：选择性使用素材中的事实（不需要全部用到）
+- ❌ 不能：添加素材中没有的细节、推断、联想或感受
+- ❌ 不能：把"喜欢动物"扩展为"看到猫猫狗狗很开心"
 
-**用词偏好**：
-- 偏好动词和名词，少用形容词和副词
-- 句子简短有力，平均 12-15 词/句
-- 避免：wonderful, amazing, fascinating, incredible
-- 偏好：interesting, notable, solid, clear
+**示例**：
+- 素材："I have a daughter, she loves animals"
+- ✅ "My daughter is quite fond of animals."
+- ❌ "Like most kids, my daughter loves animals."（这是推断）
 
-**素材使用**：只使用原始事实，不添加个人感受或联想
-**兴趣关联**：如无关联，直接提问即可，不编造连接`;
+**内容结构**：
+- 以自我介绍为主，分享自己的经历和兴趣
+- 🚫 **绝对不要向收件人提问！** 不要写"what sparked your interest?"、"Do you have a favorite...?"、"I'm curious..."等任何问句
+- 结尾只写祝福语，不要问问题`;
 
-        case 'warm':
-          return `## 💛 语气风格：温情版 (warm)
+        case 'expand':
+          return `## 💛 发散程度：扩展版 (expand)
 
-**核心理念**：温暖、走心、有情感共鸣。像一位亲密的朋友在写信。
+**核心理念**：在素材事实基础上做合理的推断和泛化。像一位善于共情的朋友。
 
-**结构特点**：
-- 自我介绍：加入个人感受（如 "每天骑车是我最放松的时刻"）
-- 兴趣回应：表达真诚好奇，分享自己类似的情感体验
-- 必须包含至少 1 个开放式问题，问题要有温度
-- 结尾祝愿要针对收件人具体情况
+**素材使用规则**：
+- ✅ 可以：基于事实做合理推断（如"喜欢动物"→"大部分小朋友都喜欢动物"）
+- ✅ 可以：添加合理的泛化描述（如"正如很多人一样"）
+- ✅ 可以：表达好奇和共鸣
+- ❌ 不能：编造具体的场景、故事或细节（如"她看到小兔子笑了"）
 
-**用词偏好**：
-- 多用表达情感的词汇：love, cherish, grateful, heartwarming
-- 句式柔和，多用复合句表达细腻感受
-- 可以用比喻和联想（但基于素材事实）
-- 语气词：honestly, truly, I must say
+**示例**：
+- 素材："I have a daughter, she loves animals"
+- ✅ "Like most children, my daughter has a real love for animals."
+- ❌ "My daughter lights up every time she sees a kitten at the park."（编造场景）
 
-**素材使用**：在事实基础上添加个人感受和好奇
-**兴趣回应**：即使没有关联，也要真诚表达 "I'd love to hear more about..."`;
+**兴趣回应**：可以表达真诚好奇和共鸣`;
 
-        case 'cultural':
-          return `## 🌏 语气风格：文化版 (cultural)
+        case 'creative':
+          return `## 🌏 发散程度：脑洞版 (creative)
 
-**核心理念**：文化交流视角。像一位热情的本地人，向远方朋友介绍自己的城市和文化。
+**核心理念**：基于素材事实进行联想，添加合理的细节和场景。像一位有想象力的讲故事者。
 
-**结构特点**：
-- 自我介绍：侧重你所在城市/国家的生活细节（天气、食物、节日、日常习惯）
-- 兴趣回应：尝试从文化差异的角度切入（如 "在中国，我们也流行..."）
-- 分享一个本地趣事或文化小知识（必须基于素材事实）
-- 结尾可以邀请对方分享他们国家的类似体验
+**素材使用规则**：
+- ✅ 可以：从事实出发进行合理联想（如"喜欢动物"→"看到猫猫狗狗都很开心"）
+- ✅ 可以：添加合理的场景细节（如"每次去动物园都特别兴奋"）
+- ✅ 可以：用生动的语言描绘画面
+- ❌ 不能：编造与事实矛盾的内容
+- ❌ 不能：把两个独立事实拼接成新故事
 
-**用词偏好**：
-- 描述性词汇丰富：vibrant, bustling, serene, traditional
-- 文化相关词汇：local, regional, tradition, custom, cuisine
-- 句式可以稍长，因为要描述场景
-- 强调 "不同" 和 "相似" 的对比
+**示例**：
+- 素材："I have a daughter, she loves animals"
+- ✅ "My daughter absolutely adores animals — her face lights up whenever she spots a dog or cat on the street."
+- ❌ "My daughter wants to be a vet when she grows up."（编造职业愿望）
 
-**素材使用**：重点使用与城市/生活相关的素材，弱化纯个人兴趣
-**文化切入**：从收件人的国家/兴趣中找文化连接点`;
+**兴趣回应**：可以用想象力丰富的方式回应，让信更有趣`;
 
         default:
           return `## 语气风格
@@ -1118,8 +1230,39 @@ ${options.extraInfo?.aboutText ? `\n## 收件人原文简介:\n${options.extraIn
 
     parts.push(`\n${toneGuide}
 
-⚠️ 你正在生成「${options.tone === 'precise' ? '事实版' : options.tone === 'warm' ? '温情版' : '文化版'}」，请严格遵循上述风格指引，不要偏离。
+⚠️ 你正在生成「${options.tone === 'strict' ? '严谨版' : options.tone === 'expand' ? '扩展版' : '脑洞版'}」，请严格遵循上述发散程度指引，不要偏离。
+
+## 🔍 生成前自检（必须逐条检查）
+完成初稿后，逐条检查以下内容：
+1. **问候是否用了昵称**（而非全名）？
+2. **是否回应了收件人的具体兴趣**（提到兴趣名称，而非泛泛说"hobbies"）？
+3. **是否使用了至少 3 个不同素材细节**（而非重复 1-2 个）？
+4. **发散程度是否匹配当前 tone**：
+   - strict：每句话是否都能在素材中找到对应事实？有无添加感受或推断？
+   - expand：是否至少有 1 处合理泛化（如"like most people"）？是否没有编造场景？
+   - creative：是否至少有 1 处生动的画面感描述？是否没有编造与事实矛盾的内容？
+5. **字数是否在 90-120 词之间**？（超过 120 词必须删减！）
+${options.tone === 'strict' ? '6. **strict 版本：是否有问号？** 如果有，必须删除所有问句！strict 版本只允许陈述句。' : ''}
+${hasDislikeMatch ? '7. **是否使用了厌恶共鸣素材？** 必须在文中表达对收件人厌恶的共鸣（如"我也害怕蜘蛛"）。' : ''}
+
+如果任何一条不通过，修改后再输出。
+
+## 发散程度对比示例
+素材："I have a 3-year-old daughter, she loves animals"
+
+| Tone | 输出示例 |
+|------|---------|
+| strict | "My daughter is quite fond of animals."（仅措辞微调） |
+| expand | "Like most kids her age, my daughter has a real love for animals."（合理泛化） |
+| creative | "My daughter absolutely adores animals — her face lights up whenever she spots a dog or cat on the street."（添加画面感） |
+
 - 禁止使用模板化套话
+
+## ⚠️ 字数硬性要求（必须遵守！）
+- **目标：90-120 词**（英文）
+- **绝对上限：120 词**（超过 120 词 = 不合格！）
+- 如果初稿超过 120 词，必须删减到 115 词左右再输出
+- 宁可写短一点（90 词），也不要超过 120 词
 
 ## ❌ 禁止使用的套话
 - "I noticed from your profile that..."

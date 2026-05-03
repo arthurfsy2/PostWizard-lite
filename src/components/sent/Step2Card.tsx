@@ -1,13 +1,15 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Check, User, Heart, Globe, Ban, FileText, Lightbulb, ArrowRight, ArrowLeft
+import {
+  Check, User, Heart, Globe, Ban, FileText, Lightbulb, ArrowRight, ArrowLeft, ChevronDown
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 interface AIParsedRecipient {
   id?: string;
@@ -26,6 +28,13 @@ interface AIParsedRecipient {
   specialRequests?: string;
 }
 
+interface InspirationEntry {
+  trigger: string;
+  label: string;
+  hint: string;
+  content: string;
+}
+
 interface Step2CardProps {
   parsedData: AIParsedRecipient;
   onGenerate: () => void;
@@ -33,6 +42,8 @@ interface Step2CardProps {
   isGenerating: boolean;
   hasMaterials: boolean | null;
   onGoToMaterials: () => void;
+  inspirationNotes?: string;
+  onSaveInspiration?: (notes: string) => Promise<void>;
 }
 
 export function Step2Card({
@@ -42,7 +53,107 @@ export function Step2Card({
   isGenerating,
   hasMaterials,
   onGoToMaterials,
+  inspirationNotes,
+  onSaveInspiration,
 }: Step2CardProps) {
+  const [showInspiration, setShowInspiration] = useState(false);
+  const [inspirationEntries, setInspirationEntries] = useState<InspirationEntry[]>([]);
+  const [isSavingInspiration, setIsSavingInspiration] = useState(false);
+  const [inspirationSaved, setInspirationSaved] = useState(false);
+
+  // 从 "英文 | 中文" 格式中提取中文部分，无中文则返回原文
+  const extractChinese = (text: string): string => {
+    if (!text) return '';
+    const parts = text.split('|').map(p => p.trim());
+    // 有中文部分则返回中文，否则返回英文
+    return parts.length > 1 && /[一-龥]/.test(parts[1]) ? parts[1] : parts[0];
+  };
+
+  // Generate inspiration entries from parsedData
+  useEffect(() => {
+    const entries: InspirationEntry[] = [];
+
+    if (parsedData.dislikes && parsedData.dislikes.length > 0) {
+      const dislikesText = parsedData.dislikes
+        .map(d => extractChinese(d))
+        .join('、');
+      entries.push({
+        trigger: 'dislikes',
+        label: `收件人不喜欢：${dislikesText}`,
+        hint: '你对这些有什么看法？有类似的经历吗？',
+        content: '',
+      });
+    }
+
+    if (parsedData.messageToSender) {
+      const msg = extractChinese(parsedData.messageToSender);
+      const msgPreview = msg.length > 60 ? msg.slice(0, 60) + '...' : msg;
+      entries.push({
+        trigger: 'messageToSender',
+        label: `TA 想对你说：${msgPreview}`,
+        hint: '写两句回应 TA 的话吧',
+        content: '',
+      });
+    }
+
+    if (parsedData.specialRequests && parsedData.specialRequests !== 'none') {
+      const sr = extractChinese(parsedData.specialRequests);
+      const srPreview = sr.length > 60 ? sr.slice(0, 60) + '...' : sr;
+      entries.push({
+        trigger: 'specialRequests',
+        label: `TA 的特殊请求：${srPreview}`,
+        hint: '你有相关的经历或能力吗？',
+        content: '',
+      });
+    }
+
+    // Pre-fill from saved inspirationNotes
+    if (inspirationNotes) {
+      try {
+        const savedEntries = JSON.parse(inspirationNotes);
+        if (Array.isArray(savedEntries)) {
+          savedEntries.forEach((saved: { date?: string; content?: string }) => {
+            if (saved.content) {
+              // Match by order (entries are deterministic based on parsedData)
+              const idx = savedEntries.indexOf(saved);
+              if (idx < entries.length) {
+                entries[idx].content = saved.content;
+              }
+            }
+          });
+        }
+      } catch {
+        // ignore invalid JSON
+      }
+    }
+
+    setInspirationEntries(entries);
+  }, [parsedData, inspirationNotes]);
+
+  const handleInspirationChange = (index: number, value: string) => {
+    setInspirationEntries(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], content: value };
+      return next;
+    });
+    setInspirationSaved(false);
+  };
+
+  const handleSaveInspiration = async () => {
+    if (!onSaveInspiration) return;
+    setIsSavingInspiration(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const payload = inspirationEntries
+        .filter(e => e.content.trim())
+        .map(e => ({ date: today, content: e.content.trim() }));
+      await onSaveInspiration(JSON.stringify(payload));
+      setInspirationSaved(true);
+    } finally {
+      setIsSavingInspiration(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -154,7 +265,7 @@ export function Step2Card({
                         key={index}
                         className="bg-red-50 text-red-700 line-through hover:bg-red-100 border-red-200"
                       >
-                        {dislike}
+                        {extractChinese(dislike)}
                       </Badge>
                     ))}
                   </div>
@@ -168,7 +279,20 @@ export function Step2Card({
                     <Heart className="h-4 w-4 text-emerald-600" />
                     <span className="text-sm font-semibold text-emerald-600">内容喜好</span>
                   </div>
-                  <p className="text-sm text-slate-700">{parsedData.contentPreference}</p>
+                  <p className="text-sm text-slate-700">{extractChinese(parsedData.contentPreference)}</p>
+                </div>
+              )}
+
+              {/* 特殊请求 */}
+              {parsedData.specialRequests && parsedData.specialRequests !== 'none' && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
+                    <FileText className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-semibold text-emerald-600">特殊请求</span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-700 bg-emerald-50 p-3 rounded-lg">
+                    {extractChinese(parsedData.specialRequests)}
+                  </p>
                 </div>
               )}
 
@@ -180,11 +304,76 @@ export function Step2Card({
                     <span className="text-sm font-semibold text-emerald-600">想你写的内容</span>
                   </div>
                   <p className="text-sm font-medium text-slate-700 bg-emerald-50 p-3 rounded-lg">
-                    {parsedData.messageToSender}
+                    {extractChinese(parsedData.messageToSender)}
                   </p>
                 </div>
               )}
             </div>
+
+            {/* 灵感速记 */}
+            {inspirationEntries.length > 0 && (
+              <div className="pt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 w-full text-left group"
+                  onClick={() => setShowInspiration(!showInspiration)}
+                >
+                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-semibold text-amber-700">
+                    灵感速记（可选，点击展开/折叠）
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 text-amber-500 ml-auto transition-transform duration-200 ${
+                      showInspiration ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {showInspiration && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="mt-3 space-y-3"
+                  >
+                    {inspirationEntries.map((entry, index) => (
+                      <div
+                        key={entry.trigger}
+                        className="rounded-lg border border-amber-200 bg-amber-50/50 p-3"
+                      >
+                        <Label className="text-xs font-medium text-amber-800 mb-1.5 block">
+                          {entry.label}
+                        </Label>
+                        <Textarea
+                          value={entry.content}
+                          onChange={e => handleInspirationChange(index, e.target.value)}
+                          placeholder={entry.hint}
+                          className="min-h-[60px] text-sm bg-white border-amber-200 focus-visible:ring-amber-400"
+                          rows={2}
+                        />
+                      </div>
+                    ))}
+
+                    <div className="flex items-center gap-3">
+                      <Button
+                        onClick={handleSaveInspiration}
+                        disabled={isSavingInspiration}
+                        variant="outline"
+                        className="h-9 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      >
+                        {isSavingInspiration ? '保存中...' : '保存灵感'}
+                      </Button>
+                      {inspirationSaved && (
+                        <span className="text-xs text-emerald-600">
+                          已保存，生成时会自动使用
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            )}
 
             {/* 素材检查提示 */}
             {hasMaterials === false ? (

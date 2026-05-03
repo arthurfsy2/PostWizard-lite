@@ -62,6 +62,7 @@ function PastePageContent() {
   const [parsedData, setParsedData] = useState<AIParsedRecipient | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasMaterials, setHasMaterials] = useState<boolean | null>(null);
+  const [inspirationNotes, setInspirationNotes] = useState('');
 
   // Step 3 状态
   const [generatedContents, setGeneratedContents] = useState<any[]>([]);
@@ -236,7 +237,7 @@ function PastePageContent() {
 
     setIsGenerating(true);
     try {
-      const tones = ['precise', 'warm', 'cultural'];
+      const tones = ['strict', 'expand', 'creative'];
       const postcardData = {
         id: parsedData.id,
         postcardId: parsedData.postcardId,
@@ -248,6 +249,12 @@ function PastePageContent() {
         recipientInterests: Array.isArray(parsedData.interests) ? parsedData.interests.join(', ') : parsedData.interests || '',
         coreInterests: Array.isArray(parsedData.coreInterests) ? parsedData.coreInterests.join(', ') : parsedData.coreInterests || '',
         recipientBio: parsedData.messageToSender || '',
+        dislikes: Array.isArray(parsedData.dislikes) ? parsedData.dislikes.join(', ') : '',
+        cardPreference: parsedData.cardPreference || '',
+        contentPreference: parsedData.contentPreference || '',
+        languagePreference: parsedData.languagePreference || '',
+        specialRequests: parsedData.specialRequests || '',
+        languages: Array.isArray((parsedData as any).languages) ? (parsedData as any).languages.join(', ') : '',
       };
       const results = await Promise.all(
         tones.map(t =>
@@ -344,6 +351,21 @@ function PastePageContent() {
     router.push('/profile');
   };
 
+  const handleSaveInspiration = async (notes: string) => {
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inspirationNotes: notes }),
+      });
+      if (response.ok) {
+        setInspirationNotes(notes);
+      }
+    } catch {
+      // silent fail
+    }
+  };
+
   // 新建一张明信片 - 清空所有状态回到 Step 1
   const handleCreateNew = () => {
     setCurrentStep(1);
@@ -433,6 +455,8 @@ function PastePageContent() {
                 isGenerating={isGenerating}
                 hasMaterials={hasMaterials}
                 onGoToMaterials={handleGoToProfile}
+                inspirationNotes={inspirationNotes}
+                onSaveInspiration={handleSaveInspiration}
               />
             </div>
           )}

@@ -21,6 +21,7 @@ const mapApiToProfileData = (apiData: any): ProfileData => ({
   aboutMe: apiData.aboutMe || '',
   casualNotes: apiData.casualNotes || '',
   casualNotesEn: apiData.casualNotesEn || '',
+  inspirationNotes: apiData.inspirationNotes || '',
   tags: Array.isArray(apiData.tags) ? apiData.tags : JSON.parse(apiData.tags || '[]'),
   createdAt: apiData.createdAt,
   updatedAt: apiData.updatedAt,
@@ -42,6 +43,7 @@ export function useProfile() {
             aboutMe: '',
             casualNotes: '',
             casualNotesEn: '',
+            inspirationNotes: '',
             tags: [],
           };
         }

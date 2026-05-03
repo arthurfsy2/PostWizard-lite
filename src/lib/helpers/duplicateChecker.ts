@@ -149,8 +149,29 @@ export async function checkDuplicateReceivedCard(
 }
 
 /**
+ * 判断 AI 解析结果质量是否足够好（用于重复记录覆盖决策）
+ *
+ * 核心字段全部缺失或无效时，认为质量差，不应覆盖已有数据
+ */
+function isParsedInfoPoor(parsedInfo: any): boolean {
+  const name = (parsedInfo.name || '').trim();
+  const country = (parsedInfo.country || '').trim();
+  const hasInterests = parsedInfo.interests?.length > 0;
+  const hasMessage = (parsedInfo.messageToSender || '').trim().length > 10;
+
+  // name 是 Unknown/unknown/未知 且没有兴趣和留言 → 质量差
+  const isBadName = !name || /^(unknown|未知)$/i.test(name);
+
+  if (isBadName && !country && !hasInterests && !hasMessage) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * 保存或更新明信片记录
- * 
+ *
  * @param userId - 用户 ID
  * @param postcardId - 明信片 ID
  * @param parsedInfo - AI 解析结果
@@ -167,8 +188,27 @@ export async function saveOrUpdatePostcard(
   const duplicate = await checkDuplicatePostcard(postcardId, userId);
 
   if (duplicate.exists && duplicate.postcard) {
-    // 已存在，始终以 AI 识别结果为准，仅当 AI 返回空值时保留旧数据
     const existing = duplicate.postcard as any;
+
+    // 质量检查：AI 解析结果质量太差时，跳过更新，直接返回已有数据
+    if (isParsedInfoPoor(parsedInfo)) {
+      console.log(`[DuplicateChecker] AI 解析质量差，跳过覆盖: ${postcardId}`);
+      // 需要获取完整的 existing 记录
+      const fullExisting = await prisma.postcard.findUnique({ where: { id: existing.id } });
+      return {
+        postcard: fullExisting || existing,
+        isDuplicate: true,
+        duplicateInfo: {
+          postcardId,
+          createdAt: duplicate.postcard.createdAt,
+          formattedTime: duplicate.postcard.formattedTime,
+        },
+        skippedDueToPoorQuality: true,
+        sanitizedAddress,
+      };
+    }
+
+    // 已存在，以 AI 识别结果为准，仅当 AI 返回空值时保留旧数据
     const updated = await prisma.postcard.update({
       where: { id: existing.id },
       data: {
@@ -181,6 +221,12 @@ export async function saveOrUpdatePostcard(
         recipientInterests: parsedInfo.interests?.length ? parsedInfo.interests.join(', ') : (existing.recipientInterests || ''),
         coreInterests: parsedInfo.coreInterests?.length ? parsedInfo.coreInterests.join(', ') : (existing.coreInterests || ''),
         recipientBio: parsedInfo.messageToSender || existing.recipientBio || '',
+        dislikes: parsedInfo.dislikes?.length ? parsedInfo.dislikes.join(', ') : (existing.dislikes || ''),
+        cardPreference: parsedInfo.cardPreference || existing.cardPreference || '',
+        contentPreference: parsedInfo.contentPreference || existing.contentPreference || '',
+        languagePreference: parsedInfo.languagePreference || existing.languagePreference || '',
+        specialRequests: parsedInfo.specialRequests || existing.specialRequests || '',
+        languages: parsedInfo.languages?.length ? parsedInfo.languages.join(', ') : (existing.languages || ''),
         distance: parsedInfo.distance || existing.distance || 0,
         status: 'pending',
       },
@@ -211,6 +257,12 @@ export async function saveOrUpdatePostcard(
         recipientInterests: parsedInfo.interests?.join(', ') || '',
         coreInterests: parsedInfo.coreInterests?.join(', ') || '',
         recipientBio: parsedInfo.messageToSender || '',
+        dislikes: parsedInfo.dislikes?.join(', ') || '',
+        cardPreference: parsedInfo.cardPreference || '',
+        contentPreference: parsedInfo.contentPreference || '',
+        languagePreference: parsedInfo.languagePreference || '',
+        specialRequests: parsedInfo.specialRequests || '',
+        languages: parsedInfo.languages?.join(', ') || '',
         distance: parsedInfo.distance || 0,
         status: 'pending',
       },
@@ -253,12 +305,13 @@ export function buildResponseData(
       distance: parsedInfo.distance || postcard.distance || 0,
       interests: parsedInfo.interests?.length ? parsedInfo.interests : (postcard.recipientInterests ? postcard.recipientInterests.split(', ') : []),
       coreInterests: parsedInfo.coreInterests?.length ? parsedInfo.coreInterests : (postcard.coreInterests ? postcard.coreInterests.split(', ') : []),
-      dislikes: parsedInfo.dislikes || [],
+      dislikes: parsedInfo.dislikes?.length ? parsedInfo.dislikes : (postcard.dislikes ? postcard.dislikes.split(', ') : []),
       messageToSender: parsedInfo.messageToSender || postcard.recipientBio || '',
-      cardPreference: parsedInfo.cardPreference || 'any',
-      contentPreference: parsedInfo.contentPreference || '',
-      languagePreference: parsedInfo.languagePreference || '',
-      specialRequests: parsedInfo.specialRequests || 'none',
+      cardPreference: parsedInfo.cardPreference || postcard.cardPreference || 'any',
+      contentPreference: parsedInfo.contentPreference || postcard.contentPreference || '',
+      languagePreference: parsedInfo.languagePreference || postcard.languagePreference || '',
+      specialRequests: parsedInfo.specialRequests || postcard.specialRequests || 'none',
+      languages: parsedInfo.languages?.length ? parsedInfo.languages : (postcard.languages ? postcard.languages.split(', ') : []),
       source: 'imap_email',
       hasMaterials: parsedInfo.hasMaterials || false,
       filledMaterialsCategories: parsedInfo.filledMaterialsCategories || [],

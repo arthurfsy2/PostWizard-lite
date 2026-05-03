@@ -206,7 +206,7 @@ export const api = {
     since?: string;
     before?: string;
   }): Promise<ApiResponse<{ count: number; emails: Email[] }>> {
-    const response = await apiFetch('/api/emails/search', {
+    const response = await apiFetch('/emails/search', {
       method: 'POST',
       body: JSON.stringify({
         configId,
