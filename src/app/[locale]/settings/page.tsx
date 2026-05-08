@@ -516,7 +516,7 @@ export default function SettingsPage() {
 
             {/* Provider 选择 */}
             <div className="space-y-2">
-              <Label>AI 服务商</Label>
+              <Label>{t('provider')}</Label>
               <Select value={currentConfig.provider} onValueChange={handleProviderChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="选择 AI 服务商" />
@@ -530,7 +530,7 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                切换后将自动填充对应的 Base URL 和推荐模型
+                {t('providerSwitchHint')}
               </p>
             </div>
 
@@ -538,7 +538,7 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <Label htmlFor="apiKey">API Key</Label>
               {currentConfig.hasApiKey && !currentConfig.apiKey && (
-                <p className="text-xs text-green-600 font-medium">已设置（输入新值可更换）</p>
+                <p className="text-xs text-green-600 font-medium">{t('apiKeySet')}</p>
               )}
               <div className="flex gap-2">
                 <Input
@@ -557,7 +557,7 @@ export default function SettingsPage() {
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">支持 OpenAI 兼容格式的 API Key</p>
+              <p className="text-xs text-muted-foreground">{t('apiKeyDesc')}</p>
             </div>
 
             {/* Base URL */}
@@ -574,7 +574,7 @@ export default function SettingsPage() {
               />
               {/* URL 预览 */}
               <div className="text-xs text-muted-foreground bg-gray-50 px-3 py-2 rounded border">
-                <span className="text-gray-500">SDK 实际请求地址：</span>
+                <span className="text-gray-500">{t('sdkEndpoint')}：</span>
                 <code className="text-orange-600">
                   {currentConfig.baseUrl
                     ? `${normalizeAIUrl(currentConfig.baseUrl, currentConfig.provider)}/chat/completions`
@@ -586,15 +586,15 @@ export default function SettingsPage() {
             {/* Proxy */}
             <div className="space-y-2">
               <Label htmlFor="proxy" className="flex items-center gap-1">
-                代理（可选）
+                {t('proxy')}
               </Label>
               <Input
                 id="proxy"
                 value={currentConfig.proxy || ''}
                 onChange={(e) => setCurrentConfig({ ...currentConfig, proxy: e.target.value })}
-                placeholder="127.0.0.1:7890 或 http://proxy:port"
+                placeholder={t('proxyPlaceholder')}
               />
-              <p className="text-xs text-muted-foreground">需要代理访问 API 时填写，如 Gemini 等境外服务。建议使用美国、日本、新加坡等地区节点，香港节点可能不被部分 API 支持</p>
+              <p className="text-xs text-muted-foreground">{t('proxyDesc')}</p>
             </div>
 
             {/* Tier */}
@@ -624,7 +624,7 @@ export default function SettingsPage() {
 
             {/* Model */}
             <div className="space-y-2">
-              <Label htmlFor="model">模型</Label>
+              <Label htmlFor="model">{t('model')}</Label>
               {(() => {
                 const preset = PROVIDER_PRESETS[currentConfig.provider as keyof typeof PROVIDER_PRESETS];
                 const hasModels = preset && preset.models.length > 0;
@@ -644,7 +644,7 @@ export default function SettingsPage() {
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="选择模型" />
+                          <SelectValue placeholder={t('modelSelect')} />
                         </SelectTrigger>
                         <SelectContent className="bg-white border shadow-lg z-50">
                           {preset.models.map((m) => (
@@ -653,7 +653,7 @@ export default function SettingsPage() {
                             </SelectItem>
                           ))}
                           <SelectItem value="__custom__" className="cursor-pointer hover:bg-gray-100 text-muted-foreground">
-                            自定义模型名称...
+                            {t('modelCustom')}
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -662,7 +662,7 @@ export default function SettingsPage() {
                           id="model"
                           value={currentConfig.model}
                           onChange={(e) => setCurrentConfig({ ...currentConfig, model: e.target.value })}
-                          placeholder="输入模型名称"
+                          placeholder={t('modelPlaceholder')}
                           className="mt-2"
                         />
                       )}
@@ -679,7 +679,7 @@ export default function SettingsPage() {
                   />
                 );
               })()}
-              <p className="text-xs text-muted-foreground">选择或填写模型名称，需与你的 API 服务支持的模型一致</p>
+              <p className="text-xs text-muted-foreground">{t('modelDesc')}</p>
             </div>
 
             {/* 用途选择 */}
@@ -747,7 +747,7 @@ export default function SettingsPage() {
                 {isSaving ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" />保存中...</>
                 ) : (
-                  <><Save className="h-4 w-4 mr-2" />保存配置</>
+                  <><Save className="h-4 w-4 mr-2" />{t('saveConfig')}</>
                 )}
               </Button>
               <Button
