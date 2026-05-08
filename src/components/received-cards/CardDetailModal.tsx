@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { 
   Dialog, 
   DialogContent, 
@@ -110,6 +110,7 @@ export function CardDetailModal({
   onDelete
 }: CardDetailModalProps) {
   const t = useTranslations('CardDetail');
+  const locale = useLocale();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('content');
   const [copying, setCopying] = useState(false);
@@ -459,7 +460,7 @@ export function CardDetailModal({
                   {card.gachaEvaluation.aiScore != null && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-sm font-semibold">
                       <Star className="w-4 h-4 fill-current" />
-                      {t('totalScore', { score: (card.gachaEvaluation.aiScore / 10).toFixed(1) })}
+                      {t('totalScore', { score: card.gachaEvaluation.aiScore })}
                     </div>
                   )}
                   {card.rarity && (
@@ -479,7 +480,11 @@ export function CardDetailModal({
                   <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50/80 to-pink-50/80 p-5 shadow-inner">
                     <p className="text-xs font-medium text-purple-600 mb-2">{t('aiComment')}</p>
                     <p className="text-sm text-gray-700 leading-relaxed">
-                      {card.gachaEvaluation.summary}
+                      {(() => {
+                        const s = card.gachaEvaluation.summary;
+                        if (typeof s === 'object' && s !== null) return (s as any)[locale] || (s as any).zh || (s as any).en;
+                        return s;
+                      })()}
                     </p>
                   </div>
                 )}
@@ -497,7 +502,7 @@ export function CardDetailModal({
                           {dim.icon} {dim.name}
                         </span>
                         <span className="text-sm font-bold text-gray-900">
-                          {dim.score != null ? (dim.score / 10).toFixed(1) : "-"}
+                          {dim.score != null ? dim.score : "-"}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">

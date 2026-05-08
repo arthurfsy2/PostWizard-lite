@@ -106,13 +106,13 @@ export default function UploadPage() {
       "image/webp",
     ];
     if (!allowedTypes.includes(file.type)) {
-      setError("不支持的文件格式，请上传 JPG/PNG/HEIC/WEBP 格式");
+      setError(t("errorInvalidFileType"));
       return;
     }
 
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError("文件大小超过 10MB 限制");
+      setError(t("errorFileTooLarge"));
       return;
     }
 
@@ -150,12 +150,12 @@ export default function UploadPage() {
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      setError("请选择要上传的图片");
+      setError(t("errorNoFileSelected"));
       return;
     }
 
     if (!token) {
-      setError("请先登录后再上传");
+      setError(t("errorNotLoggedIn"));
       return;
     }
 
@@ -190,12 +190,12 @@ export default function UploadPage() {
           return;
         }
 
-        throw new Error(data.error || "上传失败");
+        throw new Error(data.error || t("errorUploadFailed"));
       }
 
       // 检测 OCR 配额耗尽警告（卡片已创建，但手写内容为空）
       if (data.ocrQuotaExhausted) {
-        setError("⚠️ AI 识别服务不可用：免费额度已耗尽。图片已上传，但手写内容为空。请联系管理员升级 API 套餐。");
+        setError(t("errorAiServiceUnavailable"));
       }
 
       // 保存 cardId 用于后续编辑
@@ -223,7 +223,7 @@ export default function UploadPage() {
       );
 
       if (!gachaResult) {
-        throw new Error(gachaError || "抽卡失败，请稍后重试");
+        throw new Error(gachaError || t("errorGachaFailed"));
       }
 
       // 转换后端数据格式为前端格式
@@ -253,7 +253,7 @@ export default function UploadPage() {
       setCompletedSteps([1]);
     } catch (err: any) {
       // console.error('Upload failed:', err);
-      setError(err.message || "上传失败，请重试");
+      setError(err.message || t("errorUploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -469,15 +469,15 @@ export default function UploadPage() {
       });
 
       if (response.ok) {
-        alert("保存成功！");
+        alert(t("alertSaveSuccess"));
         router.push("/received/history");
       } else {
         const data = await response.json();
-        alert("保存失败：" + (data.error || "未知错误"));
+        alert(t("alertSaveFailed", { error: data.error || t("unknownError") }));
       }
     } catch (error) {
       // console.error('Save failed:', error);
-      alert("保存失败，请重试");
+      alert(t("alertSaveFailedRetry"));
     } finally {
       setGenerating(false);
     }
@@ -502,14 +502,14 @@ export default function UploadPage() {
         
         if (!deleteResponse.ok) {
           const errorData = await deleteResponse.json();
-          throw new Error(errorData.error || '删除旧记录失败');
+          throw new Error(errorData.error || t("errorDeleteOldRecord"));
         }
         
         // 2. 重新上传（删除后不会再触发重复检测）
         await handleUpload();
         
       } catch (error: any) {
-        setError(error.message || "覆盖处理失败，请重试");
+        setError(error.message || t("errorOverwriteFailed"));
       }
     } else if (pendingSaveData) {
       // Step 3 保存阶段的重复
@@ -595,7 +595,7 @@ export default function UploadPage() {
                           <button
                             onClick={clearSelection}
                             className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
-                            title="重新选择"
+                            title={t("reselect")}
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -654,7 +654,7 @@ export default function UploadPage() {
                         />
 
                         <p className="text-xs text-gray-400">
-                          支持 JPG/PNG/HEIC/WEBP 格式，最大 10MB
+                          {t("formatHint")}
                         </p>
                       </div>
                     )}
@@ -751,7 +751,7 @@ export default function UploadPage() {
                             )}
                             <span className="flex items-center gap-1">
                               <Globe className="h-3.5 w-3.5" />
-                              {getCountryNameCN(formData.senderCountry || cardData.senderCountry || '') || '未知国家'}
+                              {getCountryNameCN(formData.senderCountry || cardData.senderCountry || '') || t("unknownCountry")}
                             </span>
                           </div>
                         </div>
@@ -776,14 +776,14 @@ export default function UploadPage() {
                               setFormData({ ...formData, postcardId: e.target.value })
                             }
                             className="bg-white/20 border border-white/30 rounded px-2 py-0.5 text-sm font-bold text-white placeholder-white/60 focus:ring-2 focus:ring-white/40 focus:border-transparent w-[160px]"
-                            placeholder={cardData.postcardId ? "请输入正确的 ID" : "未识别到，可手动输入"}
+                            placeholder={cardData.postcardId ? t("idPlaceholderCorrect") : t("idPlaceholderManual")}
                           />
                         ) : (
                           <span className="font-bold">{cardData.postcardId}</span>
                         )}
                         {postcardIdConfirmed && (
                           <span className="rounded-full bg-green-400/80 px-2 py-0.5 text-xs font-bold text-white">
-                            已确认
+                            {t("idConfirmed")}
                           </span>
                         )}
                       </div>
@@ -798,7 +798,7 @@ export default function UploadPage() {
                             }}
                             className="px-3 py-1.5 text-xs rounded-full transition-all bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
                           >
-                            保存
+                            {t("saveId")}
                           </button>
                         ) : (
                           <>
@@ -810,7 +810,7 @@ export default function UploadPage() {
                                   : "bg-white/20 text-white hover:bg-white/30"
                               } backdrop-blur-sm`}
                             >
-                              ✓ 确认
+                              {t("confirmId")}
                             </button>
                             <button
                               onClick={() => setPostcardIdUnclear(true)}
@@ -820,7 +820,7 @@ export default function UploadPage() {
                                   : "bg-white/20 text-white hover:bg-white/30"
                               } backdrop-blur-sm`}
                             >
-                              看不清
+                              {t("idUnclear")}
                             </button>
                           </>
                         )}
@@ -885,12 +885,12 @@ export default function UploadPage() {
                             })
                           }
                           className="flex-1 w-full px-4 py-3 bg-white/80 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-gray-800 leading-relaxed"
-                          placeholder="请核对并编辑识别出的手写内容..."
+                          placeholder={t("handwrittenPlaceholder")}
                           style={{ minHeight: "200px" }}
                         />
                         <p className="mt-2 text-xs text-amber-600 flex items-center gap-1 flex-shrink-0">
                           <span>💡</span>
-                          请仔细核对原文内容
+                          {t("pleaseCheckOriginal")}
                         </p>
                       </div>
                     </div>
@@ -913,7 +913,7 @@ export default function UploadPage() {
                           </div>
                           <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1 flex-shrink-0">
                             <span>📝</span>
-                            翻译仅供参考
+                            {t("translationHint")}
                           </p>
                         </div>
                       ) : (
@@ -929,7 +929,7 @@ export default function UploadPage() {
                   {/* 中英文对比提示 */}
                   <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-blue-700">
                     <span>💡</span>
-                    <span>左右对照查看：左侧为英文原文（可编辑），右侧为中文翻译（参考）</span>
+                    <span>{t("compareHint")}</span>
                   </div>
 
                   {/* 寄件人信息（折叠） */}
@@ -946,7 +946,7 @@ export default function UploadPage() {
                     <div className="pt-4 space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          寄件人用户名
+                          {t("senderUsernameLabel")}
                         </label>
                         <input
                           type="text"
@@ -958,14 +958,14 @@ export default function UploadPage() {
                             })
                           }
                           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                          placeholder="例如：Alice"
+                          placeholder={t("senderUsernamePlaceholder")}
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            国家/地区
+                            {t("senderCountryLabel")}
                           </label>
                           <input
                             type="text"
@@ -977,12 +977,12 @@ export default function UploadPage() {
                               })
                             }
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            placeholder="例如：Germany"
+                            placeholder={t("senderCountryPlaceholder")}
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            城市
+                            {t("senderCityLabel")}
                           </label>
                           <input
                             type="text"
@@ -994,7 +994,7 @@ export default function UploadPage() {
                               })
                             }
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            placeholder="例如：Berlin"
+                            placeholder={t("senderCityPlaceholder")}
                           />
                         </div>
                       </div>
@@ -1030,7 +1030,7 @@ export default function UploadPage() {
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             ></path>
                           </svg>
-                          保存中...
+                          {t("saving")}
                         </>
                       ) : (
                         <>
@@ -1074,7 +1074,7 @@ export default function UploadPage() {
 
             <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div className="flex items-center justify-between">
-                <span className="text-gray-500">明信片 ID</span>
+                <span className="text-gray-500">{t("postcardId")}</span>
                 <span className="font-mono font-bold text-amber-600">{duplicateInfo.postcardId}</span>
               </div>
             </div>
@@ -1089,7 +1089,7 @@ export default function UploadPage() {
                 onClick={handleOverwriteCancel}
                 className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-all"
               >
-                取消
+                {t("cancel")}
               </button>
               <button
                 onClick={handleOverwriteConfirm}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Loader2, RefreshCw, TrendingUp, Quote, Star, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -444,6 +444,7 @@ const RARITY_ICON: Record<string, string> = {
  */
 function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
   const t = useTranslations('Highlights');
+  const locale = useLocale();
   const [showDetail, setShowDetail] = useState(false);
 
   // 从 postcardId 前缀推断国家代码（当 country 为空或 UN 时）
@@ -620,8 +621,8 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
               </div>
             )}
 
-            {/* 翻译 */}
-            {item.translation && (
+            {/* 中文翻译（仅在中文界面显示） */}
+            {locale === 'zh' && item.translation && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50/30 p-4 rounded-lg border border-blue-100">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-medium text-blue-600">{t('chineseTranslation')}</span>
@@ -636,7 +637,7 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
             {item.summary && (
               <div className="bg-gradient-to-r from-purple-50 to-pink-50/30 p-4 rounded-lg border border-purple-100">
                 <p className="text-xs font-medium text-purple-600 mb-2">{t('aiComment')}</p>
-                <p className="text-sm text-gray-700 leading-relaxed">{item.summary}</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{typeof item.summary === 'object' && item.summary !== null ? item.summary[locale] || item.summary.zh || item.summary.en : item.summary}</p>
               </div>
             )}
 

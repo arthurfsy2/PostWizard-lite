@@ -14,10 +14,16 @@ import { Grid, List, Loader2, Plus, Mail, MapPin, BookOpen, Cloud, Star, Filter 
 
 type TabKey = "collection" | "wordcloud" | "highlights";
 
-const TABS: { key: TabKey; label: string; icon: typeof Mail }[] = [
-  { key: "collection", label: "卡册", icon: BookOpen },
-  { key: "wordcloud", label: "词云", icon: Cloud },
-  { key: "highlights", label: "精选", icon: Star },
+interface TabConfig {
+  key: TabKey;
+  labelKey: string;
+  icon: typeof Mail;
+}
+
+const TABS: TabConfig[] = [
+  { key: "collection", labelKey: "tabCollection", icon: BookOpen },
+  { key: "wordcloud", labelKey: "tabWordcloud", icon: Cloud },
+  { key: "highlights", labelKey: "tabHighlights", icon: Star },
 ];
 
 interface ReceivedCard {
@@ -105,7 +111,7 @@ export default function ReceivedCardsPage() {
   // 处理删除
   const handleDeleteCard = async (cardId: string) => {
     if (!token) return;
-    if (!confirm("确定要删除这张明信片吗？此操作不可恢复。")) return;
+    if (!confirm(t("confirmDeleteCard"))) return;
 
     try {
       const response = await fetch(`/api/received-cards/${cardId}`, {
@@ -123,13 +129,13 @@ export default function ReceivedCardsPage() {
           ...prev,
           total: prev.total - 1,
         }));
-        alert("删除成功");
+        alert(t("deleteSuccess"));
       } else {
         throw new Error("删除失败");
       }
     } catch (error) {
       // console.error('Failed to delete card:', error);
-      alert("删除失败，请重试");
+      alert(t("deleteFailed"));
     }
   };
 
@@ -223,7 +229,7 @@ export default function ReceivedCardsPage() {
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    <span>{tab.label}</span>
+                    <span>{t(tab.labelKey)}</span>
                   </button>
                 );
               })}

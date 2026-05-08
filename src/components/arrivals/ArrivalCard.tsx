@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,6 +22,7 @@ interface ArrivalCardProps {
 
 export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
   const t = useTranslations('ArrivalCard');
+  const locale = useLocale();
   const [showDetail, setShowDetail] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -219,8 +220,8 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
                   <p className="whitespace-pre-wrap text-sm leading-8 text-slate-600 italic">{arrival.message}</p>
                 </div>
                 
-                {/* 中文翻译（如果有） */}
-                {arrival.messageAnalysis?.translation && (
+                {/* 中文翻译（仅在中文界面显示） */}
+                {locale === 'zh' && arrival.messageAnalysis?.translation && (
                   <div className="rounded-[22px] border border-emerald-100 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/80 p-4">
                     <div className="mb-2 text-xs font-medium text-emerald-700 uppercase tracking-wider">{t('chineseTranslation')}</div>
                     <p className="whitespace-pre-wrap text-sm leading-8 text-slate-700">{arrival.messageAnalysis.translation}</p>

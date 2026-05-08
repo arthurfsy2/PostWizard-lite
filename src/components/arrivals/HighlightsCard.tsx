@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { MapPin, Calendar, Quote, Star, Loader2, Languages } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,6 +20,7 @@ interface HighlightsCardProps {
  */
 export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
   const t = useTranslations('Highlights');
+  const locale = useLocale();
   const [showDetail, setShowDetail] = useState(false);
   const [translation, setTranslation] = useState(highlight.translation);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -261,8 +262,8 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
               </p>
             </div>
 
-            {/* 中文翻译 */}
-            {translation ? (
+            {/* 中文翻译（仅在中文界面显示） */}
+            {locale === 'zh' && translation ? (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50/30 p-4 rounded-lg border border-blue-100">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-medium text-blue-600">{t('chineseTranslation')}</span>
@@ -271,7 +272,7 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
                   {translation}
                 </p>
               </div>
-            ) : (
+            ) : locale === 'zh' && (
               <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-200 flex items-center justify-between">
                 <span className="text-xs text-gray-400">{t('noTranslation')}</span>
                 <button

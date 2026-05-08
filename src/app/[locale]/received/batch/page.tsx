@@ -140,7 +140,7 @@ export default function BatchUploadPage() {
         method: "POST",
         body: formData,
       });
-      if (!res.ok || !res.body) throw new Error("重试请求失败");
+      if (!res.ok || !res.body) throw new Error(t("retryRequestFailed"));
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -290,7 +290,7 @@ export default function BatchUploadPage() {
       });
 
       if (!response.ok || !response.body) {
-        throw new Error("批量上传请求失败");
+        throw new Error(t("batchRequestFailed"));
       }
 
       const reader = response.body.getReader();
@@ -373,14 +373,16 @@ export default function BatchUploadPage() {
                   {t("aiNotConfigured")}
                 </p>
                 <p className="text-xs text-amber-600 mt-1">
-                  批量上传需要 AI 服务进行文字识别和评分。请先前往{" "}
-                  <a
-                    href="/settings"
-                    className="underline font-medium text-amber-700 hover:text-amber-900"
-                  >
-                    设置页面
-                  </a>{" "}
-                  配置 API Key。
+                  {t.rich("aiNotConfiguredDesc", {
+                    link: (chunks) => (
+                      <a
+                        href="/settings"
+                        className="underline font-medium text-amber-700 hover:text-amber-900"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                  })}
                 </p>
               </div>
             </div>
@@ -395,9 +397,7 @@ export default function BatchUploadPage() {
                   {t("aiQuotaExhausted")}
                 </p>
                 <p className="text-xs text-red-600 mt-1">
-                  AI
-                  服务的免费额度已耗尽，手写内容识别暂时无法使用。图片已上传成功，但手写内容为空。请联系管理员升级
-                  API 套餐后重试。
+                  {t("aiQuotaExhaustedDesc")}
                 </p>
               </div>
             </div>
@@ -428,8 +428,7 @@ export default function BatchUploadPage() {
               {t("skipHint")}
             </p>
             <p className="text-xs text-slate-500 mb-4 font-bold">
-              建议明信片手写页的照片，使用明信片 ID 进行命名，这样将提升 ID
-              的识别准确率/除重速度
+              {t("namingHint")}
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -480,7 +479,7 @@ export default function BatchUploadPage() {
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <Loader2 className="w-3 h-3 animate-spin text-orange-500" />
                         <span>
-                          识别中 {progress.done}/{progress.total}
+                          {t("recognizingProgress", { done: progress.done, total: progress.total })}
                         </span>
                       </div>
                       <div className="mt-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -579,8 +578,7 @@ export default function BatchUploadPage() {
                       )}
                       {item.status === "duplicate" && (
                         <p className="text-xs text-amber-600 mt-1">
-                          ID 已存在，已跳过:{" "}
-                          {item.result?.duplicateInfo?.postcardId}
+                          {t("duplicateSkipped", { id: item.result?.duplicateInfo?.postcardId })}
                         </p>
                       )}
                       {item.error && (
@@ -634,15 +632,15 @@ export default function BatchUploadPage() {
                 </h2>
                 <div className="flex gap-2 text-sm">
                   <span className="text-emerald-600">
-                    {summary.success} 成功
+                    {t("summarySuccess", { count: summary.success })}
                   </span>
                   {summary.duplicate > 0 && (
                     <span className="text-amber-600">
-                      {summary.duplicate} 重复
+                      {t("summaryDuplicate", { count: summary.duplicate })}
                     </span>
                   )}
                   {summary.error > 0 && (
-                    <span className="text-red-600">{summary.error} 失败</span>
+                    <span className="text-red-600">{t("summaryError", { count: summary.error })}</span>
                   )}
                 </div>
               </div>

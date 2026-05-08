@@ -293,7 +293,7 @@ ${content}
   "touchingScore": <0-100>,
   "emotionalScore": <0-100>,
   "culturalInsightScore": <0-100>,
-  "summary": "<1-2句正面评价>",
+  "summary": {"zh": "<1-2句中文正面评价>", "en": "<1-2句英文正面评价>"},
   "primaryCategory": "<touching|emotional|culturalInsight>"
 }
 
@@ -492,7 +492,7 @@ ${batchContent}
         touchingScore: Math.min(100, Math.max(0, Math.round(parsed.touchingScore || 0))),
         emotionalScore: Math.min(100, Math.max(0, Math.round(parsed.emotionalScore || 0))),
         culturalInsightScore: Math.min(100, Math.max(0, Math.round(parsed.culturalInsightScore || 0))),
-        summary: parsed.summary || '这是一张用心书写的明信片。',
+        summary: parsed.summary || JSON.stringify({ zh: '这是一张用心书写的明信片。', en: 'A thoughtfully written postcard.' }),
         primaryCategory: parsed.primaryCategory || 'emotional',
       };
 
@@ -544,18 +544,22 @@ function generateDefaultEvaluation(content: string): AIEvaluation {
   if (length > 200) culturalInsightScore += 10;
   culturalInsightScore = Math.min(culturalInsightScore, 100);
 
-  // 根据内容特征生成多样化 summary
-  const summaryParts: string[] = [];
-  if (length > 200) summaryParts.push('这是一封内容详实的明信片');
-  else if (length > 100) summaryParts.push('这是一封用心书写的明信片');
-  else summaryParts.push('这是一封简洁的明信片');
+  // 根据内容特征生成多样化 summary（双语）
+  const zhSummaryParts: string[] = [];
+  const enSummaryParts: string[] = [];
+  if (length > 200) { zhSummaryParts.push('这是一封内容详实的明信片'); enSummaryParts.push('A detailed and heartfelt postcard'); }
+  else if (length > 100) { zhSummaryParts.push('这是一封用心书写的明信片'); enSummaryParts.push('A thoughtfully written postcard'); }
+  else { zhSummaryParts.push('这是一封简洁的明信片'); enSummaryParts.push('A concise and warm postcard'); }
 
-  if (hasCulture) summaryParts.push('蕴含着丰富的文化气息');
-  if (hasEmotion) summaryParts.push('字里行间流露出真挚的情感');
-  if (hasNature) summaryParts.push('描绘了美好的自然意象');
-  if (hasStory) summaryParts.push('承载着独特的个人故事');
+  if (hasCulture) { zhSummaryParts.push('蕴含着丰富的文化气息'); enSummaryParts.push('rich with cultural insights'); }
+  if (hasEmotion) { zhSummaryParts.push('字里行间流露出真挚的情感'); enSummaryParts.push('brimming with sincere emotions'); }
+  if (hasNature) { zhSummaryParts.push('描绘了美好的自然意象'); enSummaryParts.push('painting beautiful natural imagery'); }
+  if (hasStory) { zhSummaryParts.push('承载着独特的个人故事'); enSummaryParts.push('carrying a unique personal story'); }
 
-  const summary = summaryParts.join('，') + '。';
+  const summary = JSON.stringify({
+    zh: zhSummaryParts.join('，') + '。',
+    en: enSummaryParts.join(', ') + '.',
+  });
 
   // primaryCategory = 最高分维度
   const scores = {
