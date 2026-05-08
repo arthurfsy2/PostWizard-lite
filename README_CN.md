@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="README.md">English</a> | <a href="README_CN.md">中文说明</a>
+</p>
+
 <div align="center">
 
 <img src="public/favicon.svg" width="120" alt="PostWizard Logo">
