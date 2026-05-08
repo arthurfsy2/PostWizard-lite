@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
 import {
   Check, User, Heart, Globe, Ban, FileText, Lightbulb, ArrowRight, ArrowLeft, ChevronDown
@@ -58,17 +58,20 @@ export function Step2Card({
   onSaveInspiration,
 }: Step2CardProps) {
   const t = useTranslations('Step2Card');
+  const locale = useLocale();
   const [showInspiration, setShowInspiration] = useState(false);
   const [inspirationEntries, setInspirationEntries] = useState<InspirationEntry[]>([]);
   const [isSavingInspiration, setIsSavingInspiration] = useState(false);
   const [inspirationSaved, setInspirationSaved] = useState(false);
 
-  // 从 "英文 | 中文" 格式中提取中文部分，无中文则返回原文
-  const extractChinese = (text: string): string => {
+  // 根据当前语言显示文本：英文界面只显英文，中文界面显示 "英文 | 中文" 双语格式
+  const getDisplayText = (text: string): string => {
     if (!text) return '';
     const parts = text.split('|').map(p => p.trim());
-    // 有中文部分则返回中文，否则返回英文
-    return parts.length > 1 && /[一-龥]/.test(parts[1]) ? parts[1] : parts[0];
+    if (parts.length > 1) {
+      return locale === 'en' ? parts[0] : text;
+    }
+    return text;
   };
 
   // Generate inspiration entries from parsedData
@@ -76,9 +79,13 @@ export function Step2Card({
     const entries: InspirationEntry[] = [];
 
     if (parsedData.dislikes && parsedData.dislikes.length > 0) {
+      const isZh = locale === 'zh';
       const dislikesText = parsedData.dislikes
-        .map(d => extractChinese(d))
-        .join('、');
+        .map(d => {
+          const parts = d.split('|').map(p => p.trim());
+          return parts.length > 1 ? (isZh ? parts[1] : parts[0]) : d;
+        })
+        .join(isZh ? '、' : ', ');
       entries.push({
         trigger: 'dislikes',
         label: t('dislikesLabel', { text: dislikesText }),
@@ -88,7 +95,7 @@ export function Step2Card({
     }
 
     if (parsedData.messageToSender) {
-      const msg = extractChinese(parsedData.messageToSender);
+      const msg = getDisplayText(parsedData.messageToSender);
       const msgPreview = msg.length > 60 ? msg.slice(0, 60) + '...' : msg;
       entries.push({
         trigger: 'messageToSender',
@@ -99,7 +106,7 @@ export function Step2Card({
     }
 
     if (parsedData.specialRequests && parsedData.specialRequests !== 'none') {
-      const sr = extractChinese(parsedData.specialRequests);
+      const sr = getDisplayText(parsedData.specialRequests);
       const srPreview = sr.length > 60 ? sr.slice(0, 60) + '...' : sr;
       entries.push({
         trigger: 'specialRequests',
@@ -247,7 +254,7 @@ export function Step2Card({
                         key={index}
                         className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
                       >
-                        {interest}
+                        {getDisplayText(interest)}
                       </Badge>
                     ))}
                   </div>
@@ -267,7 +274,7 @@ export function Step2Card({
                         key={index}
                         className="bg-red-50 text-red-700 line-through hover:bg-red-100 border-red-200"
                       >
-                        {extractChinese(dislike)}
+                        {getDisplayText(dislike)}
                       </Badge>
                     ))}
                   </div>
@@ -281,7 +288,7 @@ export function Step2Card({
                     <Heart className="h-4 w-4 text-emerald-600" />
                     <span className="text-sm font-semibold text-emerald-600">{t('contentPreference')}</span>
                   </div>
-                  <p className="text-sm text-slate-700">{extractChinese(parsedData.contentPreference)}</p>
+                  <p className="text-sm text-slate-700">{getDisplayText(parsedData.contentPreference)}</p>
                 </div>
               )}
 
@@ -293,7 +300,7 @@ export function Step2Card({
                     <span className="text-sm font-semibold text-emerald-600">{t('specialRequests')}</span>
                   </div>
                   <p className="text-sm font-medium text-slate-700 bg-emerald-50 p-3 rounded-lg">
-                    {extractChinese(parsedData.specialRequests)}
+                    {getDisplayText(parsedData.specialRequests)}
                   </p>
                 </div>
               )}
@@ -306,7 +313,7 @@ export function Step2Card({
                     <span className="text-sm font-semibold text-emerald-600">{t('messageToSender')}</span>
                   </div>
                   <p className="text-sm font-medium text-slate-700 bg-emerald-50 p-3 rounded-lg">
-                    {extractChinese(parsedData.messageToSender)}
+                    {getDisplayText(parsedData.messageToSender)}
                   </p>
                 </div>
               )}
