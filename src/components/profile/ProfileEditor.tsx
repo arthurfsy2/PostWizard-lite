@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   Save,
   Loader2,
@@ -72,6 +72,7 @@ const staggerContainer = {
 
 export function ProfileEditor() {
   const t = useTranslations('ProfileEditor');
+  const locale = useLocale();
   // 状态管理
   const [userType, setUserType] = useState<UserType>('expert');
   const [aboutMe, setAboutMe] = useState('');
@@ -198,9 +199,6 @@ export function ProfileEditor() {
       }
 
       // 不调用 invalidateQueries，直接静默更新，避免额外的 GET 请求
-      // queryClient.setQueryData 已经在 useSaveProfile 中处理
-
-      alert(t('alertSaveSuccess'));
     } catch (error) {
       console.error('保存失败:', error);
       alert(t('alertSaveFailed'));
@@ -687,7 +685,7 @@ export function ProfileEditor() {
                     "hover:bg-orange-50 hover:text-orange-600"
                   )}
                 >
-                  #{tag}
+                  #{tag.includes('|') ? (locale === 'en' ? tag.split('|')[0].trim() : tag) : tag}
                 </motion.span>
               ))
             ) : (

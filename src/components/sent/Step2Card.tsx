@@ -237,7 +237,7 @@ export function Step2Card({
                     <Globe className="h-4 w-4 text-emerald-600" />
                     <span className="text-sm font-semibold text-emerald-600">{t('languagePreference')}</span>
                   </div>
-                  <p className="text-sm text-slate-700">{parsedData.languagePreference}</p>
+                  <p className="text-sm text-slate-700">{getDisplayText(parsedData.languagePreference)}</p>
                 </div>
               )}
 

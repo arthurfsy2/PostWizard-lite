@@ -193,15 +193,15 @@ export default function SettingsPage() {
 
     // 前端校验
     if (!currentConfig.name.trim()) {
-      setError('配置名称不能为空');
+      setError(t('configNameRequired'));
       return;
     }
     if (!currentConfig.baseUrl.trim()) {
-      setError('API Base URL 不能为空');
+      setError(t('apiBaseUrlRequired'));
       return;
     }
     if (!currentConfig.model.trim()) {
-      setError('模型名称不能为空');
+      setError(t('modelRequired'));
       return;
     }
 
@@ -227,7 +227,7 @@ export default function SettingsPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '保存失败');
+        throw new Error(result.error || t('saveFailed'));
       }
 
       setConfigs(result.configs);
@@ -241,7 +241,7 @@ export default function SettingsPage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || '保存失败');
+      setError(err.message || t('saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -334,7 +334,7 @@ export default function SettingsPage() {
       const data = await response.json();
       setTestResult(data);
     } catch {
-      setTestResult({ success: false, error: '连接失败' });
+      setTestResult({ success: false, error: t('connectionFailed') });
     } finally {
       setIsTesting(false);
     }
@@ -431,7 +431,7 @@ export default function SettingsPage() {
                   </Badge>
                   {config.useFor && config.useFor !== 'all' && (
                     <Badge variant="secondary" className="text-xs">
-                      {config.useFor === 'ocr' ? '图片' : '文字'}
+                      {config.useFor === 'ocr' ? t('useForOcr') : t('useForText')}
                     </Badge>
                   )}
                   {activeId === config.id && (
@@ -462,18 +462,17 @@ export default function SettingsPage() {
               const ocrConfig = enabledConfigs.find(c => c.useFor === 'ocr');
               const textConfig = enabledConfigs.find(c => c.useFor === 'text');
               const generalConfig = enabledConfigs.find(c => c.useFor === 'all' || !c.useFor);
-              const activeGeneral = enabledConfigs.find(c => c.id === activeId) || generalConfig;
 
               return (
                 <div className="mt-3 pt-3 border-t text-xs text-muted-foreground space-y-1">
-                  <div className="font-medium text-foreground/70 mb-1">当前生效配置：</div>
+                  <div className="font-medium text-foreground/70 mb-1">{t('activeSummary')}：</div>
                   <div>
-                    图片识别：<span className="text-foreground">{ocrConfig ? `${ocrConfig.name}（${ocrConfig.model}）` : activeGeneral ? `${activeGeneral.name}（${activeGeneral.model}）` : '未配置'}</span>
-                    {ocrConfig && <span className="ml-1 text-green-600">专用</span>}
+                    {t('imageRecognition')}：<span className="text-foreground">{ocrConfig ? `${ocrConfig.name}（${ocrConfig.model}）` : generalConfig ? `${generalConfig.name}（${generalConfig.model}）` : t('notConfigured')}</span>
+                    {ocrConfig && <span className="ml-1 text-green-600">{t('dedicated')}</span>}
                   </div>
                   <div>
-                    文字分析：<span className="text-foreground">{textConfig ? `${textConfig.name}（${textConfig.model}）` : activeGeneral ? `${activeGeneral.name}（${activeGeneral.model}）` : '未配置'}</span>
-                    {textConfig && <span className="ml-1 text-green-600">专用</span>}
+                    {t('textAnalysis')}：<span className="text-foreground">{textConfig ? `${textConfig.name}（${textConfig.model}）` : generalConfig ? `${generalConfig.name}（${generalConfig.model}）` : t('notConfigured')}</span>
+                    {textConfig && <span className="ml-1 text-green-600">{t('dedicated')}</span>}
                   </div>
                 </div>
               );
@@ -506,7 +505,7 @@ export default function SettingsPage() {
 
             {/* 配置名称 */}
             <div className="space-y-2">
-              <Label htmlFor="name">配置名称</Label>
+              <Label htmlFor="name">{t('configName')}</Label>
               <Input
                 id="name"
                 value={currentConfig.name}
@@ -547,7 +546,7 @@ export default function SettingsPage() {
                   type={showApiKey ? 'text' : 'password'}
                   value={currentConfig.apiKey}
                   onChange={(e) => setCurrentConfig({ ...currentConfig, apiKey: e.target.value, hasApiKey: false })}
-                  placeholder={currentConfig.hasApiKey ? '••••••••（已保存）' : 'sk-...'}
+                  placeholder={currentConfig.hasApiKey ? t('apiKeyPlaceholder') : 'sk-...'}
                   className="flex-1"
                 />
                 <Button
@@ -600,11 +599,11 @@ export default function SettingsPage() {
 
             {/* Tier */}
             <div className="space-y-2">
-              <Label>额度类型</Label>
+              <Label>{t('tier')}</Label>
               <div className="flex gap-2">
                 {([
-                  { value: 'free', label: '免费额度', desc: '自动限流，避免触发频率限制' },
-                  { value: 'paid', label: '付费/订阅', desc: '拉满速率，批量上传更快' },
+                  { value: 'free', label: t('tierFree'), desc: t('tierFreeDesc') },
+                  { value: 'paid', label: t('tierPaid'), desc: t('tierPaidDesc') },
                 ] as const).map((opt) => (
                   <button
                     key={opt.value}
@@ -685,12 +684,12 @@ export default function SettingsPage() {
 
             {/* 用途选择 */}
             <div className="space-y-3">
-              <Label>用途</Label>
+              <Label>{t('useFor')}</Label>
               <div className="flex flex-wrap gap-3">
                 {[
-                  { value: 'all' as const, label: '通用', desc: '文字分析 + 图片识别' },
-                  { value: 'text' as const, label: '仅文字', desc: '明信片评分、翻译' },
-                  { value: 'ocr' as const, label: '仅图片', desc: '手写文字识别（OCR）' },
+                  { value: 'all' as const, label: t('useForAll'), desc: t('useForAllDesc') },
+                  { value: 'text' as const, label: t('useForText'), desc: t('useForTextDesc') },
+                  { value: 'ocr' as const, label: t('useForOcr'), desc: t('useForOcrDesc') },
                 ].map(opt => (
                   <button
                     key={opt.value}
@@ -722,7 +721,7 @@ export default function SettingsPage() {
               </div>
               {currentConfig.useFor === 'ocr' && (
                 <p className="text-xs text-amber-600">
-                  需选择支持视觉/图片的模型（如 qwen-vl-plus、gemini-2.0-flash、gpt-4o），纯文本模型无法识别图片
+                  {t('useForOcrHint')}
                 </p>
               )}
             </div>

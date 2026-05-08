@@ -18,15 +18,16 @@ const TAG_EXTRACTION_SYSTEM_PROMPT = `你是一位内容分析专家，服务于
 
 规则：
 - 标签应描述用户的兴趣爱好、性格特征或喜欢讨论的话题
-- 标签使用中文，简洁明了（2-4 个字）
+- 每个标签需同时提供中英文，格式为 "english | 中文"
+- 英文部分简洁明了（1-3 个单词），中文部分 2-4 个字
 - 根据内容自然提取，不限制数量
 - 只包含准确反映用户兴趣的标签
-- 避免泛泛的标签如"明信片"、"旅行"、"邮票"，除非用户特别强调
+- 避免泛泛的标签如"postcard | 明信片"、"travel | 旅行"、"stamp | 邮票"，除非用户特别强调
 - 关注用户的独特之处和想与片友分享的内容
 
 输出格式（仅 JSON）：
 {
-  "tags": ["标签1", "标签2", "标签3", ...]
+  "tags": ["english | 中文", "english | 中文", ...]
 }`;
 
 export interface AnalyzeProfileResult {
@@ -100,10 +101,12 @@ async function extractTags(content: string): Promise<{ tags: string[]; usage: Tr
  * 分析个人要素内容，翻译并提取标签
  * @param aboutMe - 个人简介（需要翻译的中文内容）
  * @param casualNotes - 随心记（参考上下文，用于提取标签）
+ * @param inspirationNotes - 灵感速记（参考上下文，用于提取标签）
  */
 export async function analyzeProfileContent(
   aboutMe: string,
-  casualNotes: string
+  casualNotes: string,
+  inspirationNotes?: string
 ): Promise<AnalyzeProfileResult> {
   console.log('[Profile AI] Starting analysis...');
 
@@ -117,7 +120,7 @@ export async function analyzeProfileContent(
 
   console.log('[Profile AI] Translation completed:', translateResult.text.substring(0, 50) + '...');
 
-  // Step 2: 提取标签（合并 aboutMe 和 casualNotes，支持 JSON 数组格式）
+  // Step 2: 提取标签（合并 aboutMe + casualNotes + inspirationNotes）
   let notesText = casualNotes || '';
   try {
     const parsed = JSON.parse(notesText);
@@ -125,7 +128,14 @@ export async function analyzeProfileContent(
       notesText = parsed.map((e: any) => (e.content || '').trim()).filter(Boolean).join('\n');
     }
   } catch {}
-  const combinedContent = `${aboutMe}\n${notesText}`.trim();
+  let inspText = inspirationNotes || '';
+  try {
+    const parsed = JSON.parse(inspText);
+    if (Array.isArray(parsed)) {
+      inspText = parsed.map((e: any) => (e.content || '').trim()).filter(Boolean).join('\n');
+    }
+  } catch {}
+  const combinedContent = `${aboutMe}\n${notesText}\n${inspText}`.trim();
   const tagResult = await extractTags(combinedContent);
 
   console.log('[Profile AI] Tags extracted:', tagResult.tags);

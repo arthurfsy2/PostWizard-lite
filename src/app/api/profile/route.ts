@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     if (hasAboutMe || hasCasualNotes) {
       try {
         console.log('[Profile POST] 调用 AI 分析内容...');
-        const result = await analyzeProfileContent(newAboutMe, newCasualNotes);
+        const result = await analyzeProfileContent(newAboutMe, newCasualNotes, newInspirationNotes);
 
         // 如果 aboutMe 是中文，使用 AI 翻译结果保存到 aboutMeEn
         if (containsChinese(newAboutMe) && result.translation) {

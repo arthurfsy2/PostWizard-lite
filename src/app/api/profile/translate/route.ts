@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const userId = getLocalUserId();
 
     const body = await request.json();
-    const { aboutMe, casualNotes } = body;
+    const { aboutMe, casualNotes, inspirationNotes } = body;
 
     // 验证输入
     if (!aboutMe || typeof aboutMe !== 'string') {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const result = await analyzeProfileContent(aboutMe, casualNotes || '');
+      const result = await analyzeProfileContent(aboutMe, casualNotes || '', inspirationNotes || '');
 
       return NextResponse.json({
         success: true,
