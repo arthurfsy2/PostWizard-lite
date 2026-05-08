@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -33,8 +34,11 @@ export function ParseProgressPanel({
   progress,
   logs,
   isParsing,
-  emptyText = "等待解析日志...",
+  emptyText,
 }: ParseProgressPanelProps) {
+  const t = useTranslations('ParseProgress');
+  const defaultEmptyText = t('waitingForLogs');
+  const displayEmptyText = emptyText ?? defaultEmptyText;
   const hasProgress = progress && progress.total > 0;
 
   return (
@@ -50,7 +54,7 @@ export function ParseProgressPanel({
           {isParsing ? (
             <div className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs text-orange-700 shadow-sm">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              解析进行中
+              {t('parsingInProgress')}
             </div>
           ) : null}
         </div>
@@ -58,7 +62,7 @@ export function ParseProgressPanel({
         {hasProgress ? (
           <div className="mt-4 space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">解析进度</span>
+              <span className="text-gray-600">{t('parseProgress')}</span>
               <span className="font-semibold text-gray-900">
                 {progress.current}/{progress.total}
               </span>
@@ -77,21 +81,21 @@ export function ParseProgressPanel({
 
             <div className="grid grid-cols-4 gap-2 text-center text-xs">
               <div className="rounded-lg bg-white px-2 py-2 text-gray-600 shadow-sm">
-                <div className="text-[11px] text-gray-500">总计</div>
+                <div className="text-[11px] text-gray-500">{t('total')}</div>
                 <div className="mt-1 text-sm font-semibold text-gray-900">
                   {progress.total}
                 </div>
               </div>
               <div className="rounded-lg bg-white px-2 py-2 text-emerald-600 shadow-sm">
-                <div className="text-[11px] text-emerald-500">成功</div>
+                <div className="text-[11px] text-emerald-500">{t('success')}</div>
                 <div className="mt-1 text-sm font-semibold">{progress.success}</div>
               </div>
               <div className="rounded-lg bg-white px-2 py-2 text-red-500 shadow-sm">
-                <div className="text-[11px] text-red-400">失败</div>
+                <div className="text-[11px] text-red-400">{t('failed')}</div>
                 <div className="mt-1 text-sm font-semibold">{progress.failed}</div>
               </div>
               <div className="rounded-lg bg-white px-2 py-2 text-amber-600 shadow-sm">
-                <div className="text-[11px] text-amber-500">跳过</div>
+                <div className="text-[11px] text-amber-500">{t('skipped')}</div>
                 <div className="mt-1 text-sm font-semibold">{progress.skipped}</div>
               </div>
             </div>
@@ -119,7 +123,7 @@ export function ParseProgressPanel({
             </div>
           ))
         ) : (
-          <div className="text-sm text-gray-400">{emptyText}</div>
+          <div className="text-sm text-gray-400">{displayEmptyText}</div>
         )}
       </div>
     </div>

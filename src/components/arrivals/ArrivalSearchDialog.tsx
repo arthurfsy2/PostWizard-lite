@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from 'next-intl';
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -72,6 +73,7 @@ export function ArrivalSearchDialog({
   const { data: folderData, refetch: refetchFolders } = useEmailFolders(
     selectedConfig?.id || undefined,
   );
+  const t = useTranslations('ArrivalSearch');
   const { search, isLoading: searching } = useSearchArrivalEmails();
   const { parse, isParsing, progress } = useParseArrivalEmails();
 
@@ -125,7 +127,7 @@ export function ArrivalSearchDialog({
       const result = await refetchFolders();
       if (result.data?.folders && result.data.folders.length > 0) {
         setAvailableFolders(result.data.folders);
-        toast.success(`已获取 ${result.data.folders.length} 个文件夹`);
+        toast.success(t('foldersFetched', { count: result.data.folders.length }));
         
         // 选择第一个非 INBOX 的文件夹作为默认（如果 INBOX 不在里面）
         if (!result.data.folders.includes("INBOX")) {
@@ -138,10 +140,10 @@ export function ArrivalSearchDialog({
         }
       } else {
         setAvailableFolders([]);
-        toast.info("未找到文件夹，将使用默认 INBOX");
+        toast.info(t('noFoldersUseDefault'));
       }
     } catch (error: any) {
-      toast.error("获取文件夹失败：" + (error.message || "请检查邮箱配置"));
+      toast.error(t('fetchFoldersFailed') + ': ' + (error.message || t('checkConfig')));
     } finally {
       setIsLoadingFolders(false);
     }
@@ -216,7 +218,7 @@ export function ArrivalSearchDialog({
     if (!selectedConfig?.id) return;
 
     setStep("parsing");
-    setParseLog([{ type: "info", message: "开始解析邮件..." }]);
+    setParseLog([{ type: "info", message: t('parsingStarted') }]);
 
     try {
       await parse(
@@ -242,7 +244,7 @@ export function ArrivalSearchDialog({
                 ...prev,
                 {
                   type: "success",
-                  message: `✅ 解析成功: ${event.data.postcardId} (${event.data.country})`,
+                  message: t('parseSuccess', { postcardId: event.data.postcardId, country: event.data.country }),
                 },
               ]);
               break;
@@ -251,7 +253,7 @@ export function ArrivalSearchDialog({
                 ...prev,
                 {
                   type: "warning",
-                  message: `⏭️ 跳过: ${event.data.postcardId || "无ID"} (${event.data.reason})`,
+                  message: t('parseSkip', { postcardId: event.data.postcardId || t('unknownId'), reason: event.data.reason }),
                 },
               ]);
               break;
@@ -260,7 +262,7 @@ export function ArrivalSearchDialog({
                 ...prev,
                 {
                   type: "error",
-                  message: `❌ 失败: ${event.data.postcardId || "未知"} (${event.data.error})`,
+                  message: t('parseFailed', { postcardId: event.data.postcardId || t('unknown'), error: event.data.error }),
                 },
               ]);
               break;
@@ -269,7 +271,7 @@ export function ArrivalSearchDialog({
                 ...prev,
                 {
                   type: "success",
-                  message: `🎉 完成! 成功: ${event.data.success}, 失败: ${event.data.failed}, 跳过: ${event.data.skipped}`,
+                  message: t('parseComplete', { success: event.data.success, failed: event.data.failed, skipped: event.data.skipped }),
                 },
               ]);
               onComplete?.();
@@ -280,7 +282,7 @@ export function ArrivalSearchDialog({
     } catch (error: any) {
       setParseLog((prev) => [
         ...prev,
-        { type: "error", message: `解析出错: ${error.message}` },
+        { type: "error", message: t('parseError', { error: error.message }) },
       ]);
     }
   };
@@ -305,11 +307,11 @@ export function ArrivalSearchDialog({
         method: "DELETE",
       });
       
-      toast.success("邮箱已解绑");
+      toast.success(t('unbindSuccess'));
       await refetchConfigs();
       setStep("config");
     } catch (error: any) {
-      toast.error(`解绑失败：${error.message}`);
+      toast.error(t('unbindFailed', { message: error.message }));
     }
   };
 
@@ -324,7 +326,7 @@ export function ArrivalSearchDialog({
       }
     }, 500);
     setStep("config");
-    toast.success("邮箱配置成功！请继续选择文件夹");
+    toast.success(t('setupSuccess'));
   };
 
   const handleBackToResults = () => {
@@ -333,10 +335,10 @@ export function ArrivalSearchDialog({
     }
   };
 
-  const parsingTitle = forceReparse ? "强制重新解析中" : "正在解析邮件";
+  const parsingTitle = forceReparse ? t('parsingTitleForce') : t('parsingTitle');
   const parsingSubtitle = forceReparse
-    ? `将删除并重新解析 ${searchCount?.existing || 0} 条旧记录`
-    : `正在处理 ${searchCount?.new || 0} 封待解析邮件`;
+    ? t('parsingSubtitleForce', { count: searchCount?.existing || 0 })
+    : t('parsingSubtitle', { count: searchCount?.new || 0 });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -350,8 +352,8 @@ export function ArrivalSearchDialog({
               />
             )}
             {step === "config" ? (
-              hasConfigs ? "🔍 搜索邮件" : "📧 配置邮箱"
-            ) : "📋 搜索结果"}
+              hasConfigs ? t('searchEmails') : t('configureEmail')
+            ) : t('searchResults')}
           </DialogTitle>
         </DialogHeader>
 
@@ -361,7 +363,7 @@ export function ArrivalSearchDialog({
             <div className="space-y-4">
               {!hasConfigs && (
                 <div className="bg-amber-50 rounded-lg p-3 border border-amber-200 text-sm text-amber-800">
-                  💡 配置邮箱后即可搜索和解析明信片送达确认邮件
+                  {t('configHint')}
                 </div>
               )}
               <EmailConfigForm
@@ -393,7 +395,7 @@ export function ArrivalSearchDialog({
                     onClick={() => setEditingConfig(configs[0] || null)}
                     className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 h-7"
                   >
-                    + 添加/切换邮箱
+                    {t('addSwitchEmail')}
                   </Button>
                   <Button
                     variant="ghost"
@@ -402,7 +404,7 @@ export function ArrivalSearchDialog({
                     className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 h-7"
                   >
                     <Unlink className="w-3 h-3 mr-1" />
-                    解绑
+                    {t('unbind')}
                   </Button>
                 </div>
               </div>
@@ -416,8 +418,8 @@ export function ArrivalSearchDialog({
                 onRefresh={handleRefreshFolders}
                 hint={
                   <div className="bg-amber-50 rounded-lg p-3 border border-amber-200 text-sm text-amber-700">
-                    <p>💡 提示：明信片送达确认邮件通常在 <strong>INBOX</strong> 文件夹中。</p>
-                    <p className="text-amber-600 mt-1">系统会自动记住您上次选择的文件夹。</p>
+                    <p>{t('folderHint1', { folder: 'INBOX' })}</p>
+                    <p className="text-amber-600 mt-1">{t('folderHint2')}</p>
                   </div>
                 }
               />
@@ -425,7 +427,7 @@ export function ArrivalSearchDialog({
               {/* 操作按钮 */}
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  取消
+                  {t('cancel')}
                 </Button>
                 <Button
                   onClick={handleSearch}
@@ -435,12 +437,12 @@ export function ArrivalSearchDialog({
                   {searching ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      搜索中...
+                      {t('searching')}
                     </>
                   ) : (
                     <>
                       <Search className="h-4 w-4 mr-2" />
-                      开始搜索
+                      {t('startSearch')}
                     </>
                   )}
                 </Button>
@@ -457,7 +459,7 @@ export function ArrivalSearchDialog({
                   <div className="text-3xl font-bold text-orange-600">
                     {searchCount.total}
                   </div>
-                  <div className="text-sm text-gray-600">封邮件符合条件</div>
+                  <div className="text-sm text-gray-600">{t('emailsMatching')}</div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center">
@@ -465,19 +467,19 @@ export function ArrivalSearchDialog({
                     <div className="text-lg font-bold text-emerald-600">
                       {searchCount.existing}
                     </div>
-                    <div className="text-xs text-gray-500">已解析</div>
+                    <div className="text-xs text-gray-500">{t('parsed')}</div>
                   </div>
                   <div className="bg-white rounded-lg p-2">
                     <div className="text-lg font-bold text-blue-600">
                       {searchCount.new}
                     </div>
-                    <div className="text-xs text-gray-500">待解析</div>
+                    <div className="text-xs text-gray-500">{t('pending')}</div>
                   </div>
                   <div className="bg-white rounded-lg p-2">
                     <div className="text-lg font-bold text-gray-600">
                       {searchCount.total}
                     </div>
-                    <div className="text-xs text-gray-500">总计</div>
+                    <div className="text-xs text-gray-500">{t('total')}</div>
                   </div>
                 </div>
               </div>
@@ -492,17 +494,17 @@ export function ArrivalSearchDialog({
                       </div>
                       <div>
                         <div className="font-medium text-gray-900">
-                          解析全部待解析邮件
+                          {t('parseAllPending')}
                         </div>
                         <div className="text-xs text-gray-500">
-                          将解析 {searchCount.new} 封新邮件
+                          {t('willParseNew', { count: searchCount.new })}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">
-                  💡 系统会自动解析所有未保存的邮件
+                  {t('autoParseHint')}
                 </p>
               </div>
 
@@ -518,15 +520,15 @@ export function ArrivalSearchDialog({
                       className="h-4 w-4 rounded border-amber-300 text-orange-600 focus:ring-orange-500"
                     />
                     <label htmlFor="forceReparse" className="text-sm text-amber-800 cursor-pointer">
-                      <span className="font-medium">强制重新解析</span>
+                      <span className="font-medium">{t('forceReparse')}</span>
                       <span className="text-amber-600 ml-1">
-                        （删除 {searchCount.existing} 条旧记录后重新解析）
+                        {t('forceReparseHint', { count: searchCount.existing })}
                       </span>
                     </label>
                   </div>
                   {forceReparse && (
                     <p className="text-xs text-amber-700">
-                      ⚠️ 警告：将删除已解析的 {searchCount.existing} 条记录并重新解析。
+                      {t('forceReparseWarning', { count: searchCount.existing })}
                     </p>
                   )}
                 </div>
@@ -539,14 +541,14 @@ export function ArrivalSearchDialog({
                   size="sm"
                   onClick={() => setStep("config")}
                 >
-                  继续搜索
+                  {t('continueSearch')}
                 </Button>
                 <Button
                   onClick={handleParse}
                   disabled={searchCount.new === 0 && !(forceReparse && searchCount.existing > 0)}
                   className="bg-gradient-to-r from-orange-500 to-amber-500"
                 >
-                  {forceReparse ? "强制重新解析" : "开始解析"}
+                  {forceReparse ? t('forceReparse') : t('startParse')}
                 </Button>
               </div>
             </div>
@@ -563,11 +565,11 @@ export function ArrivalSearchDialog({
                   className="-ml-2 text-gray-600 hover:text-orange-600"
                 >
                   <ArrowLeft className="mr-1 h-4 w-4" />
-                  返回结果页
+                  {t('backToResults')}
                 </Button>
                 {!isParsing && (
                   <Button variant="outline" size="sm" onClick={handleClose}>
-                    完成
+                    {t('done')}
                   </Button>
                 )}
               </div>
@@ -578,7 +580,7 @@ export function ArrivalSearchDialog({
                 progress={progress}
                 logs={parseLog}
                 isParsing={isParsing}
-                emptyText="正在等待解析器返回日志..."
+                emptyText={t('waitingForLogs')}
               />
             </div>
           )}

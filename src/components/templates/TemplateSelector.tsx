@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { FolderOpen, Loader2, Trash2, FileText, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,17 +32,18 @@ interface TemplateSelectorProps {
   trigger?: React.ReactNode;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  general: '通用',
-  friendly: '友好热情',
-  casual: '轻松随意',
-  formal: '正式礼貌',
-  humorous: '幽默风趣',
-  poetic: '文艺诗意',
-};
-
 export function TemplateSelector({ onSelect, trigger }: TemplateSelectorProps) {
+  const t = useTranslations('TemplateSelect');
   const [open, setOpen] = useState(false);
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    general: t('categoryGeneral'),
+    friendly: t('categoryFriendly'),
+    casual: t('categoryCasual'),
+    formal: t('categoryFormal'),
+    humorous: t('categoryHumorous'),
+    poetic: t('categoryPoetic'),
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
   const { data: templates, isLoading } = useTemplates();
@@ -58,17 +60,17 @@ export function TemplateSelector({ onSelect, trigger }: TemplateSelectorProps) {
 
     try {
       await deleteTemplate.mutateAsync(deleteTemplateId);
-      toast.success('模板已删除');
+      toast.success(t('alertDeleted'));
       setDeleteTemplateId(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '删除失败');
+      toast.error(error instanceof Error ? error.message : t('alertDeleteFailed'));
     }
   };
 
   const handleSelect = (template: Template) => {
     onSelect(template.content);
     setOpen(false);
-    toast.success(`已选择模板：${template.name}`);
+    toast.success(t('alertSelected', { name: template.name }));
   };
 
   return (
@@ -78,22 +80,22 @@ export function TemplateSelector({ onSelect, trigger }: TemplateSelectorProps) {
           {trigger || (
             <Button variant="outline" size="sm">
               <FolderOpen className="h-4 w-4 mr-2" />
-              我的模板
+              {t('triggerLabel')}
             </Button>
           )}
         </DialogTrigger>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>选择模板</DialogTitle>
+            <DialogTitle>{t('title')}</DialogTitle>
             <DialogDescription>
-              从已保存的模板中选择，快速填充内容。
+              {t('description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="搜索模板..."
+              placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -108,9 +110,9 @@ export function TemplateSelector({ onSelect, trigger }: TemplateSelectorProps) {
             ) : filteredTemplates?.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>暂无模板</p>
+                <p>{t('emptyTitle')}</p>
                 <p className="text-sm mt-2">
-                  {searchQuery ? '没有找到匹配的模板' : '保存的模板将显示在这里'}
+                  {searchQuery ? t('emptySearch') : t('emptySave')}
                 </p>
               </div>
             ) : (
@@ -125,10 +127,7 @@ export function TemplateSelector({ onSelect, trigger }: TemplateSelectorProps) {
                         <h4 className="font-medium truncate">{template.name}</h4>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           <span className="px-2 py-0.5 rounded-full bg-muted">
-                            {CATEGORY_LABELS[template.category] || '通用'}
-                          </span>
-                          <span>
-                            {new Date(template.updatedAt).toLocaleDateString('zh-CN')}
+                            {CATEGORY_LABELS[template.category] || t('categoryGeneral')}
                           </span>
                         </div>
                       </div>
@@ -138,7 +137,7 @@ export function TemplateSelector({ onSelect, trigger }: TemplateSelectorProps) {
                           size="sm"
                           onClick={() => handleSelect(template)}
                         >
-                          使用
+                          {t('use')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -167,13 +166,13 @@ export function TemplateSelector({ onSelect, trigger }: TemplateSelectorProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogTitle>{t('confirmDelete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作不可撤销，确定要删除这个模板吗？
+              {t('confirmDeleteDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleteTemplate.isPending}
@@ -182,10 +181,10 @@ export function TemplateSelector({ onSelect, trigger }: TemplateSelectorProps) {
               {deleteTemplate.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  删除中...
+                  {t('deleting')}
                 </>
               ) : (
-                '删除'
+                t('delete')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

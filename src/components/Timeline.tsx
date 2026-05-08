@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Mail,
   Rocket,
@@ -95,9 +96,9 @@ function getIconBgColor(iconType: TimelineIconType): string {
 /**
  * 格式化时间
  */
-function formatTimestamp(timestamp: Date | string): string {
+function formatTimestamp(timestamp: Date | string, locale: string): string {
   const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp;
-  return date.toLocaleString("zh-CN", {
+  return date.toLocaleString(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -110,6 +111,8 @@ function formatTimestamp(timestamp: Date | string): string {
  * 垂直时间线组件
  */
 export function Timeline({ events, className = "" }: TimelineProps) {
+  const t = useTranslations('Timeline');
+  const locale = useLocale();
   // 按时间排序（新的在前面）
   const sortedEvents = [...events].sort((a, b) => {
     const dateA = new Date(a.timestamp).getTime();
@@ -146,7 +149,7 @@ export function Timeline({ events, className = "" }: TimelineProps) {
               {/* 时间和标题 */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium text-slate-500">
-                  {formatTimestamp(event.timestamp)}
+                  {formatTimestamp(event.timestamp, locale)}
                 </span>
                 <span className="text-base font-semibold text-slate-800">
                   {event.title}
@@ -168,7 +171,7 @@ export function Timeline({ events, className = "" }: TimelineProps) {
                   rel="noopener noreferrer"
                   className="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
                 >
-                  {event.linkLabel || "查看详情"}
+                  {event.linkLabel || t('viewDetails')}
                   <svg
                     className="h-3 w-3"
                     fill="none"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Check, Copy, Download, FileDown, Plus, FileText, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +34,12 @@ const TAB_DEFS = [
   { tone: 'creative', label: '脑洞版', versionLabel: '版本 C', description: '联想丰富，添加细节' },
 ] as const;
 
+const TAB_I18N_KEYS: Record<string, { label: string; version: string; desc: string }> = {
+  strict: { label: 'tabStrictLabel', version: 'tabStrictVersion', desc: 'tabStrictDesc' },
+  expand: { label: 'tabExpandLabel', version: 'tabExpandVersion', desc: 'tabExpandDesc' },
+  creative: { label: 'tabCreativeLabel', version: 'tabCreativeVersion', desc: 'tabCreativeDesc' },
+};
+
 export function Step3Card({
   generatedContents,
   generatedContent,
@@ -45,6 +52,7 @@ export function Step3Card({
   copied,
 }: Step3CardProps) {
   const [activeTab, setActiveTab] = useState(1); // default: expand/扩展版
+  const t = useTranslations('Step3Card');
   const [confirmed, setConfirmed] = useState(false);
 
   // Determine if we're in multi-version mode
@@ -75,12 +83,12 @@ export function Step3Card({
               </div>
               <div>
                 <CardTitle className="text-xl">
-                  {isMultiMode ? 'Step 3 · 选择你喜欢的版本' : 'Step 3 · 生成完成'}
+                  {isMultiMode ? t('titleMulti') : t('titleSingle')}
                 </CardTitle>
                 <CardDescription>
                   {isMultiMode
-                    ? '为你生成了 3 个不同风格的版本，选择最喜欢的一个'
-                    : '明信片内容已生成，可以复制或导出'}
+                    ? t('descMulti')
+                    : t('descSingle')}
                 </CardDescription>
               </div>
             </div>
@@ -102,9 +110,9 @@ export function Step3Card({
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}
                   `}
                 >
-                  <span className="mr-1.5">{tab.versionLabel}</span>
+                  <span className="mr-1.5">{t(TAB_I18N_KEYS[tab.tone].version)}</span>
                   <span className={activeTab === idx ? 'text-orange-100' : 'text-slate-400'}>
-                    {tab.label}
+                    {t(TAB_I18N_KEYS[tab.tone].label)}
                   </span>
                 </button>
               ))}
@@ -116,10 +124,10 @@ export function Step3Card({
             <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
               <Check className="h-4 w-4" />
             </div>
-            <span className="font-medium">生成成功</span>
+            <span className="font-medium">{t('generateSuccess')}</span>
             {isMultiMode && (
               <span className="text-sm text-slate-400 ml-2">
-                {TAB_DEFS[activeTab].versionLabel} · {TAB_DEFS[activeTab].description}
+                {t(TAB_I18N_KEYS[TAB_DEFS[activeTab].tone].version)} · {t(TAB_I18N_KEYS[TAB_DEFS[activeTab].tone].desc)}
               </span>
             )}
           </div>
@@ -130,7 +138,7 @@ export function Step3Card({
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
                 <span className="text-lg">{'\u{1F1EC}\u{1F1E7}'}</span>
-                <span className="font-medium text-slate-700">英文原文</span>
+                <span className="font-medium text-slate-700">{t('englishLabel')}</span>
               </div>
               <div className="p-4 max-h-[300px] overflow-y-auto">
                 <pre className="text-sm whitespace-pre-wrap font-sans text-slate-700 leading-relaxed">
@@ -144,7 +152,7 @@ export function Step3Card({
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
                   <span className="text-lg">{'\u{1F1E8}\u{1F1F3}'}</span>
-                  <span className="font-medium text-slate-700">中文参考</span>
+                  <span className="font-medium text-slate-700">{t('chineseLabel')}</span>
                 </div>
                 <div className="p-4 max-h-[300px] overflow-y-auto">
                   <pre className="text-sm whitespace-pre-wrap font-sans text-slate-600 leading-relaxed">
@@ -156,7 +164,7 @@ export function Step3Card({
               <div className="bg-slate-50 rounded-xl border border-dashed border-slate-200 flex items-center justify-center p-8">
                 <div className="text-center text-slate-400">
                   <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">暂无中文翻译</p>
+                  <p className="text-sm">{t('noTranslation')}</p>
                 </div>
               </div>
             )}
@@ -172,12 +180,12 @@ export function Step3Card({
               {copied ? (
                 <>
                   <Check className="h-4 w-4 mr-2 text-emerald-500" />
-                  已复制
+                  {t('copied')}
                 </>
               ) : (
                 <>
                   <Copy className="h-4 w-4 mr-2" />
-                  复制内容
+                  {t('copyContent')}
                 </>
               )}
             </Button>
@@ -187,7 +195,7 @@ export function Step3Card({
               className="flex-1 sm:flex-none border-slate-200 hover:bg-slate-50"
             >
               <FileDown className="h-4 w-4 mr-2" />
-              导出 MD
+              {t('exportMd')}
             </Button>
             <Button
               onClick={() => activeContent && onExportPdf(activeContent.id)}
@@ -195,7 +203,7 @@ export function Step3Card({
               className="flex-1 sm:flex-none border-slate-200 hover:bg-slate-50"
             >
               <Download className="h-4 w-4 mr-2" />
-              导出 PDF
+              {t('exportPdf')}
             </Button>
           </div>
 
@@ -206,7 +214,7 @@ export function Step3Card({
                 confirmed ? (
                   <div className="flex-1 flex items-center justify-center gap-2 h-12 rounded-lg bg-emerald-50 text-emerald-700 font-medium border border-emerald-200">
                     <Check className="h-5 w-5" />
-                    已确认
+                    {t('confirmed')}
                   </div>
                 ) : (
                   <Button
@@ -219,7 +227,7 @@ export function Step3Card({
                     className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 shadow-lg text-base"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    使用这个版本
+                    {t('useThisVersion')}
                   </Button>
                 )
               )}
@@ -228,7 +236,7 @@ export function Step3Card({
                 className="flex-1 h-12 bg-orange-500 hover:bg-orange-600 shadow-lg"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                新建一张
+                {t('createNew')}
               </Button>
             </div>
           </div>

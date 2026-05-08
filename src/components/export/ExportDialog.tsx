@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ export function ExportDialog({
   onPrint,
   isLoading = false,
 }: ExportDialogProps) {
+  const t = useTranslations('Export');
   const [format, setFormat] = useState<'markdown' | 'pdf'>('markdown');
   const [includeRecipient, setIncludeRecipient] = useState(true);
   const [includeSignature, setIncludeSignature] = useState(true);
@@ -75,48 +77,48 @@ export function ExportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>导出选项</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>
-            已选择 {selectedCount} 个项目，请配置导出选项
+            {t('description', { count: selectedCount })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
           {/* 导出格式 */}
           <div className="grid gap-2">
-            <Label htmlFor="format">导出格式</Label>
+            <Label htmlFor="format">{t('format')}</Label>
             <Select
               value={format}
               onValueChange={(value: 'markdown' | 'pdf') => setFormat(value)}
             >
               <SelectTrigger id="format">
-                <SelectValue placeholder="选择格式" />
+                <SelectValue placeholder={t('formatPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="markdown">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    Markdown (.md)
+                    {t('markdown')}
                   </div>
                 </SelectItem>
                 <SelectItem value="pdf">
                   <div className="flex items-center gap-2">
                     <FileDown className="h-4 w-4" />
-                    PDF 文档 (.pdf)
+                    {t('pdf')}
                   </div>
                 </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {format === 'markdown' 
-                ? '合并为一个 Markdown 文件，便于编辑和分享' 
-                : '生成多页 PDF，适合打印和存档'}
+              {format === 'markdown'
+                ? t('markdownDesc')
+                : t('pdfDesc')}
             </p>
           </div>
 
           {/* 导出内容选项 */}
           <div className="space-y-3">
-            <Label>导出内容</Label>
+            <Label>{t('content')}</Label>
             <div className="flex flex-col gap-3">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -125,7 +127,7 @@ export function ExportDialog({
                   onCheckedChange={(checked) => setIncludeRecipient(checked as boolean)}
                 />
                 <Label htmlFor="includeRecipient" className="font-normal cursor-pointer">
-                  包含收件人信息（国家、城市）
+                  {t('includeRecipient')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
@@ -135,7 +137,7 @@ export function ExportDialog({
                   onCheckedChange={(checked) => setIncludeSignature(checked as boolean)}
                 />
                 <Label htmlFor="includeSignature" className="font-normal cursor-pointer">
-                  包含寄件人签名和附加信息
+                  {t('includeSignature')}
                 </Label>
               </div>
             </div>
@@ -143,18 +145,18 @@ export function ExportDialog({
 
           {/* 字体大小 */}
           <div className="grid gap-2">
-            <Label htmlFor="fontSize">字体大小</Label>
+            <Label htmlFor="fontSize">{t('fontSize')}</Label>
             <Select
               value={fontSize}
               onValueChange={(value: 'small' | 'medium' | 'large') => setFontSize(value)}
             >
               <SelectTrigger id="fontSize">
-                <SelectValue placeholder="选择字体大小" />
+                <SelectValue placeholder={t('fontSizePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="small">小 (14px)</SelectItem>
-                <SelectItem value="medium">中 (16px)</SelectItem>
-                <SelectItem value="large">大 (18px)</SelectItem>
+                <SelectItem value="small">{t('small')}</SelectItem>
+                <SelectItem value="medium">{t('medium')}</SelectItem>
+                <SelectItem value="large">{t('large')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -169,22 +171,22 @@ export function ExportDialog({
               className="mr-auto"
             >
               <Printer className="h-4 w-4 mr-2" />
-              批量打印
+              {t('batchPrint')}
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t('cancel')}
           </Button>
           <Button onClick={handleExport} disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                导出中...
+                {t('exporting')}
               </>
             ) : (
               <>
                 <FileDown className="h-4 w-4 mr-2" />
-                导出 {selectedCount} 项
+                {t('export', { count: selectedCount })}
               </>
             )}
           </Button>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ZoomIn, ImageOff, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "next-intl";
 import LightboxDialog from "./LightboxDialog";
 
 interface ImageViewerProps {
@@ -13,6 +14,7 @@ interface ImageViewerProps {
 }
 
 export default function ImageViewer({ imageUrl, onImageLoad, onError, containerHeight = 'h-64 md:h-80 lg:h-96' }: ImageViewerProps) {
+  const t = useTranslations('ImageViewer');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -85,8 +87,8 @@ export default function ImageViewer({ imageUrl, onImageLoad, onError, containerH
       <div className={`w-full ${heightClass} bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl flex items-center justify-center border-2 border-dashed border-orange-200`}>
         <div className="text-center p-6">
           <ImageOff className="w-16 h-16 text-orange-300 mx-auto mb-3" />
-          <p className="text-sm text-orange-700 font-medium">暂无图片</p>
-          <p className="text-xs text-orange-500 mt-1">请先上传明信片背面照片</p>
+          <p className="text-sm text-orange-700 font-medium">{t('noImage')}</p>
+          <p className="text-xs text-orange-500 mt-1">{t('uploadHint')}</p>
         </div>
       </div>
     );
@@ -109,13 +111,13 @@ export default function ImageViewer({ imageUrl, onImageLoad, onError, containerH
             <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50`}>
               <div className="text-center p-6">
                 <ImageOff className="w-16 h-16 text-orange-300 mx-auto mb-3" />
-                <p className="text-sm text-orange-700 mb-3 font-medium">图片加载失败</p>
+                <p className="text-sm text-orange-700 mb-3 font-medium">{t('loadFailed')}</p>
                 <button
                   onClick={handleRetry}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm text-orange-700 bg-white hover:bg-orange-50 rounded-lg transition-colors shadow-sm"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  重试
+                  {t('retry')}
                 </button>
               </div>
             </div>
@@ -126,7 +128,7 @@ export default function ImageViewer({ imageUrl, onImageLoad, onError, containerH
             <div className={`relative w-full ${containerHeight === 'auto' ? '' : 'h-full'} bg-gradient-to-br from-gray-50 to-gray-100`}>
               <img
                 src={imageUrl || ''}
-                alt="明信片背面"
+                alt={t('imageAlt')}
                 className={`w-full ${containerHeight === 'auto' ? 'h-auto' : 'h-full'} object-contain transition-all duration-300 group-hover:scale-[1.02]`}
                 onLoad={handleImageLoad}
                 onError={handleImageError}
@@ -134,7 +136,7 @@ export default function ImageViewer({ imageUrl, onImageLoad, onError, containerH
               />
               {imageUrl && (
                 <div className="absolute top-2 right-2 px-2 py-1 bg-black/50 text-white text-xs rounded">
-                  图片 URL: {imageUrl.substring(0, 30)}...
+                  {t('imageUrlLabel')}: {imageUrl.substring(0, 30)}...
                 </div>
               )}
               
@@ -145,7 +147,7 @@ export default function ImageViewer({ imageUrl, onImageLoad, onError, containerH
                   className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:scale-105"
                 >
                   <ZoomIn className="w-5 h-5" />
-                  放大查看细节
+                  {t('zoomIn')}
                 </button>
               </div>
             </div>
@@ -156,7 +158,7 @@ export default function ImageViewer({ imageUrl, onImageLoad, onError, containerH
         {!loading && !error && (
           <div className="flex items-center justify-center gap-2 mt-3 text-xs text-gray-500 bg-orange-50/50 px-3 py-2 rounded-lg">
             <span className="text-orange-500">💡</span>
-            <span>点击图片可放大查看细节</span>
+            <span>{t('clickToZoom')}</span>
           </div>
         )}
       </div>

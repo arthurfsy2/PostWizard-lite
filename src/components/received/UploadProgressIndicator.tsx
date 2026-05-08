@@ -2,43 +2,45 @@
 
 import { Upload, Scan, Edit } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 interface UploadProgressIndicatorProps {
   currentStep: number;
   completedSteps: number[];
 }
 
-const steps = [
-  {
-    step: 1,
-    title: '上传明信片照片',
-    description: '选择要识别的明信片图片',
-    icon: Upload,
-    color: 'from-orange-500 to-amber-500',
-    bgColor: 'bg-orange-500',
-    activeColor: 'text-orange-600',
-  },
-  {
-    step: 2,
-    title: '内容评估',
-    description: '评估明信片内容质量',
-    icon: Scan,
-    color: 'from-emerald-500 to-teal-500',
-    bgColor: 'bg-emerald-500',
-    activeColor: 'text-emerald-600',
-  },
-  {
-    step: 3,
-    title: '编辑并收藏',
-    description: '完善信息保存到卡册',
-    icon: Edit,
-    color: 'from-purple-500 to-indigo-500',
-    bgColor: 'bg-purple-500',
-    activeColor: 'text-purple-600',
-  },
-];
-
 export function UploadProgressIndicator({ currentStep, completedSteps }: UploadProgressIndicatorProps) {
+  const t = useTranslations('UploadProgress');
+
+  const steps = [
+    {
+      step: 1,
+      title: t('step1Title'),
+      description: t('step1Desc'),
+      icon: Upload,
+      color: 'from-orange-500 to-amber-500',
+      bgColor: 'bg-orange-500',
+      activeColor: 'text-orange-600',
+    },
+    {
+      step: 2,
+      title: t('step2Title'),
+      description: t('step2Desc'),
+      icon: Scan,
+      color: 'from-emerald-500 to-teal-500',
+      bgColor: 'bg-emerald-500',
+      activeColor: 'text-emerald-600',
+    },
+    {
+      step: 3,
+      title: t('step3Title'),
+      description: t('step3Desc'),
+      icon: Edit,
+      color: 'from-purple-500 to-indigo-500',
+      bgColor: 'bg-purple-500',
+      activeColor: 'text-purple-600',
+    },
+  ];
   return (
     <div className="w-full mb-12">
       <div className="relative flex items-center justify-between max-w-3xl mx-auto">

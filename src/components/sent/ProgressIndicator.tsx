@@ -2,6 +2,7 @@
 
 import { Mail, Search, FileText, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 interface ProgressIndicatorProps {
   currentStep: number;
@@ -41,6 +42,7 @@ const steps = [
 ];
 
 export function ProgressIndicator({ currentStep, completedSteps }: ProgressIndicatorProps) {
+  const t = useTranslations('StepProgress');
   return (
     <div className="w-full mb-8">
       <div className="relative flex items-center justify-between max-w-lg mx-auto">
@@ -96,9 +98,9 @@ export function ProgressIndicator({ currentStep, completedSteps }: ProgressIndic
                     ${isCurrent ? step.activeColor : isCompleted ? 'text-emerald-600' : 'text-slate-400'}
                   `}
                 >
-                  {step.title}
+                  {t(`step${step.step}Title`)}
                 </div>
-                <div className="text-[10px] text-slate-500">{step.description}</div>
+                <div className="text-[10px] text-slate-500">{t(`step${step.step}Desc`)}</div>
               </div>
             </motion.div>
           );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import {
   Check, User, Heart, Globe, Ban, FileText, Lightbulb, ArrowRight, ArrowLeft, ChevronDown
@@ -56,6 +57,7 @@ export function Step2Card({
   inspirationNotes,
   onSaveInspiration,
 }: Step2CardProps) {
+  const t = useTranslations('Step2Card');
   const [showInspiration, setShowInspiration] = useState(false);
   const [inspirationEntries, setInspirationEntries] = useState<InspirationEntry[]>([]);
   const [isSavingInspiration, setIsSavingInspiration] = useState(false);
@@ -79,8 +81,8 @@ export function Step2Card({
         .join('、');
       entries.push({
         trigger: 'dislikes',
-        label: `收件人不喜欢：${dislikesText}`,
-        hint: '你对这些有什么看法？有类似的经历吗？',
+        label: t('dislikesLabel', { text: dislikesText }),
+        hint: t('dislikesHint'),
         content: '',
       });
     }
@@ -90,8 +92,8 @@ export function Step2Card({
       const msgPreview = msg.length > 60 ? msg.slice(0, 60) + '...' : msg;
       entries.push({
         trigger: 'messageToSender',
-        label: `TA 想对你说：${msgPreview}`,
-        hint: '写两句回应 TA 的话吧',
+        label: t('messageLabel', { text: msgPreview }),
+        hint: t('messageHint'),
         content: '',
       });
     }
@@ -101,8 +103,8 @@ export function Step2Card({
       const srPreview = sr.length > 60 ? sr.slice(0, 60) + '...' : sr;
       entries.push({
         trigger: 'specialRequests',
-        label: `TA 的特殊请求：${srPreview}`,
-        hint: '你有相关的经历或能力吗？',
+        label: t('specialLabel', { text: srPreview }),
+        hint: t('specialHint'),
         content: '',
       });
     }
@@ -128,7 +130,7 @@ export function Step2Card({
     }
 
     setInspirationEntries(entries);
-  }, [parsedData, inspirationNotes]);
+  }, [parsedData, inspirationNotes, t]);
 
   const handleInspirationChange = (index: number, value: string) => {
     setInspirationEntries(prev => {
@@ -167,8 +169,8 @@ export function Step2Card({
               <Check className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
-              <CardTitle className="text-xl">Step 2 · 解析结果</CardTitle>
-              <CardDescription>已识别收件人详细信息</CardDescription>
+              <CardTitle className="text-xl">{t('title')}</CardTitle>
+              <CardDescription>{t('description')}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -176,7 +178,7 @@ export function Step2Card({
           <div className="space-y-6">
             <div className="flex items-center gap-2 text-emerald-600">
               <Check className="h-5 w-5" />
-              <span className="font-medium">解析成功</span>
+              <span className="font-medium">{t('parseSuccess')}</span>
             </div>
 
             <div className="space-y-5">
@@ -184,20 +186,20 @@ export function Step2Card({
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
                   <User className="h-4 w-4 text-emerald-600" />
-                  <span className="text-sm font-semibold text-emerald-600">基本信息</span>
+                  <span className="text-sm font-semibold text-emerald-600">{t('basicInfo')}</span>
                 </div>
                 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label className="text-slate-500 text-xs">收件人</Label>
+                    <Label className="text-slate-500 text-xs">{t('recipient')}</Label>
                     <p className="font-medium text-slate-900">{parsedData.name}</p>
                   </div>
                   <div>
-                    <Label className="text-slate-500 text-xs">国家/地区</Label>
+                    <Label className="text-slate-500 text-xs">{t('country')}</Label>
                     <p className="font-medium text-slate-900">{parsedData.country}</p>
                   </div>
                   <div>
-                    <Label className="text-slate-500 text-xs">城市</Label>
+                    <Label className="text-slate-500 text-xs">{t('city')}</Label>
                     <p className="font-medium text-slate-900">{parsedData.city || '-'}</p>
                   </div>
                 </div>
@@ -207,14 +209,14 @@ export function Step2Card({
               <div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-slate-500 text-xs mb-1 block">明信片 ID</Label>
+                    <Label className="text-slate-500 text-xs mb-1 block">{t('postcardId')}</Label>
                     <Badge variant="secondary" className="font-mono text-sm bg-slate-100">
                       {parsedData.postcardId}
                     </Badge>
                   </div>
                   {parsedData.distance && (
                     <div>
-                      <Label className="text-slate-500 text-xs mb-1 block">距离</Label>
+                      <Label className="text-slate-500 text-xs mb-1 block">{t('distance')}</Label>
                       <p className="text-sm text-slate-700">{parsedData.distance.toLocaleString()} km</p>
                     </div>
                   )}
@@ -226,7 +228,7 @@ export function Step2Card({
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
                     <Globe className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-emerald-600">语言偏好</span>
+                    <span className="text-sm font-semibold text-emerald-600">{t('languagePreference')}</span>
                   </div>
                   <p className="text-sm text-slate-700">{parsedData.languagePreference}</p>
                 </div>
@@ -237,7 +239,7 @@ export function Step2Card({
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
                     <Heart className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-emerald-600">收片偏好</span>
+                    <span className="text-sm font-semibold text-emerald-600">{t('interests')}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {parsedData.interests.map((interest, index) => (
@@ -257,7 +259,7 @@ export function Step2Card({
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
                     <Ban className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-emerald-600">收片厌恶</span>
+                    <span className="text-sm font-semibold text-emerald-600">{t('dislikes')}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {parsedData.dislikes.map((dislike, index) => (
@@ -277,7 +279,7 @@ export function Step2Card({
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
                     <Heart className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-emerald-600">内容喜好</span>
+                    <span className="text-sm font-semibold text-emerald-600">{t('contentPreference')}</span>
                   </div>
                   <p className="text-sm text-slate-700">{extractChinese(parsedData.contentPreference)}</p>
                 </div>
@@ -288,7 +290,7 @@ export function Step2Card({
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
                     <FileText className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-emerald-600">特殊请求</span>
+                    <span className="text-sm font-semibold text-emerald-600">{t('specialRequests')}</span>
                   </div>
                   <p className="text-sm font-medium text-slate-700 bg-emerald-50 p-3 rounded-lg">
                     {extractChinese(parsedData.specialRequests)}
@@ -301,7 +303,7 @@ export function Step2Card({
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
                     <FileText className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-emerald-600">想你写的内容</span>
+                    <span className="text-sm font-semibold text-emerald-600">{t('messageToSender')}</span>
                   </div>
                   <p className="text-sm font-medium text-slate-700 bg-emerald-50 p-3 rounded-lg">
                     {extractChinese(parsedData.messageToSender)}
@@ -320,7 +322,7 @@ export function Step2Card({
                 >
                   <Lightbulb className="h-4 w-4 text-amber-500" />
                   <span className="text-sm font-semibold text-amber-700">
-                    灵感速记（可选，点击展开/折叠）
+                    {t('inspirationTitle')}
                   </span>
                   <ChevronDown
                     className={`h-4 w-4 text-amber-500 ml-auto transition-transform duration-200 ${
@@ -362,11 +364,11 @@ export function Step2Card({
                         variant="outline"
                         className="h-9 border-amber-300 text-amber-700 hover:bg-amber-100"
                       >
-                        {isSavingInspiration ? '保存中...' : '保存灵感'}
+                        {isSavingInspiration ? t('saving') : t('saveInspiration')}
                       </Button>
                       {inspirationSaved && (
                         <span className="text-xs text-emerald-600">
-                          已保存，生成时会自动使用
+                          {t('inspirationSaved')}
                         </span>
                       )}
                     </div>
@@ -386,22 +388,22 @@ export function Step2Card({
                       </div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-amber-800 mb-2">
-                          需要先填写个人要素
+                          {t('noMaterialsTitle')}
                         </h4>
                         <p className="text-sm text-amber-700 mb-3">
-                          填写个人简介后，系统会基于您的真实经历和喜好生成更个性化、更有温度的明信片内容。
+                          {t('noMaterialsDesc')}
                         </p>
                         <div className="flex gap-2">
                           <Button
                             onClick={onGoToMaterials}
                             className="flex-1 h-11 text-base bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md"
                           >
-                            立即填写个人要素
+                            {t('goToMaterials')}
                             <ArrowRight className="h-4 w-4 ml-2" />
                           </Button>
                         </div>
                         <p className="text-xs text-amber-600 mt-3">
-                          💡 填写个人要素后返回此页面，即可一键生成个性化明信片内容
+                          {t('fillMaterialsHint')}
                         </p>
                       </div>
                     </div>
@@ -418,7 +420,7 @@ export function Step2Card({
                     className="flex-1 h-12 border-slate-200 hover:bg-slate-50"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    返回修改
+                    {t('backToEdit')}
                   </Button>
                   <Button
                     onClick={onGenerate}
@@ -428,12 +430,12 @@ export function Step2Card({
                     {isGenerating ? (
                       <>
                         <ArrowRight className="h-4 w-4 mr-2 animate-spin" />
-                        生成中...
+                        {t('generating')}
                       </>
                     ) : (
                       <>
                         <ArrowRight className="h-4 w-4 mr-2" />
-                        生成明信片内容
+                        {t('generateContent')}
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </>
                     )}

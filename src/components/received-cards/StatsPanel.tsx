@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Globe, Heart, Mail, TrendingUp, Award, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -11,12 +12,13 @@ interface StatsPanelProps {
   className?: string;
 }
 
-export function StatsPanel({ 
-  total = 0, 
-  countries = 0, 
+export function StatsPanel({
+  total = 0,
+  countries = 0,
   favorites = 0,
-  className = '' 
+  className = ''
 }: StatsPanelProps) {
+  const t = useTranslations('StatsPanel');
   const [animatedStats, setAnimatedStats] = useState({
     total: 0,
     countries: 0,
@@ -55,7 +57,7 @@ export function StatsPanel({
   const stats = [
     {
       icon: Mail,
-      label: '已识别的明信片',
+      label: t('identifiedCards'),
       value: animatedStats.total,
       color: 'from-blue-500 to-blue-600',
       bgColor: 'bg-blue-50',
@@ -63,7 +65,7 @@ export function StatsPanel({
     },
     {
       icon: Globe,
-      label: '不同国家',
+      label: t('differentCountries'),
       value: animatedStats.countries,
       color: 'from-purple-500 to-purple-600',
       bgColor: 'bg-purple-50',
@@ -71,7 +73,7 @@ export function StatsPanel({
     },
     {
       icon: Heart,
-      label: '收藏数量',
+      label: t('favorites'),
       value: animatedStats.favorites,
       color: 'from-red-500 to-red-600',
       bgColor: 'bg-red-50',
@@ -115,6 +117,7 @@ export function StatsPanel({
 
 // 扩展版统计面板（用于首页或详情页）
 export function ExtendedStatsPanel({ className = '' }: { className?: string }) {
+  const t = useTranslations('StatsPanel');
   const [stats, setStats] = useState({
     total: 0,
     countries: 0,
@@ -176,9 +179,9 @@ export function ExtendedStatsPanel({ className = '' }: { className?: string }) {
                 <TrendingUp className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">最近 30 天</p>
+                <p className="text-sm text-gray-500">{t('recent30Days')}</p>
                 <p className="text-xl font-bold text-gray-900">
-                  {stats.recentCount} 封
+                  {t('recentCount', { count: stats.recentCount })}
                 </p>
               </div>
             </div>
@@ -192,9 +195,9 @@ export function ExtendedStatsPanel({ className = '' }: { className?: string }) {
                 <MapPin className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">最常收到</p>
+                <p className="text-sm text-gray-500">{t('mostReceived')}</p>
                 <p className="text-xl font-bold text-gray-900">
-                  {stats.topCountry || '暂无'}
+                  {stats.topCountry || t('none')}
                 </p>
               </div>
             </div>
@@ -212,10 +215,10 @@ export function ExtendedStatsPanel({ className = '' }: { className?: string }) {
               </div>
               <div>
                 <p className="text-sm text-amber-800 font-medium">
-                  🎉 Postcrossing 爱好者
+                  {t('achievementTitle')}
                 </p>
                 <p className="text-xs text-amber-600">
-                  已收到 {stats.total} 张明信片
+                  {t('achievementDesc', { count: stats.total })}
                 </p>
               </div>
             </div>

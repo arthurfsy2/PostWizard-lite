@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from 'next-intl';
 import { MapPin, Calendar, Quote, Star, Loader2, Languages } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +19,7 @@ interface HighlightsCardProps {
  * 展示单条精选留言
  */
 export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
+  const t = useTranslations('Highlights');
   const [showDetail, setShowDetail] = useState(false);
   const [translation, setTranslation] = useState(highlight.translation);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -58,10 +60,10 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
 
   const getCategoryLabel = (category: HighlightCategory) => {
     const labels: Record<HighlightCategory, string> = {
-      touching: "最走心",
-      emotional: "情感温度",
-      culturalInsight: "文化洞察",
-      lucky: "最Lucky",
+      touching: t('catTouching'),
+      emotional: t('catEmotional'),
+      culturalInsight: t('catCulturalInsight'),
+      lucky: t('catLucky'),
     };
     return labels[category];
   };
@@ -231,7 +233,7 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-sm font-semibold">
                 <Star className="w-4 h-4 fill-current" />
-                评分: {highlight.aiScore}
+                {t('scoreLabel', { score: highlight.aiScore })}
               </div>
               <Badge
                 variant="outline"
@@ -263,7 +265,7 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
             {translation ? (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50/30 p-4 rounded-lg border border-blue-100">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-medium text-blue-600">🇨🇳 中文翻译</span>
+                  <span className="text-xs font-medium text-blue-600">{t('chineseTranslation')}</span>
                 </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                   {translation}
@@ -271,7 +273,7 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
               </div>
             ) : (
               <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-200 flex items-center justify-between">
-                <span className="text-xs text-gray-400">暂无翻译</span>
+                <span className="text-xs text-gray-400">{t('noTranslation')}</span>
                 <button
                   onClick={handleTranslate}
                   disabled={isTranslating}
@@ -280,12 +282,12 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
                   {isTranslating ? (
                     <>
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      翻译中...
+                      {t('translating')}
                     </>
                   ) : (
                     <>
                       <Languages className="w-3 h-3" />
-                      重新翻译
+                      {t('retranslate')}
                     </>
                   )}
                 </button>
@@ -295,7 +297,7 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
             {/* 其他分类评分 */}
             {highlight.categories.length > 1 && (
               <div className="space-y-2">
-                <p className="text-xs text-gray-500 font-medium">分类置信度</p>
+                <p className="text-xs text-gray-500 font-medium">{t('categoryConfidence')}</p>
                 <div className="flex flex-wrap gap-2">
                   {highlight.categories
                     .filter((c) => c.name !== highlight.primaryCategory)
@@ -315,11 +317,11 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
             {/* 元数据 */}
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1">明信片 ID</p>
+                <p className="text-xs text-gray-500 mb-1">{t('postcardId')}</p>
                 <p className="font-mono font-semibold text-gray-900">{highlight.postcardId}</p>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1">到达日期</p>
+                <p className="text-xs text-gray-500 mb-1">{t('arrivalDate')}</p>
                 <p className="font-semibold text-gray-900">{formatDate(highlight.arrivalDate)}</p>
               </div>
             </div>
@@ -327,7 +329,7 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
             {/* 关键词 */}
             {highlight.tags.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 font-medium mb-2">关键词标签</p>
+                <p className="text-xs text-gray-500 font-medium mb-2">{t('keywords')}</p>
                 <div className="flex flex-wrap gap-2">
                   {highlight.tags.map((tag) => (
                     <span
@@ -343,7 +345,7 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
 
             {/* 情感倾向 */}
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span>情感倾向:</span>
+              <span>{t('emotion')}</span>
               <span
                 className={`
                   px-2 py-0.5 rounded-full font-medium
@@ -357,16 +359,16 @@ export function HighlightsCard({ highlight, index }: HighlightsCardProps) {
                 `}
               >
                 {highlight.emotion === "positive"
-                  ? "😊 积极"
+                  ? t('emotionPositive')
                   : highlight.emotion === "negative"
-                  ? "😔 消极"
-                  : "😐 中性"}
+                  ? t('emotionNegative')
+                  : t('emotionNeutral')}
               </span>
             </div>
 
             {/* 分析时间 */}
             <p className="text-xs text-gray-400 text-right">
-              分析于 {formatDate(highlight.analyzedAt)}
+              {t('analyzedAt', { date: formatDate(highlight.analyzedAt) })}
             </p>
           </div>
         </DialogContent>

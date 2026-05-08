@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { 
   Dialog, 
   DialogContent, 
@@ -76,8 +77,8 @@ interface CardDetailModalProps {
 // getFlagEmoji 已从 @/lib/flag-emoji 导入
 
 // 语言代码转语言名称
-function getLanguageName(langCode: string | null): string {
-  if (!langCode) return '未知';
+function getLanguageName(langCode: string | null, unknownLabel?: string): string {
+  if (!langCode) return unknownLabel || '未知';
   
   const langNames: Record<string, string> = {
     'en': '英语',
@@ -102,12 +103,13 @@ function getLanguageName(langCode: string | null): string {
 
 
 
-export function CardDetailModal({ 
-  card, 
-  open, 
+export function CardDetailModal({
+  card,
+  open,
   onOpenChange,
-  onDelete 
+  onDelete
 }: CardDetailModalProps) {
+  const t = useTranslations('CardDetail');
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('content');
   const [copying, setCopying] = useState(false);
@@ -141,7 +143,7 @@ export function CardDetailModal({
       // 显示成功提示（由父组件的 onDelete 处理）
     } catch (error: any) {
       console.error('Failed to delete:', error);
-      alert('删除失败，请重试');
+      alert(t('alertDeleteFailed'));
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -185,7 +187,7 @@ export function CardDetailModal({
         throw new Error('保存失败');
       }
     } catch (error: any) {
-      alert(error.message || '保存失败，请重试');
+      alert(error.message || t('alertSaveEditFailed'));
     }
   };
 
@@ -194,7 +196,7 @@ export function CardDetailModal({
 
     const newId = editedPostcardId.trim();
     if (!newId) {
-      alert('请输入明信片 ID');
+      alert(t('alertEnterId'));
       return;
     }
 
@@ -219,13 +221,13 @@ export function CardDetailModal({
       } else {
         const data = await response.json().catch(() => ({}));
         if (data.error === 'DUPLICATE_POSTCARD_ID') {
-          alert(`该明信片 ID (${newId}) 已被其他记录使用`);
+          alert(t('alertDuplicateId', { id: newId }));
         } else {
           throw new Error(data.message || data.error || '保存失败');
         }
       }
     } catch (error: any) {
-      alert(error.message || '保存失败，请重试');
+      alert(error.message || t('alertSaveEditFailed'));
     } finally {
       setSavingId(false);
     }
@@ -248,7 +250,7 @@ export function CardDetailModal({
               
               <div>
                 <DialogTitle className="text-xl font-bold">
-                  {card.senderUsername ? `@${card.senderUsername}` : '未知寄件人'}
+                  {card.senderUsername ? `@${card.senderUsername}` : t('unknownSender')}
                 </DialogTitle>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-white/80">
                   {card.senderCity && (
@@ -259,7 +261,7 @@ export function CardDetailModal({
                   )}
                   <span className="flex items-center gap-1">
                     <Globe className="h-3.5 w-3.5" />
-                    {getCountryNameCN(card.senderCountry || '') || card.senderCountry || '未知国家'}
+                    {getCountryNameCN(card.senderCountry || '') || card.senderCountry || t('unknownCountry')}
                   </span>
                   {card.receivedAt && (
                     <span className="flex items-center gap-1">
@@ -289,7 +291,7 @@ export function CardDetailModal({
                   value={editedPostcardId}
                   onChange={(e) => setEditedPostcardId(e.target.value)}
                   className="px-3 py-1.5 rounded-lg bg-white/90 text-gray-900 text-sm font-mono focus:ring-2 focus:ring-white/50 focus:outline-none w-48"
-                  placeholder="如 CN-1234567"
+                  placeholder={t('idPlaceholder')}
                   autoFocus
                 />
                 <button
@@ -298,13 +300,13 @@ export function CardDetailModal({
                   className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-green-500/80 hover:bg-green-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
                 >
                   {savingId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                  保存
+                  {t('save')}
                 </button>
                 <button
                   onClick={() => setIsEditingId(false)}
                   className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors"
                 >
-                  取消
+                  {t('cancel')}
                 </button>
               </div>
             ) : (
@@ -314,19 +316,19 @@ export function CardDetailModal({
                   setIsEditingId(true);
                 }}
                 className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-sm font-mono hover:bg-white/30 transition-colors cursor-pointer"
-                title="点击修改明信片 ID"
+                title={t('modifyId')}
               >
                 {card.postcardId ? (
                   <>
                     <span>🆔 {card.postcardId}</span>
                     {card.postcardIdConfirmed && (
                       <span className="rounded-full bg-green-400/80 px-2 py-0.5 text-xs font-bold text-white">
-                        已确认
+                        {t('confirmed')}
                       </span>
                     )}
                   </>
                 ) : (
-                  <span className="opacity-70">点击设置 ID</span>
+                  <span className="opacity-70">{t('clickToSetId')}</span>
                 )}
                 <Edit3 className="h-3 w-3 opacity-70" />
               </button>
@@ -355,7 +357,7 @@ export function CardDetailModal({
               <div className="absolute top-3 right-3">
                 <span className="px-3 py-1.5 bg-slate-900/70 text-white text-sm rounded-full flex items-center gap-1.5">
                   <Languages className="h-4 w-4" />
-                  {getLanguageName(card.detectedLang)}
+                  {getLanguageName(card.detectedLang, t('unknownLanguage'))}
                 </span>
               </div>
             )}
@@ -369,14 +371,14 @@ export function CardDetailModal({
                 className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-orange-600"
               >
                 <Mail className="h-4 w-4 mr-1.5" />
-                手写内容
+                {t('tabContent')}
               </TabsTrigger>
               <TabsTrigger
                 value="translation"
                 className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-orange-600"
               >
                 <Languages className="h-4 w-4 mr-1.5" />
-                中文翻译
+                {t('tabTranslation')}
               </TabsTrigger>
               {card.gachaEvaluation && (
                 <TabsTrigger
@@ -384,7 +386,7 @@ export function CardDetailModal({
                   className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-orange-600"
                 >
                   <Star className="h-4 w-4 mr-1.5" />
-                  抽卡评价
+                  {t('tabEvaluation')}
                 </TabsTrigger>
               )}
             </TabsList>
@@ -397,16 +399,16 @@ export function CardDetailModal({
                     value={editedHandwrittenText}
                     onChange={(e) => setEditedHandwrittenText(e.target.value)}
                     className="w-full h-[200px] bg-transparent border-0 resize-none focus:ring-0 text-gray-800 font-serif text-lg leading-relaxed"
-                    placeholder="请输入手写内容..."
+                    placeholder={t('textareaPlaceholder')}
                   />
                   <p className="text-xs text-orange-600 mt-2">
-                    💡 直接编辑文字内容，然后点击保存
+                    {t('editHint')}
                   </p>
                 </div>
               ) : (
                 <div className="relative rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50/80 to-amber-50/80 p-5 shadow-inner">
                   <pre className="whitespace-pre-wrap text-gray-800 font-serif text-lg leading-relaxed pr-20">
-                    {card.handwrittenText || '暂无手写内容'}
+                    {card.handwrittenText || t('noHandwrittenText')}
                   </pre>
                   {card.handwrittenText && (
                     <div className="absolute top-3 right-3">
@@ -418,7 +420,7 @@ export function CardDetailModal({
                         className="border-orange-200 text-orange-600 hover:bg-orange-50"
                       >
                         <Copy className="h-4 w-4 mr-1" />
-                        复制原文
+                        {t('copyOriginal')}
                       </Button>
                     </div>
                   )}
@@ -430,7 +432,7 @@ export function CardDetailModal({
             <TabsContent value="translation" className="space-y-4">
               <div className="relative rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 to-cyan-50/80 p-5 shadow-inner">
                 <pre className="whitespace-pre-wrap text-gray-800 text-lg leading-relaxed pr-20">
-                  {card.translatedText || '暂无翻译内容'}
+                  {card.translatedText || t('noTranslation')}
                 </pre>
                 {card.translatedText && (
                   <div className="absolute top-3 right-3">
@@ -442,7 +444,7 @@ export function CardDetailModal({
                       className="border-blue-200 text-blue-600 hover:bg-blue-50"
                     >
                       <Copy className="h-4 w-4 mr-1" />
-                      复制翻译
+                      {t('copyTranslation')}
                     </Button>
                   </div>
                 )}
@@ -457,7 +459,7 @@ export function CardDetailModal({
                   {card.gachaEvaluation.aiScore != null && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-sm font-semibold">
                       <Star className="w-4 h-4 fill-current" />
-                      总分: {(card.gachaEvaluation.aiScore / 10).toFixed(1)}
+                      {t('totalScore', { score: (card.gachaEvaluation.aiScore / 10).toFixed(1) })}
                     </div>
                   )}
                   {card.rarity && (
@@ -467,7 +469,7 @@ export function CardDetailModal({
                   )}
                   {card.luckyLevel && card.luckyLevel !== "none" && (
                     <span className="text-xs text-amber-600">
-                      {card.luckyLevel === "superLucky" ? "🌟 超级幸运" : card.luckyLevel === "special" ? "💎 特殊" : "🍀 幸运"}
+                      {card.luckyLevel === "superLucky" ? t('superLucky') : card.luckyLevel === "special" ? t('special') : t('lucky')}
                     </span>
                   )}
                 </div>
@@ -475,7 +477,7 @@ export function CardDetailModal({
                 {/* AI 评语 */}
                 {card.gachaEvaluation.summary && (
                   <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50/80 to-pink-50/80 p-5 shadow-inner">
-                    <p className="text-xs font-medium text-purple-600 mb-2">🤖 AI 评语</p>
+                    <p className="text-xs font-medium text-purple-600 mb-2">{t('aiComment')}</p>
                     <p className="text-sm text-gray-700 leading-relaxed">
                       {card.gachaEvaluation.summary}
                     </p>
@@ -485,9 +487,9 @@ export function CardDetailModal({
                 {/* 维度评分 */}
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { name: "最走心", score: card.gachaEvaluation.touchingScore, icon: "💝" },
-                    { name: "情感温度", score: card.gachaEvaluation.emotionalScore, icon: "💗" },
-                    { name: "文化洞察", score: card.gachaEvaluation.culturalInsightScore, icon: "🌍" },
+                    { name: t('dimMostTouching'), score: card.gachaEvaluation.touchingScore, icon: "💝" },
+                    { name: t('dimEmotional'), score: card.gachaEvaluation.emotionalScore, icon: "💗" },
+                    { name: t('dimCultural'), score: card.gachaEvaluation.culturalInsightScore, icon: "🌍" },
                   ].map((dim) => (
                     <div key={dim.name} className="bg-gray-50 rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1.5">
@@ -521,35 +523,35 @@ export function CardDetailModal({
                   onClick={handleSaveEdit}
                   className="border-green-200 text-green-600 hover:bg-green-50"
                 >
-                  保存
+                  {t('saveEdit')}
                 </Button>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => {
                     setIsEditing(false);
                     setEditedHandwrittenText(card?.handwrittenText || '');
                   }}
                 >
-                  取消
+                  {t('cancelEdit')}
                 </Button>
               </>
             ) : showDeleteConfirm ? (
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   size="sm"
                   onClick={handleDelete}
                   disabled={deleting}
                 >
-                  {deleting ? '删除中...' : '确认删除'}
+                  {deleting ? t('deleting') : t('confirmDelete')}
                 </Button>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowDeleteConfirm(false)}
                 >
-                  取消
+                  {t('cancelDelete')}
                 </Button>
               </div>
             ) : (
@@ -561,7 +563,7 @@ export function CardDetailModal({
                   className="border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300"
                 >
                   <Crop className="h-4 w-4 mr-1" />
-                  调整图片
+                  {t('adjustImage')}
                 </Button>
 
                 <Button
@@ -571,7 +573,7 @@ export function CardDetailModal({
                   className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300"
                 >
                   <Edit3 className="h-4 w-4 mr-1" />
-                  编辑
+                  {t('edit')}
                 </Button>
 
                 <Button
@@ -581,7 +583,7 @@ export function CardDetailModal({
                   className="text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  删除
+                  {t('delete')}
                 </Button>
               </>
             )}
@@ -598,7 +600,7 @@ export function CardDetailModal({
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center">
               <Crop className="w-5 h-5 text-white" />
             </div>
-            <DialogTitle className="text-xl font-bold">调整图片</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t('adjustTitle')}</DialogTitle>
           </div>
         </DialogHeader>
 
@@ -606,7 +608,7 @@ export function CardDetailModal({
           {/* 图片预览 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              当前图片
+              {t('currentImage')}
             </label>
             <div className="relative aspect-[4/3] bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200">
               {(card?.processedImageUrl || card?.backImageUrl) ? (
@@ -626,14 +628,14 @@ export function CardDetailModal({
               )}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              旋转后预览效果，实际处理由后端完成
+              {t('rotateHint')}
             </p>
           </div>
 
           {/* 旋转 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              旋转图片
+              {t('rotateImage')}
             </label>
             <div className="flex items-center gap-4">
               <button
@@ -658,14 +660,14 @@ export function CardDetailModal({
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              点击按钮或拖动滑块，每次旋转 90°
+              {t('rotateStepHint')}
             </p>
           </div>
 
           {/* 提示信息 */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <p className="text-sm text-blue-800">
-              💡 当前版本支持旋转和基础增强。裁剪功能即将推出，敬请期待。
+              {t('versionHint')}
             </p>
           </div>
 
@@ -692,15 +694,15 @@ export function CardDetailModal({
                   });
 
                   if (response.ok) {
-                    alert('图片调整完成！');
+                    alert(t('adjustDone'));
                     setShowAdjustDialog(false);
                     setRotation(0);
                     window.location.reload();
                   } else {
-                    throw new Error('调整失败');
+                    throw new Error(t('adjustFailed'));
                   }
                 } catch (error: any) {
-                  alert(error.message || '调整失败，请重试');
+                  alert(error.message || t('adjustFailed'));
                 } finally {
                   setAdjusting(false);
                 }
@@ -711,10 +713,10 @@ export function CardDetailModal({
               {adjusting ? (
                 <>
                   <Loader2 className="animate-spin h-4 w-4 inline mr-2" />
-                  处理中...
+                  {t('processing')}
                 </>
               ) : (
-                '确认调整'
+                t('confirmAdjust')
               )}
             </Button>
             <Button
@@ -722,7 +724,7 @@ export function CardDetailModal({
               onClick={() => setShowAdjustDialog(false)}
               className="border-gray-200"
             >
-              取消
+              {t('cancelAdjust')}
             </Button>
           </div>
         </div>

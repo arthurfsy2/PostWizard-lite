@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 interface EmailStatusCardProps {
   /** 当前绑定邮箱地址 */
@@ -25,6 +26,7 @@ interface EmailStatusCardProps {
  * <EmailStatusCard email="xxx@gmail.com" actions={<><AddButton /><UnbindButton /></>} />
  */
 export function EmailStatusCard({ email, actions, className = "" }: EmailStatusCardProps) {
+  const t = useTranslations('EmailConfig');
   return (
     <div className={`flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-200 ${className}`}>
       <div className="flex items-center gap-2">

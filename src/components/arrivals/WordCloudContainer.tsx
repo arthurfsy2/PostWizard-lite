@@ -4,6 +4,7 @@ import { WordCloud } from "./WordCloud";
 import { WordCloudEnhanced } from "./WordCloudEnhanced";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { useWordCloud } from "@/hooks/useWordCloud";
+import { useTranslations } from 'next-intl';
 import { useState, useRef, useEffect, useCallback } from "react";
 import { WordCloudWord } from "@/types/wordcloud";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ import { BarChart3, RefreshCw, Palette } from "lucide-react";
  * - 长按 0.8 秒：强制刷新（绕过缓存，直接读数据库）
  */
 export function WordCloudContainer({ source = 'arrivals' }: { source?: 'arrivals' | 'received' }) {
+  const t = useTranslations('WordCloud');
   const [language, setLanguage] = useState<"zh" | "en" | "all">("en");
   const [forceRefresh, setForceRefresh] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
@@ -109,11 +111,13 @@ export function WordCloudContainer({ source = 'arrivals' }: { source?: 'arrivals
           </div>
           <div>
             <h3 className="text-base font-semibold text-slate-900">
-              词云分析
+              {t('wordCloudAnalysis')}
             </h3>
             {data && (
               <p className="text-xs text-slate-500">
-                基于 {data.totalMessages} 条{source === 'received' ? '收信' : '明信片'} / 共计 {data.totalWords} 字{source === 'received' ? '手写内容' : '留言'}，提取了 {data.uniqueWords} 个关键词
+                {source === 'received'
+                  ? t('statsReceived', { totalMessages: data.totalMessages, totalWords: data.totalWords, uniqueWords: data.uniqueWords })
+                  : t('statsArrivals', { totalMessages: data.totalMessages, totalWords: data.totalWords, uniqueWords: data.uniqueWords })}
               </p>
             )}
           </div>
@@ -131,17 +135,17 @@ export function WordCloudContainer({ source = 'arrivals' }: { source?: 'arrivals
                 ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-md"
                 : "bg-white text-slate-600 border-slate-200 hover:border-purple-300"
             )}
-            title={useEnhanced ? "切换到经典版" : "切换到增强版"}
+            title={useEnhanced ? t('switchToClassic') : t('switchToEnhanced')}
           >
             {useEnhanced ? (
               <>
                 <Palette className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">增强版</span>
+                <span className="hidden sm:inline">{t('enhancedVersion')}</span>
               </>
             ) : (
               <>
                 <BarChart3 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">经典版</span>
+                <span className="hidden sm:inline">{t('classicVersion')}</span>
               </>
             )}
           </button>
@@ -164,8 +168,8 @@ export function WordCloudContainer({ source = 'arrivals' }: { source?: 'arrivals
               }`}
               title={
                 cooldownLeft > 0
-                  ? `防抖中，请 ${cooldownLeft} 秒后重试`
-                  : "刷新（长按 0.8 秒强制重新生成）"
+                  ? t('debounceHint', { seconds: cooldownLeft })
+                  : t('refreshHint')
               }
             >
               <RefreshCw
@@ -203,7 +207,7 @@ export function WordCloudContainer({ source = 'arrivals' }: { source?: 'arrivals
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              <span className="text-sm">加载中...</span>
+              <span className="text-sm">{t('loading')}</span>
             </div>
           </div>
         ) : error ? (
@@ -221,12 +225,12 @@ export function WordCloudContainer({ source = 'arrivals' }: { source?: 'arrivals
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
-            <p className="text-sm mb-2">加载失败</p>
+            <p className="text-sm mb-2">{t('loadFailed')}</p>
             <button
               onClick={() => refresh()}
               className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-sm font-medium hover:shadow-lg transition-all duration-300"
             >
-              重试
+              {t('retry')}
             </button>
           </div>
         ) : data ? (

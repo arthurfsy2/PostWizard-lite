@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Save,
   Loader2,
@@ -70,6 +71,7 @@ const staggerContainer = {
 };
 
 export function ProfileEditor() {
+  const t = useTranslations('ProfileEditor');
   // 状态管理
   const [userType, setUserType] = useState<UserType>('expert');
   const [aboutMe, setAboutMe] = useState('');
@@ -134,10 +136,10 @@ export function ProfileEditor() {
   // 翻译功能 - 翻译个人简介
   const handleTranslate = useCallback(async () => {
     if (!aboutMe.trim()) {
-      alert('请先填写个人简介');
+      alert(t('alertFillBio'));
       return;
     }
-    
+
     try {
       // 传入 aboutMe 和 casualNotes 让 AI 翻译 aboutMe 并提取标签
       const result = await translateMutation.mutateAsync({
@@ -151,14 +153,14 @@ export function ProfileEditor() {
       setShowTags(true);
     } catch (error) {
       console.error('翻译失败:', error);
-      alert('翻译失败，请稍后重试');
+      alert(t('alertTranslateFailed'));
     }
-  }, [aboutMe, journalEntries, inspirationEntries, translateMutation]);
+  }, [aboutMe, journalEntries, inspirationEntries, translateMutation, t]);
 
   // 保存功能 - 带防抖
   const handleSave = useCallback(async () => {
     if (!aboutMe.trim()) {
-      alert('请填写个人简介');
+      alert(t('alertFillBioSimple'));
       return;
     }
 
@@ -198,10 +200,10 @@ export function ProfileEditor() {
       // 不调用 invalidateQueries，直接静默更新，避免额外的 GET 请求
       // queryClient.setQueryData 已经在 useSaveProfile 中处理
 
-      alert('✅ 保存成功！AI已生成个性化标签');
+      alert(t('alertSaveSuccess'));
     } catch (error) {
       console.error('保存失败:', error);
-      alert('保存失败，请稍后重试');
+      alert(t('alertSaveFailed'));
     } finally {
       // 3秒后恢复可保存状态
       setTimeout(() => {
@@ -260,21 +262,21 @@ export function ProfileEditor() {
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-orange-500 mx-auto" />
-          <p className="text-stone-500">加载中...</p>
+          <p className="text-stone-500">{t('loading')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-6"
       variants={staggerContainer}
       initial="initial"
       animate="animate"
     >
       {/* 用户类型切换 */}
-      <motion.div 
+      <motion.div
         className="flex gap-2 justify-center"
         variants={fadeInUp}
       >
@@ -288,7 +290,7 @@ export function ProfileEditor() {
           )}
         >
           <Trophy className="w-4 h-4" />
-          <span className="font-medium">我是老手</span>
+          <span className="font-medium">{t('expertUser')}</span>
         </button>
         <button
           onClick={() => handleUserTypeChange('newbie')}
@@ -300,7 +302,7 @@ export function ProfileEditor() {
           )}
         >
           <Sprout className="w-4 h-4" />
-          <span className="font-medium">我是新手</span>
+          <span className="font-medium">{t('newbieUser')}</span>
         </button>
       </motion.div>
 
@@ -315,10 +317,10 @@ export function ProfileEditor() {
             <span className="inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-full text-sm font-semibold">
               ①
             </span>
-            <span className="font-semibold text-stone-800">个人简介</span>
+            <span className="font-semibold text-stone-800">{t('bioTitle')}</span>
           </div>
           <span className="text-xs font-medium px-2.5 py-1 bg-red-50 text-red-600 rounded-full">
-            必填
+            {t('required')}
           </span>
         </div>
 
@@ -333,7 +335,7 @@ export function ProfileEditor() {
             >
               <p className="text-sm text-emerald-700 flex items-center gap-2">
                 <Tag className="w-4 h-4" />
-                直接粘贴你在 Postcrossing 的英文简介即可，系统会分析内容生成标签
+                {t('expertHint')}
               </p>
             </motion.div>
           )}
@@ -350,12 +352,12 @@ export function ProfileEditor() {
             >
               <div className="flex items-center gap-2 text-amber-700 font-medium mb-2">
                 <Globe className="w-4 h-4" />
-                不知道如何写英文简介？
+                {t('newbieGuideTitle')}
               </div>
               <ol className="text-sm text-stone-600 space-y-1 list-decimal list-inside">
-                <li>先用中文写下你的兴趣爱好</li>
-                <li>系统会帮你翻译成地道的英文</li>
-                <li>你可以粘贴到 Postcrossing 使用</li>
+                <li>{t('newbieStep1')}</li>
+                <li>{t('newbieStep2')}</li>
+                <li>{t('newbieStep3')}</li>
               </ol>
             </motion.div>
           )}
@@ -367,8 +369,8 @@ export function ProfileEditor() {
           onChange={(e) => setAboutMe(e.target.value)}
           placeholder={
             userType === 'expert'
-              ? '直接粘贴你的英文简介...'
-              : '先用中文写下你的兴趣爱好，比如：我喜欢骑行，目标是完成100次百公里骑行...'
+              ? t('expertPlaceholder')
+              : t('newbiePlaceholder')
           }
           className={cn(
             "w-full min-h-[160px] p-4 rounded-xl border-2 font-sans text-[15px] leading-relaxed",
@@ -400,12 +402,12 @@ export function ProfileEditor() {
                 {translateMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    翻译中...
+                    {t('translating')}
                   </>
                 ) : (
                   <>
                     <Globe className="w-4 h-4" />
-                    翻译为英文
+                    {t('translateToEnglish')}
                   </>
                 )}
               </button>
@@ -421,7 +423,7 @@ export function ProfileEditor() {
                   >
                     <div className="flex items-center gap-2 text-emerald-600 font-semibold text-xs uppercase tracking-wide mb-2">
                       <Check className="w-4 h-4" />
-                      翻译结果
+                      {t('translationResult')}
                     </div>
                     <p className="text-stone-700 text-sm leading-relaxed">
                       {aboutMeEn}
@@ -452,7 +454,7 @@ export function ProfileEditor() {
               >
                 <span className="flex items-center gap-2 text-sm font-medium">
                   <Tag className="w-4 h-4" />
-                  不知道如何写？参考这些提示
+                  {t('templateHint')}
                 </span>
                 <ChevronDown 
                   className={cn(
@@ -514,24 +516,24 @@ export function ProfileEditor() {
             <span className="inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-full text-sm font-semibold">
               ②
             </span>
-            <span className="font-semibold text-stone-800">随心记</span>
+            <span className="font-semibold text-stone-800">{t('casualNotesTitle')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full">
-              选填
+              {t('optional')}
             </span>
             <button
               onClick={addEntry}
               className="flex items-center gap-1 text-xs px-2.5 py-1 bg-orange-50 text-orange-600 rounded-full hover:bg-orange-100 transition-colors"
             >
               <Plus className="w-3 h-3" />
-              新增
+              {t('add')}
             </button>
           </div>
         </div>
 
         <p className="text-sm text-stone-500 mb-4">
-          按日期记录心情和故事，帮助生成更贴心的内容
+          {t('casualNotesDesc')}
         </p>
 
         <div className="space-y-3">
@@ -551,7 +553,7 @@ export function ProfileEditor() {
                 <textarea
                   value={entry.content}
                   onChange={(e) => updateEntryContent(index, e.target.value)}
-                  placeholder={entry.date === today ? '今天发生了什么...' : '记录...'}
+                  placeholder={entry.date === today ? t('todayPlaceholder') : t('recordPlaceholder')}
                   rows={entry.content.length > 60 ? 3 : 1}
                   className={cn(
                     "w-full p-3 pr-8 rounded-lg border text-sm leading-relaxed",
@@ -563,7 +565,7 @@ export function ProfileEditor() {
                 <button
                   onClick={() => deleteEntry(index)}
                   className="absolute top-2 right-2 p-1 text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                  title="删除"
+                  title={t('delete')}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -573,7 +575,7 @@ export function ProfileEditor() {
 
           {journalEntries.length === 0 && (
             <p className="text-center text-stone-400 text-sm py-4">
-              点击「新增」开始记录...
+              {t('emptyNotes')}
             </p>
           )}
         </div>
@@ -589,24 +591,24 @@ export function ProfileEditor() {
             <span className="inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-full text-sm font-semibold">
               ③
             </span>
-            <span className="font-semibold text-stone-800">灵感速记</span>
+            <span className="font-semibold text-stone-800">{t('inspirationTitle')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full">
-              选填
+              {t('optional')}
             </span>
             <button
               onClick={addInspirationEntry}
               className="flex items-center gap-1 text-xs px-2.5 py-1 bg-orange-50 text-orange-600 rounded-full hover:bg-orange-100 transition-colors"
             >
               <Plus className="w-3 h-3" />
-              新增
+              {t('add')}
             </button>
           </div>
         </div>
 
         <p className="text-sm text-stone-500 mb-4">
-          记录针对收件人的灵感和共鸣，生成时自动作为素材使用
+          {t('inspirationDesc')}
         </p>
 
         <div className="space-y-3">
@@ -626,7 +628,7 @@ export function ProfileEditor() {
                 <textarea
                   value={entry.content}
                   onChange={(e) => updateInspirationEntryContent(index, e.target.value)}
-                  placeholder={entry.date === today ? '今天有什么灵感...' : '记录...'}
+                  placeholder={entry.date === today ? t('inspirationTodayPlaceholder') : t('recordPlaceholder')}
                   rows={entry.content.length > 60 ? 3 : 1}
                   className={cn(
                     "w-full p-3 pr-8 rounded-lg border text-sm leading-relaxed",
@@ -638,7 +640,7 @@ export function ProfileEditor() {
                 <button
                   onClick={() => deleteInspirationEntry(index)}
                   className="absolute top-2 right-2 p-1 text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                  title="删除"
+                  title={t('delete')}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -648,7 +650,7 @@ export function ProfileEditor() {
 
           {inspirationEntries.length === 0 && (
             <p className="text-center text-stone-400 text-sm py-4">
-              点击「新增」开始记录灵感...
+              {t('emptyInspiration')}
             </p>
           )}
         </div>
@@ -661,9 +663,9 @@ export function ProfileEditor() {
       >
         <div className="flex items-center gap-3 mb-5">
           <span className="text-lg">🏷️</span>
-          <span className="font-semibold text-stone-800">识别标签</span>
+          <span className="font-semibold text-stone-800">{t('tagsTitle')}</span>
           <span className="text-sm text-stone-400">
-            （保存后基于个人简介+随心记生成）
+            {t('tagsSubtitle')}
           </span>
         </div>
         
@@ -695,7 +697,7 @@ export function ProfileEditor() {
                 exit={{ opacity: 0 }}
                 className="text-stone-400 text-sm italic"
               >
-                保存后将自动分析生成标签...
+                {t('tagsPending')}
               </motion.span>
             )}
           </AnimatePresence>
@@ -721,22 +723,22 @@ export function ProfileEditor() {
           {saveMutation.isPending ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              AI分析中...
+              {t('aiAnalyzing')}
             </>
           ) : !canSave ? (
             <>
               <Check className="w-5 h-5" />
-              已保存
+              {t('saved')}
             </>
           ) : (
             <>
               <Save className="w-5 h-5" />
-              保存个人要素
+              {t('saveProfile')}
             </>
           )}
         </button>
         <p className="mt-3 text-sm text-stone-400">
-          系统将综合分析你的个人简介、随心记和灵感速记，生成个性化标签
+          {t('saveHint')}
         </p>
       </motion.div>
     </motion.div>

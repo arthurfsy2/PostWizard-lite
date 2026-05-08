@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import { X, Star, BookOpen, Share2, ChevronLeft } from 'lucide-react';
 interface CardDrawDialogProps {
   open: boolean;
@@ -92,8 +93,8 @@ const RarityBadge: React.FC<{ rarity: string }> = ({ rarity }) => {
 };
 
 // Lucky Badge 组件（三级体系）
-const LuckyBadge: React.FC<{ level?: 'none' | 'lucky' | 'special' | 'superLucky'; bonus?: number }> = ({ 
-  level = 'none', bonus = 0 
+const LuckyBadge: React.FC<{ level?: 'none' | 'lucky' | 'special' | 'superLucky'; bonus?: number; pointsLabel?: string }> = ({
+  level = 'none', bonus = 0, pointsLabel = '+{score}分'
 }) => {
   if (level === 'none') return null;
   
@@ -126,12 +127,14 @@ const LuckyBadge: React.FC<{ level?: 'none' | 'lucky' | 'special' | 'superLucky'
     >
       <span>{emoji}</span>
       <span>{label}</span>
-      <span className="ml-1 text-[10px] opacity-90">+{bonus}分</span>
+      <span className="ml-1 text-[10px] opacity-90">{pointsLabel.replace('{score}', String(bonus))}</span>
     </motion.span>
   );
 };
 
-const CircularScore: React.FC<{ totalScore: number }> = ({ totalScore }) => {
+
+
+const CircularScore: React.FC<{ totalScore: number; label?: string }> = ({ totalScore, label = 'Score' }) => {
   const circumference = 2 * Math.PI * 36;
   const strokeDashoffset = circumference - (totalScore / 300) * circumference;
   return (
@@ -159,11 +162,13 @@ const CircularScore: React.FC<{ totalScore: number }> = ({ totalScore }) => {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-xl font-bold text-slate-900">{totalScore}</span>
-        <span className="text-[10px] text-slate-500">综合</span>
+        <span className="text-[10px] text-slate-500">{label}</span>
       </div>
     </div>
   );
 };
+
+
 
 const DimensionItem: React.FC<{ label: string; score: number; icon: string; index: number }> = ({
   label, score, icon, index
@@ -193,6 +198,7 @@ const DimensionItem: React.FC<{ label: string; score: number; icon: string; inde
 );
 
 export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDialogProps) {
+  const t = useTranslations('CardDraw');
   const [particles, setParticles] = useState<{ id: number; delay: number; duration: number }[]>([]);
   const [stars, setStars] = useState<{ id: number; delay: number }[]>([]);
   const [showCard, setShowCard] = useState(false);
@@ -254,15 +260,15 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
   const handleShare = useCallback(() => {
     if (navigator.share) {
       navigator.share({
-        title: `我在 Postcrossing Wizard 抽到了${cardData.rarity}卡片！`,
-        text: `我抽到了【${cardData.title}】${cardData.rarity}稀有度明信片卡！`,
+        title: t('shareTitle', { rarity: cardData.rarity }),
+        text: t('shareText', { title: cardData.title, rarity: cardData.rarity }),
         url: window.location.href,
       });
     } else {
-      navigator.clipboard.writeText(`我抽到了【${cardData.title}】${cardData.rarity}稀有度明信片卡！`);
-      alert('已复制到剪贴板');
+      navigator.clipboard.writeText(t('shareText', { title: cardData.title, rarity: cardData.rarity }));
+      alert(t('copiedToClipboard'));
     }
-  }, [cardData]);
+  }, [cardData, t]);
 
   const handleAddToAlbum = useCallback(() => {
     onClose();
@@ -282,8 +288,8 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
         transition={{ duration: 0.3 }}
         className="text-center mb-2"
       >
-        <h2 className="text-xl font-bold text-gray-900 mb-0.5">🎉 恭喜获得！</h2>
-        <p className="text-xs text-gray-500">超稀有的明信片卡</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-0.5">{t('congratulations')}</h2>
+        <p className="text-xs text-gray-500">{t('superRareCard')}</p>
       </motion.div>
 
       <div className="flex-1 min-h-0 flex items-center justify-center mb-2">
@@ -298,7 +304,7 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white text-left">
               <div className="flex flex-wrap items-center gap-2">
                 <RarityBadge rarity={cardData.rarity} />
-                <LuckyBadge level={cardData.luckyLevel} bonus={cardData.luckyBonus} />
+                <LuckyBadge level={cardData.luckyLevel} bonus={cardData.luckyBonus} pointsLabel={t('bonusPoints')} />
               </div>
               <h3 className="text-base font-bold mt-1">{cardData.title}</h3>
             </div>
@@ -312,11 +318,11 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
         transition={{ delay: 0.5 }}
         className="flex items-center justify-center gap-3 mb-2"
       >
-        <CircularScore totalScore={cardData.aiEvaluation.touchingScore + cardData.aiEvaluation.emotionalScore + cardData.aiEvaluation.culturalInsightScore} />
+        <CircularScore totalScore={cardData.aiEvaluation.touchingScore + cardData.aiEvaluation.emotionalScore + cardData.aiEvaluation.culturalInsightScore} label={t('scoreLabel')} />
         <div className="text-left">
-          <p className="text-xs text-slate-500">综合评分</p>
-          <p className="text-base font-bold text-slate-900">{cardData.aiEvaluation.touchingScore + cardData.aiEvaluation.emotionalScore + cardData.aiEvaluation.culturalInsightScore}/300</p>
-          <p className="text-[10px] text-slate-400">滑动查看详情 →</p>
+          <p className="text-xs text-slate-500">{t('compositeScore')}</p>
+          <p className="text-base font-bold text-slate-900">{t('outOf', { score: String(cardData.aiEvaluation.touchingScore + cardData.aiEvaluation.emotionalScore + cardData.aiEvaluation.culturalInsightScore) })}</p>
+          <p className="text-[10px] text-slate-400">{t('swipeForDetails')}</p>
         </div>
       </motion.div>
     </div>
@@ -329,9 +335,9 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-2">
         <div className="flex items-center justify-center gap-2 mb-0.5">
           <Star className="w-4 h-4 text-orange-500" />
-          <h2 className="text-lg font-bold text-slate-900">内容评价</h2>
+          <h2 className="text-lg font-bold text-slate-900">{t('contentEvaluation')}</h2>
         </div>
-        <p className="text-[10px] text-slate-500">三维评分 · 总分 {totalScore}/300</p>
+        <p className="text-[10px] text-slate-500">{t('threeDimScore', { score: String(totalScore) })}</p>
       </motion.div>
 
       <motion.div
@@ -344,16 +350,16 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
       </motion.div>
 
       <div className="flex-1 overflow-y-auto">
-        <h3 className="text-xs font-semibold text-slate-900 mb-2">维度评分</h3>
+        <h3 className="text-xs font-semibold text-slate-900 mb-2">{t('dimensionScores')}</h3>
         <div className="space-y-2">
-          <DimensionItem label="最走心" score={cardData.aiEvaluation.touchingScore} icon="💝" index={0} />
-          <DimensionItem label="情感温度" score={cardData.aiEvaluation.emotionalScore} icon="💗" index={1} />
-          <DimensionItem label="文化洞察" score={cardData.aiEvaluation.culturalInsightScore} icon="🌍" index={2} />
+          <DimensionItem label={t('mostTouching')} score={cardData.aiEvaluation.touchingScore} icon="💝" index={0} />
+          <DimensionItem label={t('emotionalWarmth')} score={cardData.aiEvaluation.emotionalScore} icon="💗" index={1} />
+          <DimensionItem label={t('culturalInsight')} score={cardData.aiEvaluation.culturalInsightScore} icon="🌍" index={2} />
         </div>
       </div>
 
       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center text-xs text-slate-400 mt-3">
-        ← 滑动返回卡片
+        {t('swipeBack')}
       </motion.p>
     </div>
   );
@@ -455,14 +461,14 @@ export default function CardDrawDialog({ open, onClose, cardData }: CardDrawDial
                   className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-medium transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm"
                 >
                   <BookOpen className="w-4 h-4" />
-                  放入卡册
+                  {t('addToAlbum')}
                 </button>
                 <button
                   onClick={handleShare}
                   className="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-bold transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm shadow-lg shadow-orange-500/25"
                 >
                   <Share2 className="w-4 h-4" />
-                  炫耀分享
+                  {t('proudShare')}
                 </button>
               </div>
             </div>

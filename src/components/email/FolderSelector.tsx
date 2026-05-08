@@ -4,6 +4,7 @@ import { FolderOpen, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslations } from "next-intl";
 import {
   Select,
   SelectContent,
@@ -38,15 +39,16 @@ export function FolderSelector({
   hint,
   className = "",
 }: FolderSelectorProps) {
+  const t = useTranslations('EmailConfig');
   const defaultHint =
     folders.length > 0
-      ? `已获取 ${folders.length} 个文件夹，系统会自动记住您的选择`
-      : '点击"获取文件夹"查看可用选项，或手动输入文件夹路径';
+      ? t('folderCountHint', { count: folders.length })
+      : t('fetchFolderHint');
 
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center justify-between">
-        <Label className="text-slate-700">文件夹路径</Label>
+        <Label className="text-slate-700">{t('folderPathLabel')}</Label>
         <Button
           type="button"
           variant="ghost"
@@ -60,7 +62,7 @@ export function FolderSelector({
           ) : (
             <RefreshCw className="h-3 w-3 mr-1" />
           )}
-          获取文件夹
+          {t('fetchFolders')}
         </Button>
       </div>
 
@@ -71,7 +73,7 @@ export function FolderSelector({
           </SelectTrigger>
           <SelectContent className="max-h-[300px] bg-white border border-gray-200 shadow-lg">
             <SelectItem value="__default__">
-              <span className="text-gray-400">使用默认（INBOX）</span>
+              <span className="text-gray-400">{t('useDefault')}</span>
             </SelectItem>
             {folders.map((folder) => (
               <SelectItem key={folder} value={folder}>

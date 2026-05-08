@@ -1,20 +1,22 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { LanguageSwitchProps } from '@/types/wordcloud';
 
-const OPTIONS = [
-  { value: 'en' as const, label: '英文' },
-  { value: 'zh' as const, label: '中文' },
-  { value: 'all' as const, label: '全部' },
-] as const;
-
 /**
  * 语言切换组件
- * 
- * 切换词云显示语言：英文 / 中文 / 全部
+ *
+ * 切换词云显示语言
  */
 export function LanguageSwitch({ value, onChange }: LanguageSwitchProps) {
+  const t = useTranslations('LanguageSwitch');
+
+  const OPTIONS = [
+    { value: 'en' as const, label: t('en') },
+    { value: 'zh' as const, label: t('zh') },
+    { value: 'all' as const, label: t('all') },
+  ] as const;
   return (
     <div className="inline-flex gap-1 p-1 bg-slate-100 rounded-lg">
       {OPTIONS.map((opt) => (

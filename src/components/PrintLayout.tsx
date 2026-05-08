@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Printer, Download, Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +23,7 @@ export default function PrintLayout({
   senderCity = 'Shenzhen',
   onHandwrittenPreference,
 }: PrintLayoutProps) {
+  const t = useTranslations('PrintLayout');
   const [preferHandwritten, setPreferHandwritten] = useState(false);
 
   const handlePrint = () => {
@@ -66,11 +68,11 @@ export default function PrintLayout({
       <div className="no-print flex items-center gap-3 mb-6">
         <Button onClick={handlePrint} className="gap-2">
           <Printer className="h-4 w-4" />
-          打印
+          {t('print')}
         </Button>
         <Button variant="outline" onClick={handleDownload} className="gap-2">
           <Download className="h-4 w-4" />
-          导出 PDF
+          {t('exportPdf')}
         </Button>
         <Button 
           variant={preferHandwritten ? "default" : "outline"} 
@@ -78,7 +80,7 @@ export default function PrintLayout({
           className="gap-2"
         >
           <Settings className="h-4 w-4" />
-          {preferHandwritten ? '✍️ 手写优先' : '📋 打印优先'}
+          {preferHandwritten ? t('handwrittenPreferred') : t('printPreferred')}
         </Button>
       </div>
 
@@ -100,7 +102,7 @@ export default function PrintLayout({
             </div>
           </div>
           {/* 剪切线 */}
-          <div className="cut-line"></div>
+          <div className="cut-line"><span className="cut-line-text">{t('cutLine')}</span></div>
         </div>
       </div>
 
@@ -196,9 +198,8 @@ export default function PrintLayout({
           margin: 10px 0;
           position: relative;
         }
-        
-        .cut-line::before {
-          content: '✂️ 剪切线';
+
+        .cut-line-text {
           position: absolute;
           left: 50%;
           top: -10px;

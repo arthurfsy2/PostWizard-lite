@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, Wand2, ChevronDown, ChevronUp, Loader2, FolderOpen, RefreshCw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCreateEmailConfig, useUpdateEmailConfig, useTestConnectionAndGetFolders } from '@/hooks/useApi';
 import type { EmailConfig } from '@/lib/api';
 import {
@@ -69,6 +70,7 @@ export function EmailConfigForm({
   title,
   description,
 }: EmailConfigFormProps) {
+  const t = useTranslations('EmailConfig');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [detectedProvider, setDetectedProvider] = useState<{ name: string; icon: string } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -118,11 +120,11 @@ export function EmailConfigForm({
     
     // 表单验证
     const errors: Record<string, string> = {};
-    if (!formData.name.trim()) errors.name = '请输入配置名称';
-    if (!formData.email.trim()) errors.email = '请输入邮箱地址';
-    if (!formData.imapHost.trim()) errors.imapHost = '请输入 IMAP 服务器地址';
-    if (!formData.imapUsername.trim()) errors.imapUsername = '请输入 IMAP 用户名';
-    if (!formData.imapPassword.trim()) errors.imapPassword = '请输入 IMAP 授权码';
+    if (!formData.name.trim()) errors.name = t('errorNameRequired');
+    if (!formData.email.trim()) errors.email = t('errorEmailRequired');
+    if (!formData.imapHost.trim()) errors.imapHost = t('errorImapHostRequired');
+    if (!formData.imapUsername.trim()) errors.imapUsername = t('errorImapUsernameRequired');
+    if (!formData.imapPassword.trim()) errors.imapPassword = t('errorImapPasswordRequired');
     
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -154,7 +156,7 @@ export function EmailConfigForm({
       // 触发成功回调
       onSuccess?.();
     } catch (error) {
-      toast.error('保存失败：' + (error instanceof Error ? error.message : '未知错误'));
+      toast.error(t('saveFailed', { error: error instanceof Error ? error.message : t('unknownError') }));
     }
   };
 
@@ -219,24 +221,24 @@ export function EmailConfigForm({
 
       if (result.success && result.folders) {
         setAvailableFolders(result.folders || []);
-        toast.success('连接成功', {
-          description: result.message || `成功连接到 ${formData.imapHost}`,
+        toast.success(t('connectionSuccess'), {
+          description: result.message || t('connectionSuccessDesc', { host: formData.imapHost }),
         });
       } else if (result.success && result.data && result.data.folders) {
         setAvailableFolders(result.data.folders || []);
-        toast.success('连接成功', {
-          description: result.message || '邮箱配置验证通过',
+        toast.success(t('connectionSuccess'), {
+          description: result.message || t('connectionVerified'),
         });
       } else {
-        setFolderError(result.error || '获取文件夹列表失败');
-        toast.error('连接失败', {
-          description: result.error || '请检查邮箱配置是否正确',
+        setFolderError(result.error || t('fetchFoldersFailed'));
+        toast.error(t('connectionFailed'), {
+          description: result.error || t('checkConfig'),
         });
       }
     } catch (error: any) {
-      setFolderError(error.message || '获取文件夹列表失败');
-      toast.error('连接失败', {
-        description: error.message || '请检查邮箱配置是否正确',
+      setFolderError(error.message || t('fetchFoldersFailed'));
+      toast.error(t('connectionFailed'), {
+        description: error.message || t('checkConfig'),
       });
     }
   };
@@ -273,7 +275,7 @@ export function EmailConfigForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="form-email" className="text-gray-700 font-medium">
-            邮箱地址
+            {t('emailLabel')}
           </Label>
           <div className="relative mt-1.5">
             <Input
@@ -300,7 +302,7 @@ export function EmailConfigForm({
         </div>
         <div>
           <Label htmlFor="form-imap-password" className="text-gray-700 font-medium">
-            授权码
+            {t('passwordLabel')}
           </Label>
           <Input
             id="form-imap-password"
@@ -310,7 +312,7 @@ export function EmailConfigForm({
               setFormData({ ...formData, imapPassword: e.target.value });
               if (formErrors.imapPassword) setFormErrors(prev => ({ ...prev, imapPassword: '' }));
             }}
-            placeholder="邮箱授权码（非登录密码）"
+            placeholder={t('passwordPlaceholder')}
             className="h-10 mt-1.5 border-gray-200 focus:border-orange-400 focus:ring-orange-400/20"
             required
           />
@@ -323,13 +325,13 @@ export function EmailConfigForm({
       {/* 配置名称（可选，自动填充） */}
       <div>
         <Label htmlFor="form-name" className="text-gray-700 font-medium">
-          配置名称 <span className="text-gray-400 font-normal">（可选）</span>
+          {t('nameLabel')} <span className="text-gray-400 font-normal">{t('optional')}</span>
         </Label>
         <Input
           id="form-name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder={detectedProvider ? detectedProvider.name : "例如：我的 QQ 邮箱"}
+          placeholder={detectedProvider ? detectedProvider.name : t('namePlaceholder')}
           className="h-10 mt-1.5 border-gray-200 focus:border-orange-400 focus:ring-orange-400/20"
         />
       </div>
@@ -342,7 +344,7 @@ export function EmailConfigForm({
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-orange-600 transition-colors"
         >
           {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          {showAdvanced ? '收起高级配置' : '展开高级配置（手动设置 IMAP）'}
+          {showAdvanced ? t('collapseAdvanced') : t('expandAdvanced')}
         </button>
       </div>
 
@@ -351,7 +353,7 @@ export function EmailConfigForm({
         <div className="space-y-4 p-4 bg-gray-50/80 rounded-xl border border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="form-imap-host" className="text-gray-700">IMAP 服务器</Label>
+              <Label htmlFor="form-imap-host" className="text-gray-700">{t('imapHostLabel')}</Label>
               <Input
                 id="form-imap-host"
                 value={formData.imapHost}
@@ -368,7 +370,7 @@ export function EmailConfigForm({
               )}
             </div>
             <div>
-              <Label htmlFor="form-imap-port" className="text-gray-700">IMAP 端口</Label>
+              <Label htmlFor="form-imap-port" className="text-gray-700">{t('imapPortLabel')}</Label>
               <Input
                 id="form-imap-port"
                 type="number"
@@ -382,7 +384,7 @@ export function EmailConfigForm({
           </div>
 
           <div>
-            <Label htmlFor="form-imap-username" className="text-gray-700">IMAP 用户名</Label>
+            <Label htmlFor="form-imap-username" className="text-gray-700">{t('imapUsernameLabel')}</Label>
             <Input
               id="form-imap-username"
               value={formData.imapUsername}
@@ -390,7 +392,7 @@ export function EmailConfigForm({
                 setFormData({ ...formData, imapUsername: e.target.value });
                 if (formErrors.imapUsername) setFormErrors(prev => ({ ...prev, imapUsername: '' }));
               }}
-              placeholder="通常与邮箱相同"
+              placeholder={t('imapUsernamePlaceholder')}
               className="h-9 mt-1 border-gray-200 focus:border-orange-400"
               required
             />
@@ -402,7 +404,7 @@ export function EmailConfigForm({
           <div>
             <div className="flex items-center justify-between">
               <Label className="text-gray-700">
-                邮件文件夹路径 <span className="text-gray-400 font-normal">（可选）</span>
+                {t('folderPathLabel')} <span className="text-gray-400 font-normal">{t('optional')}</span>
               </Label>
               <Button
                 type="button"
@@ -417,7 +419,7 @@ export function EmailConfigForm({
                 ) : (
                   <RefreshCw className="h-3 w-3 mr-1" />
                 )}
-                获取文件夹
+                {t('fetchFolders')}
               </Button>
             </div>
             
@@ -427,11 +429,11 @@ export function EmailConfigForm({
                 onValueChange={handleFolderChange}
               >
                 <SelectTrigger className="h-9 mt-1 border-gray-200 focus:border-orange-400">
-                  <SelectValue placeholder="选择文件夹（默认为 INBOX）" />
+                  <SelectValue placeholder={t('selectFolderPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] bg-white border-gray-200 shadow-lg">
                   <SelectItem value="__default__">
-                    <span className="text-gray-400">使用默认（INBOX）</span>
+                    <span className="text-gray-400">{t('useDefault')}</span>
                   </SelectItem>
                   {availableFolders.map((folder) => (
                     <SelectItem key={folder} value={folder}>
@@ -447,7 +449,7 @@ export function EmailConfigForm({
               <Input
                 value={formData.folderPath}
                 onChange={(e) => setFormData({ ...formData, folderPath: e.target.value })}
-                placeholder="例如：其他文件夹/Mail"
+                placeholder={t('folderPathPlaceholder')}
                 className="h-9 mt-1 border-gray-200 focus:border-orange-400"
               />
             )}
@@ -461,13 +463,13 @@ export function EmailConfigForm({
 
       {/* 支持的邮箱提示 */}
       <div className="flex flex-wrap gap-2 text-xs text-gray-400">
-        <span>支持：</span>
+        <span>{t('supportLabel')}</span>
         {Object.values(EMAIL_PROVIDERS).slice(0, 6).map((provider, idx) => (
           <span key={idx} className="bg-gray-100 px-2 py-0.5 rounded-full">
             {provider.name}
           </span>
         ))}
-        <span>等 {Object.keys(EMAIL_PROVIDERS).length}+ 种邮箱</span>
+        <span>{t('supportMore', { count: Object.keys(EMAIL_PROVIDERS).length })}</span>
       </div>
 
       {/* 操作按钮 */}
@@ -479,7 +481,7 @@ export function EmailConfigForm({
             onClick={onCancel}
             className="border-gray-300"
           >
-            取消
+            {t('cancel')}
           </Button>
         )}
         <Button
@@ -490,7 +492,7 @@ export function EmailConfigForm({
           {(createMutation.isPending || updateMutation.isPending) && (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           )}
-          {isEditing ? '更新配置' : '保存并继续'}
+          {isEditing ? t('updateConfig') : t('saveAndContinue')}
         </Button>
       </div>
     </form>

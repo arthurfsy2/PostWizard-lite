@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from 'next-intl';
 import { Loader2, RefreshCw, TrendingUp, Quote, Star, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -34,6 +35,7 @@ export function HighlightsContainer({
   showHeader = true,
   source = "arrivals",
 }: HighlightsContainerProps) {
+  const t = useTranslations('Highlights');
   const [activeCategory, setActiveCategory] = useState<HighlightCategory>(defaultCategory);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
   const [isTranslatingBatch, setIsTranslatingBatch] = useState(false);
@@ -81,12 +83,11 @@ export function HighlightsContainer({
 
   const handleContinueAnalysis = async () => {
     if (!status || pendingCount === 0) {
-      toast.info('暂时没有需要继续分析的留言');
+      toast.info(t('noPendingAnalysis'));
       return;
     }
 
     const result = await continueAnalysis(() => {
-      // 分析完成，刷新精选数据
       refresh();
     });
     if (result.success) {
@@ -134,14 +135,14 @@ export function HighlightsContainer({
             }
 
             if (data.done) {
-              toast.success(`补全翻译完成：${data.translated}/${data.total} 条`);
+              toast.success(t('batchTranslateComplete', { translated: data.translated, total: data.total }));
               fetchStatus();
             }
           } catch {}
         }
       }
     } catch (e) {
-      toast.error('翻译请求失败');
+      toast.error(t('translateFailed'));
     } finally {
       setIsTranslatingBatch(false);
       setTranslateProgress(null);
@@ -160,7 +161,7 @@ export function HighlightsContainer({
                 {source === 'received' ? '🃏' : '💬'}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{source === 'received' ? '收信精选' : '留言精选'}</h2>
+                <h2 className="text-lg font-bold text-gray-900">{source === 'received' ? t('receivedHighlights') : t('arrivalsHighlights')}</h2>
               </div>
             </div>
             <div className="flex gap-2">
@@ -171,10 +172,10 @@ export function HighlightsContainer({
                   onClick={handleContinueAnalysis}
                   disabled={isAnalyzing}
                   className="text-purple-600 border-purple-300 hover:bg-purple-50"
-                  title={`继续补全剩余 ${pendingCount} 条${source === 'received' ? '收信' : '留言'}的精选分析`}
+                  title={t('continueAnalysisTitle', { count: pendingCount, type: source === 'received' ? t('received') : t('arrivals') })}
                 >
                   <TrendingUp className={`w-4 h-4 mr-1.5 ${isAnalyzing ? "animate-spin" : ""}`} />
-                  {isAnalyzing ? "分析中..." : `继续分析 (${pendingCount})`}
+                  {isAnalyzing ? t('analyzing') : t('continueAnalysis', { count: pendingCount })}
                 </Button>
               )}
               {/* 刷新按钮 */}
@@ -186,7 +187,7 @@ export function HighlightsContainer({
                 className="text-gray-600 hover:text-orange-600"
               >
                 <RefreshCw className={`w-4 h-4 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
-                {isRefreshing ? "刷新中..." : "刷新"}
+                {isRefreshing ? t('refreshing') : t('refresh')}
               </Button>
             </div>
           </div>
@@ -194,11 +195,11 @@ export function HighlightsContainer({
           {/* 分析状态面板 */}
           {status && (
             <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg p-4 border border-slate-200">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">📊 分析进度</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('analysisProgress')}</h3>
 
               {analysisProgress && (
                 <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                  正在实时分析中，请勿关闭页面...
+                  {t('analysisRunning')}
                 </div>
               )}
 
@@ -209,9 +210,9 @@ export function HighlightsContainer({
                       <span className="text-gray-600">
                         <Loader2 className="w-3 h-3 inline animate-spin text-orange-500 mr-1" />
                         {analysisProgress.phase === 'translating'
-                          ? `翻译中 ${analysisProgress.translated ?? 0}/${analysisProgress.total}`
-                          : `分析中 ${analysisProgress.analyzed}/${analysisProgress.total}`}
-                        {analysisProgress.saved !== undefined && ` · 已保存 ${analysisProgress.saved}`}
+                          ? t('translatingProgress', { translated: analysisProgress.translated ?? 0, total: analysisProgress.total })
+                          : t('analyzingProgress', { analyzed: analysisProgress.analyzed, total: analysisProgress.total })}
+                        {analysisProgress.saved !== undefined && t('saved', { count: analysisProgress.saved })}
                       </span>
                       <span className="text-gray-600">
                         {analysisProgress.phase === 'translating'
@@ -239,7 +240,7 @@ export function HighlightsContainer({
                 ) : (
                   <>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-600">已分析 {status.analyzed}/{status.total}</span>
+                      <span className="text-gray-600">{t('analyzedCount', { analyzed: status.analyzed, total: status.total })}</span>
                       <span className="text-gray-600">{status.progress}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
@@ -255,21 +256,21 @@ export function HighlightsContainer({
               {/* 详细统计 */}
               <div className="grid grid-cols-4 gap-2 text-xs">
                 <div className="bg-white rounded p-2 text-center border border-slate-100">
-                  <div className="text-gray-500">待分析</div>
+                  <div className="text-gray-500">{t('pendingAnalysis')}</div>
                   <div className={`font-bold ${status.pending > 0 ? 'text-orange-600' : 'text-gray-700'}`}>
                     {status.pending}
                   </div>
                 </div>
                 <div className="bg-white rounded p-2 text-center border border-slate-100">
-                  <div className="text-gray-500">优秀 (80+)</div>
+                  <div className="text-gray-500">{t('excellent')}</div>
                   <div className="font-bold text-green-600">{status.scoreDistribution.excellent}</div>
                 </div>
                 <div className="bg-white rounded p-2 text-center border border-slate-100">
-                  <div className="text-gray-500">良好 (60-79)</div>
+                  <div className="text-gray-500">{t('good')}</div>
                   <div className="font-bold text-blue-600">{status.scoreDistribution.good}</div>
                 </div>
                 <div className="bg-white rounded p-2 text-center border border-slate-100 relative">
-                  <div className="text-gray-500">有翻译</div>
+                  <div className="text-gray-500">{t('hasTranslation')}</div>
                   <div className="font-bold text-purple-600">
                     {status.withTranslation} <span className="text-gray-400 font-normal">/ {status.total}</span>
                   </div>
@@ -296,10 +297,10 @@ export function HighlightsContainer({
                         {isTranslatingBatch ? (
                           <span className="flex items-center justify-center gap-1">
                             <Loader2 className="w-3 h-3 animate-spin" />
-                            补全中...
+                            {t('completing')}
                           </span>
                         ) : (
-                          `补全 (${status.total - status.withTranslation})`
+                          t('completeTranslation', { count: status.total - status.withTranslation })
                         )}
                       </button>
                     )
@@ -310,7 +311,7 @@ export function HighlightsContainer({
               {/* 低分提示 */}
               {status.scoreDistribution.poor > 0 && (
                 <p className="text-xs text-gray-500 mt-2">
-                  ℹ️ {status.scoreDistribution.poor} 条留言评分较低（&lt;40 分），可能需要优化评分规则
+                  {t('lowScoreHint', { count: status.scoreDistribution.poor })}
                 </p>
               )}
             </div>
@@ -346,7 +347,7 @@ export function HighlightsContainer({
             onClick={handleRefresh}
             className="text-orange-600 border-orange-300 hover:bg-orange-50"
           >
-            重试
+            {t('retry')}
           </Button>
         </div>
       )}
@@ -379,7 +380,7 @@ export function HighlightsContainer({
       {/* 无数据状态 */}
       {!isLoading && !error && !emptyState && highlights.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          <p>{source === 'received' ? '暂无收信精选，上传明信片并抽卡后可在此查看' : '暂无精选留言'}</p>
+          <p>{source === 'received' ? t('noDataReceived') : t('noDataArrivals')}</p>
         </div>
       )}
     </div>
@@ -442,6 +443,7 @@ const RARITY_ICON: Record<string, string> = {
  * 收信精选卡片（样式与 arrivals HighlightsCard 统一）
  */
 function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
+  const t = useTranslations('Highlights');
   const [showDetail, setShowDetail] = useState(false);
 
   // 从 postcardId 前缀推断国家代码（当 country 为空或 UN 时）
@@ -502,7 +504,7 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-2xl">{flagEmoji}</span>
                 <span className="font-semibold text-gray-900 truncate">
-                  {getCountryNameCN(effectiveCountry) || effectiveCountry || "未知"}
+                  {getCountryNameCN(effectiveCountry) || effectiveCountry || t('unknownCountry')}
                 </span>
                 {item.senderUsername && (
                   <span className="text-sm text-gray-500">· {item.senderUsername}</span>
@@ -572,7 +574,7 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span className="text-2xl">{flagEmoji}</span>
-              <span>{getCountryNameCN(effectiveCountry) || effectiveCountry || "未知"}</span>
+              <span>{getCountryNameCN(effectiveCountry) || effectiveCountry || t('unknownCountry')}</span>
               {item.senderUsername && (
                 <span className="text-sm font-normal text-gray-500">· {item.senderUsername}</span>
               )}
@@ -585,7 +587,7 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
               {item.aiScore > 0 && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-sm font-semibold">
                   <Star className="w-4 h-4 fill-current" />
-                  评分: {item.aiScore}
+                  {t('scoreLabel', { score: item.aiScore })}
                 </div>
               )}
               <span
@@ -622,7 +624,7 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
             {item.translation && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50/30 p-4 rounded-lg border border-blue-100">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-medium text-blue-600">🇨🇳 中文翻译</span>
+                  <span className="text-xs font-medium text-blue-600">{t('chineseTranslation')}</span>
                 </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                   {item.translation}
@@ -633,7 +635,7 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
             {/* AI 评语 */}
             {item.summary && (
               <div className="bg-gradient-to-r from-purple-50 to-pink-50/30 p-4 rounded-lg border border-purple-100">
-                <p className="text-xs font-medium text-purple-600 mb-2">🤖 AI 评语</p>
+                <p className="text-xs font-medium text-purple-600 mb-2">{t('aiComment')}</p>
                 <p className="text-sm text-gray-700 leading-relaxed">{item.summary}</p>
               </div>
             )}
@@ -641,12 +643,12 @@ function ReceivedHighlightCard({ item, index }: { item: any; index: number }) {
             {/* 元数据 */}
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1">明信片 ID</p>
+                <p className="text-xs text-gray-500 mb-1">{t('postcardId')}</p>
                 <p className="font-mono font-semibold text-gray-900">{item.postcardId}</p>
               </div>
               {item.createdAt && (
                 <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">日期</p>
+                  <p className="text-xs text-gray-500 mb-1">{t('date')}</p>
                   <p className="font-semibold text-gray-900">{formatDate(item.createdAt)}</p>
                 </div>
               )}

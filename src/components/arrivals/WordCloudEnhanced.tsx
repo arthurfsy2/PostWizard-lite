@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 // === 现代渐变色板（从 demo 提取） ===
@@ -58,6 +59,7 @@ export function WordCloudEnhanced({
   onWordClick,
   showExport = true,
 }: WordCloudEnhancedProps) {
+  const t = useTranslations('WordCloud');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isClient, setIsClient] = useState(false);
@@ -217,24 +219,24 @@ export function WordCloudEnhanced({
 
   // 形状按钮配置
   const shapeButtons: { id: ShapeType; emoji: string; label: string }[] = [
-    { id: 'circle', emoji: '⭕', label: '圆形' },
-    { id: 'diamond', emoji: '💎', label: '菱形' },
-    { id: 'star', emoji: '⭐', label: '星形' },
-    { id: 'triangle-forward', emoji: '▶', label: '三角' },
+    { id: 'circle', emoji: '⭕', label: t('circle') },
+    { id: 'diamond', emoji: '💎', label: t('diamond') },
+    { id: 'star', emoji: '⭐', label: t('star') },
+    { id: 'triangle-forward', emoji: '▶', label: t('triangle') },
   ];
 
   // 色板按钮配置
   const paletteButtons: { id: keyof typeof COLOR_PALETTES; label: string }[] = [
-    { id: 'neon', label: '霓虹' },
-    { id: 'tech', label: '科技' },
-    { id: 'ink', label: '水墨' },
-    { id: 'firework', label: '烟火' },
+    { id: 'neon', label: t('neon') },
+    { id: 'tech', label: t('tech') },
+    { id: 'ink', label: t('ink') },
+    { id: 'firework', label: t('firework') },
   ];
 
   if (!data.words.length) {
     return (
       <div className="flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl" style={{ minHeight: 400 }}>
-        <p className="text-slate-400 text-sm">暂无数据</p>
+        <p className="text-slate-400 text-sm">{t('noData')}</p>
       </div>
     );
   }
@@ -321,7 +323,7 @@ export function WordCloudEnhanced({
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-20">
               <div className="flex items-center gap-3 text-white">
                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span className="text-sm font-medium">正在生成词云...</span>
+                <span className="text-sm font-medium">{t('generating')}</span>
               </div>
             </div>
           )}
@@ -331,9 +333,9 @@ export function WordCloudEnhanced({
             <button
               onClick={handleExport}
               className="absolute top-4 right-4 z-20 px-3 py-1.5 text-xs bg-white/90 hover:bg-white text-slate-600 hover:text-slate-800 rounded-lg shadow-lg border border-slate-200 transition-all duration-300 hover:scale-105"
-              title="导出 PNG 图片"
+              title={t('exportTitle')}
             >
-              📷 导出 PNG
+              {t('exportPngEnhanced')}
             </button>
           )}
         </div>
@@ -378,7 +380,7 @@ export function WordCloudEnhanced({
               {/* 词频 */}
               {hoveredWord.count && (
                 <div className="text-xs text-slate-500 mt-1">
-                  出现 {hoveredWord.count} 次
+                  {t('appearsCount', { count: hoveredWord.count })}
                 </div>
               )}
             </div>

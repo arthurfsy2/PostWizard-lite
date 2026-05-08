@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { EmailConfigForm } from './EmailConfigForm';
+import { useTranslations } from 'next-intl';
 import type { EmailConfig } from '@/lib/api';
 
 interface EmailConfigDialogProps {
@@ -27,6 +28,7 @@ export function EmailConfigDialog({
   onSuccess,
   editConfig,
 }: EmailConfigDialogProps) {
+  const t = useTranslations('EmailConfig');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[672px] max-h-[90vh] overflow-y-auto">
@@ -35,12 +37,12 @@ export function EmailConfigDialog({
             <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center shadow-md">
               <span className="text-lg">📧</span>
             </div>
-            {editConfig ? '编辑邮箱' : '配置邮箱'}
+            {editConfig ? t('configDialogTitleEdit') : t('configDialogTitle')}
           </DialogTitle>
           <DialogDescription className="text-slate-600">
-            {editConfig 
-              ? '修改邮箱配置信息' 
-              : '输入邮箱地址和授权码，我们将自动为您匹配配置'}
+            {editConfig
+              ? t('configDialogDescEdit')
+              : t('configDialogDesc')}
           </DialogDescription>
         </DialogHeader>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 // 词云配色方案 - Viridis 调色板
 const WORDCLOUD_COLORS = [
@@ -40,6 +41,7 @@ export function WordCloud({
   onWordClick,
   showExport = true
 }: WordCloudProps) {
+  const t = useTranslations('WordCloud');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isClient, setIsClient] = useState(false);
@@ -140,7 +142,7 @@ export function WordCloud({
         className="flex items-center justify-center bg-white rounded-lg"
         style={{ width, height }}
       >
-        <p className="text-slate-400 text-sm">暂无数据</p>
+        <p className="text-slate-400 text-sm">{t('noData')}</p>
       </div>
     );
   }
@@ -155,9 +157,9 @@ export function WordCloud({
         <button
           onClick={handleExport}
           className="absolute top-2 right-2 z-10 px-3 py-1.5 text-xs bg-white/90 hover:bg-white text-slate-600 hover:text-slate-800 rounded-md shadow-sm border border-slate-200 transition-colors"
-          title="导出 PNG 图片"
+          title={t('exportTitle')}
         >
-          导出 PNG
+          {t('exportPng')}
         </button>
       )}
       <canvas

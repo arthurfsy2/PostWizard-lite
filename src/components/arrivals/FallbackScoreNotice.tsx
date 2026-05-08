@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { apiFetch } from '@/lib/fetch';
 import { cn } from '@/lib/utils';
@@ -13,14 +14,15 @@ interface FallbackStats {
   categoryStats: Record<string, { total: number; fallback: number }>;
 }
 
-const CATEGORIES = [
-  { key: 'blessing', label: '祝福' },
-  { key: 'funny', label: '有趣' },
-  { key: 'touching', label: '最走心' },
-  { key: 'cultural', label: '文化差异' },
-] as const;
-
 export function FallbackScoreNotice() {
+  const t = useTranslations('FallbackScore');
+  const CATEGORIES = [
+    { key: 'blessing' as const, label: t('catBlessing') },
+    { key: 'funny' as const, label: t('catFunny') },
+    { key: 'touching' as const, label: t('catTouching') },
+    { key: 'cultural' as const, label: t('catCultural') },
+  ] as const;
+
   const [stats, setStats] = useState<FallbackStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,10 +66,10 @@ export function FallbackScoreNotice() {
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="text-sm font-medium text-slate-800">
-              有 {stats.fallbackCount} 条留言使用预估评分
+              {t('fallbackCount', { count: stats.fallbackCount })}
             </span>
             <span className="text-xs text-slate-500">
-              · 如果对结果有疑问，联系管理员后台重新解析数据
+              {t('fallbackHint')}
             </span>
           </div>
 

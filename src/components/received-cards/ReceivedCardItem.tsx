@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { 
   Globe, 
@@ -41,8 +42,8 @@ interface ReceivedCardItemProps {
 // 国家代码转国旗emoji（使用共享工具 getFlagEmoji）
 
 // 语言代码转语言名称
-function getLanguageName(langCode: string | null): string {
-  if (!langCode) return '未知';
+function getLanguageName(langCode: string | null, unknownLabel?: string): string {
+  if (!langCode) return unknownLabel || '未知';
   
   const langNames: Record<string, string> = {
     'en': 'English',
@@ -71,11 +72,12 @@ function getLanguageName(langCode: string | null): string {
   return langNames[langCode.toLowerCase()] || langCode;
 }
 
-export function ReceivedCardItem({ 
-  card, 
-  viewMode, 
+export function ReceivedCardItem({
+  card,
+  viewMode,
   onClick
 }: ReceivedCardItemProps) {
+  const t = useTranslations('ReceivedCard');
   const [imageError, setImageError] = useState(false);
 
   const formatDate = (dateStr: string | null) => {
@@ -103,7 +105,7 @@ export function ReceivedCardItem({
           {displayImage && !imageError ? (
             <img
               src={displayImage}
-              alt="明信片"
+              alt={t('altPostcard')}
               className="w-full h-full object-cover"
               onError={() => setImageError(true)}
             />
@@ -150,7 +152,7 @@ export function ReceivedCardItem({
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-center gap-3 text-xs text-gray-500">
               {card.detectedLang && (
-                <span>{getLanguageName(card.detectedLang)}</span>
+                <span>{getLanguageName(card.detectedLang, t('unknownLanguage'))}</span>
               )}
             </div>
             
@@ -182,7 +184,7 @@ export function ReceivedCardItem({
         {displayImage && !imageError ? (
           <img
             src={displayImage}
-            alt="明信片"
+            alt={t('altPostcard')}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={() => setImageError(true)}
           />
@@ -203,7 +205,7 @@ export function ReceivedCardItem({
         {card.detectedLang && (
           <div className="absolute bottom-3 left-3">
             <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-full">
-              {getLanguageName(card.detectedLang)}
+              {getLanguageName(card.detectedLang, t('unknownLanguage'))}
             </span>
           </div>
         )}

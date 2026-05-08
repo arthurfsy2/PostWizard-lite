@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X, ZoomIn, ZoomOut, Maximize, Minimize } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 interface LightboxDialogProps {
   open: boolean;
@@ -12,6 +13,7 @@ interface LightboxDialogProps {
 }
 
 export default function LightboxDialog({ open, onOpenChange, imageUrl }: LightboxDialogProps) {
+  const t = useTranslations('LightboxDialog');
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -157,7 +159,7 @@ export default function LightboxDialog({ open, onOpenChange, imageUrl }: Lightbo
         >
           <img
             src={imageUrl}
-            alt="明信片背面"
+            alt={t('imageAlt')}
             className="max-w-none select-none"
             style={{
               transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
@@ -170,7 +172,7 @@ export default function LightboxDialog({ open, onOpenChange, imageUrl }: Lightbo
 
         {/* 底部提示 */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-xs">
-          滚动鼠标滚轮缩放 • 拖拽移动 • ESC 关闭
+          {t('hint')}
         </div>
       </DialogContent>
     </Dialog>

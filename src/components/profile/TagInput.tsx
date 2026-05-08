@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -18,11 +19,13 @@ export interface TagInputProps {
 export function TagInput({
   tags = [],
   onChange,
-  placeholder = '添加标签...',
+  placeholder,
   maxTags = 20,
   disabled = false,
   className,
 }: TagInputProps) {
+  const t = useTranslations('TagInput');
+  const resolvedPlaceholder = placeholder || t('placeholder');
   const [inputValue, setInputValue] = React.useState('');
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -101,7 +104,7 @@ export function TagInput({
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        placeholder={tags.length === 0 ? placeholder : ''}
+        placeholder={tags.length === 0 ? resolvedPlaceholder : ''}
         disabled={disabled}
         className="flex-1 min-w-[120px] h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-1 bg-transparent"
       />

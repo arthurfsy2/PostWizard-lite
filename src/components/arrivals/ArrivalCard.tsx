@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,6 +21,7 @@ interface ArrivalCardProps {
 }
 
 export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
+  const t = useTranslations('ArrivalCard');
   const [showDetail, setShowDetail] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -63,11 +65,11 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
         onDelete?.(arrival.id);
         setShowDeleteConfirm(false);
       } else {
-        alert('删除失败，请稍后重试');
+        alert(t('deleteFailed'));
       }
     } catch (error) {
-      console.error('删除失败:', error);
-      alert('删除失败，请稍后重试');
+      console.error('delete failed:', error);
+      alert(t('deleteFailed'));
     } finally {
       setIsDeleting(false);
     }
@@ -113,7 +115,7 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
                     </span>
                     {arrival.recipientName && (
                       <span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-600">
-                        回复人 · {arrival.recipientName}
+                        {t('replier')} · {arrival.recipientName}
                       </span>
                     )}
                   </div>
@@ -144,7 +146,7 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
               {arrival.travelDays && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-orange-100 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700">
                   <Clock className="h-3 w-3" />
-                  {arrival.travelDays} 天
+                  {arrival.travelDays} {t('days')}
                 </span>
               )}
 
@@ -158,7 +160,7 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
 
             <div className="rounded-xl border border-orange-100/70 bg-gradient-to-r from-orange-50/90 via-white to-amber-50/70 p-3 sm:p-4">
               <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-orange-700">
-                对方回复
+                {t('theirReply')}
                 <ArrowRight className="h-3 w-3" />
               </div>
 
@@ -169,7 +171,7 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
                   </p>
                 </div>
               ) : (
-                <p className="text-sm leading-6 text-slate-400">暂无留言内容</p>
+                <p className="text-sm leading-6 text-slate-400">{t('noMessage')}</p>
               )}
             </div>
           </div>
@@ -195,15 +197,15 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
           <div className="px-6 py-5">
             <div className="mb-5 grid grid-cols-3 gap-3 text-center">
               <div className="rounded-2xl bg-slate-50 p-3">
-                <div className="mb-1 text-xs text-slate-500">明信片 ID</div>
+                <div className="mb-1 text-xs text-slate-500">{t('postcardId')}</div>
                 <div className="font-mono text-sm font-semibold text-slate-900">{arrival.postcardId}</div>
               </div>
               <div className="rounded-2xl bg-orange-50 p-3">
-                <div className="mb-1 text-xs text-orange-600">旅途天数</div>
+                <div className="mb-1 text-xs text-orange-600">{t('travelDays')}</div>
                 <div className="text-sm font-bold text-orange-700">{arrival.travelDays || '-'}</div>
               </div>
               <div className="rounded-2xl bg-blue-50 p-3">
-                <div className="mb-1 text-xs text-blue-600">距离</div>
+                <div className="mb-1 text-xs text-blue-600">{t('distance')}</div>
                 <div className="text-sm font-bold text-blue-700">{formatDistance(arrival.distance)}</div>
               </div>
             </div>
@@ -213,14 +215,14 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
               <div className="space-y-3">
                 {/* 原文 */}
                 <div className="rounded-[22px] border border-orange-100 bg-gradient-to-r from-orange-50/90 via-white to-amber-50/80 p-4">
-                  <div className="mb-2 text-xs font-medium text-orange-700 uppercase tracking-wider">原文</div>
+                  <div className="mb-2 text-xs font-medium text-orange-700 uppercase tracking-wider">{t('originalText')}</div>
                   <p className="whitespace-pre-wrap text-sm leading-8 text-slate-600 italic">{arrival.message}</p>
                 </div>
                 
                 {/* 中文翻译（如果有） */}
                 {arrival.messageAnalysis?.translation && (
                   <div className="rounded-[22px] border border-emerald-100 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/80 p-4">
-                    <div className="mb-2 text-xs font-medium text-emerald-700 uppercase tracking-wider">中文翻译</div>
+                    <div className="mb-2 text-xs font-medium text-emerald-700 uppercase tracking-wider">{t('chineseTranslation')}</div>
                     <p className="whitespace-pre-wrap text-sm leading-8 text-slate-700">{arrival.messageAnalysis.translation}</p>
                   </div>
                 )}
@@ -233,7 +235,7 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
 
             <div className="mt-5 flex gap-2">
               <Button variant="outline" onClick={() => setShowDetail(false)} className="flex-1 rounded-2xl">
-                关闭
+                {t('close')}
               </Button>
               <Button
                 variant="outline"
@@ -244,7 +246,7 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
                 }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                删除
+                {t('delete')}
               </Button>
             </div>
           </div>
@@ -254,8 +256,8 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="max-w-sm rounded-[26px]">
           <DialogHeader>
-            <DialogTitle>确认删除</DialogTitle>
-            <DialogDescription>确定要删除这张明信片记录吗？此操作无法撤销。</DialogDescription>
+            <DialogTitle>{t('confirmDeleteTitle')}</DialogTitle>
+            <DialogDescription>{t('confirmDeleteDesc')}</DialogDescription>
           </DialogHeader>
           <div className="mb-4 rounded-2xl bg-slate-50 p-3">
             <div className="text-sm font-semibold">{arrival.postcardId}</div>
@@ -263,10 +265,10 @@ export function ArrivalCard({ arrival, onDelete }: ArrivalCardProps) {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
-              取消
+              {t('cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? '删除中...' : '删除'}
+              {isDeleting ? t('deleting') : t('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

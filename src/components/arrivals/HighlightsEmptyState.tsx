@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button";
 import { HIGHLIGHT_CATEGORIES, type HighlightCategory, type HighlightsEmptyState } from "@/types/highlights";
 
@@ -13,6 +14,7 @@ interface HighlightsEmptyStateProps {
  * 展示不同情况下的空状态提示
  */
 export function HighlightsEmptyState({ category, emptyState }: HighlightsEmptyStateProps) {
+  const t = useTranslations('Highlights');
   const getCategoryInfo = (cat: HighlightCategory) => {
     return HIGHLIGHT_CATEGORIES.find((c) => c.key === cat);
   };
@@ -24,34 +26,34 @@ export function HighlightsEmptyState({ category, emptyState }: HighlightsEmptySt
       case "insufficient_data":
         return (
           <div className="space-y-3">
-            <p className="text-gray-900 font-medium">数据还不够哦~</p>
+            <p className="text-gray-900 font-medium">{t('insufficientData')}</p>
             <p className="text-gray-500 text-sm leading-relaxed">
-              收到更多明信片后，系统会帮你挑选最动人的留言
+              {t('insufficientDataDesc')}
             </p>
           </div>
         );
       case "low_score":
         return (
           <div className="space-y-3">
-            <p className="text-gray-900 font-medium">还没有特别{categoryInfo?.label?.replace("最", "") || "精选"}的留言</p>
+            <p className="text-gray-900 font-medium">{t('lowScoreTitle', { category: categoryInfo?.label?.replace("最", "") || "" })}</p>
             <p className="text-gray-500 text-sm leading-relaxed">
-              期待下一张明信片带来更多惊喜！
+              {t('lowScoreDesc')}
             </p>
           </div>
         );
       case "no_messages":
         return (
           <div className="space-y-3">
-            <p className="text-gray-900 font-medium">还没有任何留言</p>
+            <p className="text-gray-900 font-medium">{t('noMessages')}</p>
             <p className="text-gray-500 text-sm leading-relaxed">
-              从邮箱中解析送达确认邮件后，系统会自动分析留言
+              {t('noMessagesDesc')}
             </p>
           </div>
         );
       default:
         return (
           <div className="space-y-3">
-            <p className="text-gray-900 font-medium">暂无数据</p>
+            <p className="text-gray-900 font-medium">{t('noData')}</p>
             <p className="text-gray-500 text-sm leading-relaxed">
               {emptyState.message}
             </p>
@@ -84,7 +86,7 @@ export function HighlightsEmptyState({ category, emptyState }: HighlightsEmptySt
       {/* 分类专属提示 */}
       <div className="mt-6 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100 max-w-xs">
         <p className="text-xs text-orange-600 font-medium mb-1">
-          💡 {categoryInfo?.label} 小贴士
+          {t('tip', { label: categoryInfo?.label })}
         </p>
         <p className="text-xs text-gray-500">{categoryInfo?.description}</p>
       </div>

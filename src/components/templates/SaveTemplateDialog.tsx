@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Bookmark, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,28 +31,29 @@ interface SaveTemplateDialogProps {
   trigger?: React.ReactNode;
 }
 
-const CATEGORIES = [
-  { value: 'general', label: '通用' },
-  { value: 'friendly', label: '友好热情' },
-  { value: 'casual', label: '轻松随意' },
-  { value: 'formal', label: '正式礼貌' },
-  { value: 'humorous', label: '幽默风趣' },
-  { value: 'poetic', label: '文艺诗意' },
-];
-
 export function SaveTemplateDialog({
   content,
   defaultName = '',
   trigger,
 }: SaveTemplateDialogProps) {
+  const t = useTranslations('TemplateSave');
   const [open, setOpen] = useState(false);
+
+  const CATEGORIES = [
+    { value: 'general', label: t('categoryGeneral') },
+    { value: 'friendly', label: t('categoryFriendly') },
+    { value: 'casual', label: t('categoryCasual') },
+    { value: 'formal', label: t('categoryFormal') },
+    { value: 'humorous', label: t('categoryHumorous') },
+    { value: 'poetic', label: t('categoryPoetic') },
+  ];
   const [name, setName] = useState(defaultName);
   const [category, setCategory] = useState('general');
   const createTemplate = useCreateTemplate();
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error('请输入模板名称');
+      toast.error(t('alertEnterName'));
       return;
     }
 
@@ -61,12 +63,12 @@ export function SaveTemplateDialog({
         content,
         category,
       });
-      toast.success('模板保存成功！');
+      toast.success(t('alertSaveSuccess'));
       setOpen(false);
       setName('');
       setCategory('general');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '保存失败');
+      toast.error(error instanceof Error ? error.message : t('alertSaveFailed'));
     }
   };
 
@@ -76,33 +78,33 @@ export function SaveTemplateDialog({
         {trigger || (
           <Button variant="outline" size="sm">
             <Bookmark className="h-4 w-4 mr-2" />
-            保存为模板
+            {t('triggerLabel')}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>保存为模板</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>
-            将当前内容保存为模板，方便以后快速使用。
+            {t('description')}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">模板名称</Label>
+            <Label htmlFor="name">{t('name')}</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例如：给日本朋友的友好问候"
+              placeholder={t('namePlaceholder')}
               maxLength={100}
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="category">分类</Label>
+            <Label htmlFor="category">{t('category')}</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="选择分类" />
+                <SelectValue placeholder={t('categoryPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((cat) => (
@@ -114,7 +116,7 @@ export function SaveTemplateDialog({
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label>内容预览</Label>
+            <Label>{t('preview')}</Label>
             <div className="max-h-[150px] overflow-y-auto rounded-md border bg-muted p-3 text-sm">
               <pre className="whitespace-pre-wrap font-sans">{content}</pre>
             </div>
@@ -122,16 +124,16 @@ export function SaveTemplateDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            取消
+            {t('cancel')}
           </Button>
           <Button onClick={handleSave} disabled={createTemplate.isPending}>
             {createTemplate.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                保存中...
+                {t('saving')}
               </>
             ) : (
-              '保存'
+              t('save')
             )}
           </Button>
         </DialogFooter>
