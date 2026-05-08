@@ -1,24 +1,24 @@
+"use client";
+
 import { VERSION } from "@/lib/version";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 export function Footer() {
+  const t = useTranslations("Navigation");
+
   return (
     <footer className="border-t py-4 bg-gradient-to-b from-slate-50/50 to-white">
       <div className="max-w-4xl mx-auto">
-        {/* 免责声明 */}
+        {/* 免责声明 - 根据当前语言显示 */}
         <div className="mb-3 text-xs text-center text-slate-500 px-4">
-          <p>
-            Disclaimer: PostWizard is an independent learning project and is not affiliated with, endorsed by, or connected to Postcrossing.
-            All trademarks and registered trademarks are the property of their respective owners.
-          </p>
-          <p className="mt-1">
-            免责声明：PostWizard 是一个独立的学习项目，与 Postcrossing 无任何关联、认可或连接关系。所有商标和注册商标归其各自所有者所有。
-          </p>
+          <p>{t("disclaimer")}</p>
         </div>
-        
+
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
           <span className="font-medium text-slate-700">PostWizard</span>
           <span className="text-slate-300">·</span>
-          <span className="text-slate-500">让明信片写作更简单</span>
+          <span className="text-slate-500">{t("slogan")}</span>
           <span className="text-slate-300">·</span>
           <a
             href="https://xhslink.com/m/772qGJ8u1HU"
@@ -48,23 +48,23 @@ export function Footer() {
             </span>
           </a>
           <span className="text-slate-300">·</span>
-          <a
+          <Link
             href="/about"
             className="text-slate-500 hover:text-orange-600 transition-colors"
           >
-            关于
-          </a>
+            {t("about")}
+          </Link>
           <span className="text-slate-300">·</span>
-          <a
+          <Link
             href="/privacy"
             className="text-slate-500 hover:text-orange-600 transition-colors"
           >
-            隐私政策
-          </a>
+            {t("privacy")}
+          </Link>
           <span className="text-slate-300">·</span>
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100">
             <span className="text-xs font-medium text-orange-600">
-              构建版本：Ver. {VERSION}
+              {t("buildVersion", { version: VERSION })}
             </span>
           </span>
         </div>

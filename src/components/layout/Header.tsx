@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, Link } from "@/i18n/routing";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Clipboard,
   Mail,
@@ -14,32 +14,34 @@ import {
   Menu,
   Settings,
   Upload,
+  Languages,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 
-// 寄信流程导航
-const sendMailNav = [
-  { name: "粘贴解析", href: "/sent/parse", icon: Clipboard },
-  { name: "邮件解析", href: "/sent/email-parse", icon: Mail },
-  { name: "送达回复", href: "/sent/reply", icon: Send },
-  { name: "历史记录", href: "/sent/history", icon: History },
-];
-
-// 收信流程导航
-const receiveMailNav = [
-  { name: "上传识别", href: "/received/upload", icon: Download },
-  { name: "批量上传", href: "/received/batch", icon: Upload },
-  { name: "收信历史", href: "/received/history", icon: Inbox },
-];
-
 export function Header() {
+  const t = useTranslations("Navigation");
+  const locale = useLocale();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sendDropdownOpen, setSendDropdownOpen] = useState(false);
   const [receiveDropdownOpen, setReceiveDropdownOpen] = useState(false);
   const sendDropdownRef = useRef<HTMLDivElement>(null);
   const receiveDropdownRef = useRef<HTMLDivElement>(null);
+
+  const sendMailNav = [
+    { name: t("pasteParse"), href: "/sent/parse", icon: Clipboard },
+    { name: t("emailParse"), href: "/sent/email-parse", icon: Mail },
+    { name: t("sendReply"), href: "/sent/reply", icon: Send },
+    { name: t("sendHistory"), href: "/sent/history", icon: History },
+  ];
+
+  const receiveMailNav = [
+    { name: t("uploadRecognize"), href: "/received/upload", icon: Download },
+    { name: t("batchUpload"), href: "/received/batch", icon: Upload },
+    { name: t("receiveHistory"), href: "/received/history", icon: Inbox },
+  ];
 
   // 点击外部关闭下拉菜单
   useEffect(() => {
@@ -60,6 +62,11 @@ export function Header() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const switchLocale = () => {
+    const nextLocale = locale === "en" ? "zh" : "en";
+    router.replace(pathname, { locale: nextLocale });
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white shadow-sm supports-[backdrop-filter]:bg-white">
@@ -82,14 +89,13 @@ export function Header() {
                 onClick={() => setSendDropdownOpen(!sendDropdownOpen)}
                 className={cn(
                   "flex items-center space-x-1 px-3 py-2 rounded-lg transition-all",
-                  sendDropdownOpen ||
-                    pathname.startsWith("/sent")
+                  sendDropdownOpen || pathname.startsWith("/sent")
                     ? "bg-orange-100 text-orange-700"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted",
                 )}
               >
                 <Send className="h-4 w-4" />
-                <span>寄信</span>
+                <span>{t("send")}</span>
                 <ChevronDown
                   className={cn(
                     "h-3 w-3 transition-transform",
@@ -135,7 +141,7 @@ export function Header() {
                 )}
               >
                 <Download className="h-4 w-4" />
-                <span>收信</span>
+                <span>{t("receive")}</span>
                 <ChevronDown
                   className={cn(
                     "h-3 w-3 transition-transform",
@@ -180,7 +186,7 @@ export function Header() {
               )}
             >
               <Inbox className="h-4 w-4" />
-              <span>个人要素</span>
+              <span>{t("profile")}</span>
             </Link>
 
             {/* 设置 */}
@@ -194,12 +200,22 @@ export function Header() {
               )}
             >
               <Settings className="h-4 w-4" />
-              <span>设置</span>
+              <span>{t("settings")}</span>
             </Link>
           </nav>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* 语言切换 */}
+          <button
+            onClick={switchLocale}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all border border-transparent hover:border-border"
+            aria-label="Switch language"
+          >
+            <Languages className="h-4 w-4" />
+            <span>{locale === "en" ? "中文" : "English"}</span>
+          </button>
+
           {/* 移动端汉堡菜单按钮 */}
           <button
             className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
@@ -223,7 +239,7 @@ export function Header() {
             <div className="px-3 py-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 <Send className="h-3 w-3" />
-                寄信流程
+                {t("sendProcess")}
               </div>
               <div className="space-y-1">
                 {sendMailNav.map((item) => {
@@ -255,7 +271,7 @@ export function Header() {
             <div className="px-3 py-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 <Download className="h-3 w-3" />
-                收信流程
+                {t("receiveProcess")}
               </div>
               <div className="space-y-1">
                 {receiveMailNav.map((item) => {
@@ -291,7 +307,7 @@ export function Header() {
                 className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 <Inbox className="h-4 w-4" />
-                <span>个人要素</span>
+                <span>{t("profile")}</span>
               </Link>
               <Link
                 href="/settings"
@@ -299,7 +315,7 @@ export function Header() {
                 className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 <Settings className="h-4 w-4" />
-                <span>设置</span>
+                <span>{t("settings")}</span>
               </Link>
             </div>
           </nav>
